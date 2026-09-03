@@ -5,48 +5,51 @@
   z-index: 1000;
   display: flex;
   align-items: center;
-  gap: 12px;
-  max-width: min(390px, calc(100vw - 24px));
-  padding: 10px 12px;
+  gap: 18px;
+  width: min(540px, calc(100vw - 24px));
+  padding: 14px 8px 14px 16px;
   color: #e9edef;
   background: #101b20;
-  border: 1px solid #2b454c;
+  border: 0;
   border-radius: 8px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.38);
 }
 
 .native-install-prompt div {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
+  flex: 1;
 }
 
 .native-install-prompt strong {
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .native-install-prompt span {
   color: #a9b8bc;
-  font-size: 11px;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .native-install-action {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   flex: 0 0 auto;
-  padding: 8px 10px;
-  color: #071411;
-  background: #00a884;
-  border-radius: 6px;
-  font-size: 12px;
+  padding: 4px;
+  color: #43d6b0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-size: 13px;
   font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
 }
 
 .native-install-action:hover {
-  background: #19c99f;
+  color: #8aecd6;
 }
 
 .native-install-close {
@@ -64,14 +67,15 @@
     right: 10px;
     bottom: 10px;
     left: 10px;
-    gap: 10px;
+    gap: 12px;
+    padding-left: 13px;
   }
 
   .native-install-action {
-    padding: 9px;
+    padding: 4px;
   }
 
   .native-install-action span {
-    display: none;
+    display: inline;
   }
 }

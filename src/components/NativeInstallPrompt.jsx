@@ -27,12 +27,12 @@ export const NativeInstallPrompt = () => {
   return (
     <aside className="native-install-prompt" role="status" aria-label="Install SomaLux">
       <div>
-        <strong>Download SomaLux for Android</strong>
-        <span>Get the full native app</span>
+        <strong>Take SomaLux with you</strong>
+        <span>Download the Android app for a faster, fuller reading experience.</span>
       </div>
       <a className="native-install-action" href={APK_DOWNLOAD_URL} onClick={dismissPrompt}>
-        <FiDownload aria-hidden="true" />
-        <span>Download APK</span>
+        <FiDownload size={24} aria-hidden="true" />
+        <span>Get the app</span>
       </a>
       <button
         className="native-install-close"
