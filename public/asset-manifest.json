@@ -1,0 +1,39 @@
+{
+  "files": {
+    "main.css": "/static/css/main.4435ea57.css",
+    "main.js": "/static/js/main.da0dd70d.js",
+    "static/media/PaltechWhite.png": "/static/media/PaltechBlack.png",
+    "static/media/splash-screen.png": "/static/media/splash-screen.a1b2c3d4.png", 
+    "static/media/notification.mp3": "/static/media/notification.12345678.mp3", 
+    "index.html": "/index.html",
+    "manifest.json": "/manifest.json", 
+    "service-worker.js": "/service-worker.js",
+    "main.4435ea57.css.map": "/static/css/main.4435ea57.css.map",
+    "main.da0dd70d.js.map": "/static/js/main.da0dd70d.js.map",
+    "asset-manifest.json": "/asset-manifest.json" 
+  },
+  "entrypoints": [
+    "static/css/main.4435ea57.css",
+    "static/js/main.da0dd70d.js"
+  ],
+  "precache": [ 
+    "/",
+    "/index.html",
+    "/static/css/main.4435ea57.css",
+    "/static/js/main.da0dd70d.js",
+    "/static/media/Paltech.png",
+    "/manifest.json"
+  ],
+  "version": "1.0.0", 
+  "buildTime": "2023-11-15T12:00:00Z", 
+  "strategy": "cache-first", 
+  "performanceHints": { 
+    "cssSize": "45kb",
+    "jsSize": "1.2mb",
+    "imageCount": 3,
+    "criticalResources": [
+      "/static/css/main.4435ea57.css",
+      "/static/js/main.da0dd70d.js"
+    ]
+  }
+}

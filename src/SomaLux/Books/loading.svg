@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Loading">
+  <style>
+    .spike {
+      animation: fade-spike 1.44s linear infinite;
+    }
+    .spike-1 { animation-delay: 0s; }
+    .spike-2 { animation-delay: 1.32s; }
+    .spike-3 { animation-delay: 1.2s; }
+    .spike-4 { animation-delay: 1.08s; }
+    .spike-5 { animation-delay: .96s; }
+    .spike-6 { animation-delay: .84s; }
+    .spike-7 { animation-delay: .72s; }
+    .spike-8 { animation-delay: .12s; }
+    .spike-9 { animation-delay: .24s; }
+    .spike-10 { animation-delay: .6s; }
+    .spike-11 { animation-delay: .48s; }
+    .spike-12 { animation-delay: .36s; }
+    @keyframes fade-spike {
+      0%, 8% { opacity: .2; }
+      12%, 20% { opacity: 1; }
+      24%, 100% { opacity: .2; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .spike { animation: none; opacity: .75; }
+    }
+  </style>
+  <g transform="translate(71.68 71.68) scale(.72)" fill="none" stroke-linecap="round" stroke-width="16">
+    <path class="spike spike-1" stroke="#4D4D4D" d="M256 8v109"/>
+    <path class="spike spike-2" stroke="#4D4D4D" d="M132 41l55 95"/>
+    <path class="spike spike-3" stroke="#4D4D4D" d="M41 132l95 55"/>
+    <path class="spike spike-4" stroke="#4D4D4D" d="M8 256h109"/>
+    <path class="spike spike-5" stroke="#4D4D4D" d="M41 380l95-55"/>
+    <path class="spike spike-6" stroke="#4D4D4D" d="M132 471l55-95"/>
+    <path class="spike spike-7" stroke="#4D4D4D" d="M256 504V395"/>
+    <path class="spike spike-8" stroke="#EEEEEE" d="M325 136l55-95"/>
+    <path class="spike spike-9" stroke="#DCDCDC" d="M376 187l95-55"/>
+    <path class="spike spike-10" stroke="#737373" d="M380 471l-55-95"/>
+    <path class="spike spike-11" stroke="#969696" d="M471 380l-95-55"/>
+    <path class="spike spike-12" stroke="#B9B9B9" d="M504 256H395"/>
+  </g>
+</svg>

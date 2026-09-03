@@ -1,0 +1,420 @@
+/* ===== BOOK MANAGEMENT PAGE — CLEAN MODERN THEME ===== */
+
+:root {
+  --primary: #00a884;
+  --primary-hover: #009374;
+  --accent: #6366f1;
+
+  --text-main: #eef2f5;
+  --text-muted: #9ba6b1;
+
+  --bg-main: #0c1317;
+  --bg-card: #111a20;
+  --bg-soft: #1a2329;
+
+  --border-light: rgba(255, 255, 255, 0.08);
+
+  --radius: 14px;
+  --transition: 0.25s ease;
+}
+
+/* Wrapper */
+.book-management {
+  min-height: 100vh;
+  background: var(--bg-main);
+  color: var(--text-main);
+  font-family: "Inter", "Segoe UI", sans-serif;
+  transition: background 0.3s ease;
+  position: relative;
+}
+
+.book-management,
+.book-management * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 768px) {
+  html,
+  body,
+  .book-management,
+  .file-converter-content-convert,
+  .containerBKP,
+  .book-management * {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+  }
+
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  *::-webkit-scrollbar,
+  html *::-webkit-scrollbar,
+  body *::-webkit-scrollbar,
+  .book-management::-webkit-scrollbar,
+  .file-converter-content-convert::-webkit-scrollbar,
+  .containerBKP::-webkit-scrollbar,
+  .book-management *::-webkit-scrollbar {
+    width: 0px !important;
+    height: 0px !important;
+    display: none !important;
+    background: transparent !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+  }
+
+  html::-webkit-scrollbar-track,
+  body::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-track,
+  html *::-webkit-scrollbar-track,
+  body *::-webkit-scrollbar-track,
+  .book-management *::-webkit-scrollbar-track,
+  html::-webkit-scrollbar-thumb,
+  body::-webkit-scrollbar-thumb,
+  *::-webkit-scrollbar-thumb,
+  html *::-webkit-scrollbar-thumb,
+  body *::-webkit-scrollbar-thumb,
+  .book-management *::-webkit-scrollbar-thumb {
+    width: 0px !important;
+    height: 0px !important;
+    display: none !important;
+    background: transparent !important;
+  }
+}
+
+/* ================= HEADER ================= */
+
+.book-management-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(12, 19, 23, 0.85);
+  backdrop-filter: blur(14px);
+  border-bottom: none;
+  padding: 10px 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  transition: box-shadow var(--transition);
+}
+
+.book-management.scrolled .book-management-header {
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.header-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  color: #b3bcc5;
+  letter-spacing: -0.6px;
+}
+
+/* ================= TAB BAR ================= */
+
+.tools-scroll-container-convert {
+  position: fixed;
+  top: 50px;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  background: rgba(12, 19, 23, 0.85);
+  backdrop-filter: blur(14px);
+  border-bottom: none;
+  padding: 2px 0;
+  overflow: hidden;
+}
+
+.tool-group-convert {
+  display: flex;
+  gap: 10px;
+  padding: 0 16px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  /* Enable smooth scrolling on tap */
+  -webkit-overflow-scrolling: touch;
+}
+
+.tool-group-convert::-webkit-scrollbar {
+  height: 6px;
+}
+.tool-group-convert::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 10px;
+}
+
+/* Buttons */
+.tool-button-convert {
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  border-radius: 0;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  /* Prevent text selection during swipe */
+  user-select: none;
+  -webkit-user-select: none;
+  /* Optimize touch responsiveness */
+  -webkit-touch-callout: none;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s ease;
+}
+
+.tool-button-convert:hover {
+  color: var(--text-main);
+}
+
+.tool-button-convert.active-convert {
+  color: var(--primary);
+  font-weight: 700;
+  border-bottom: 2px solid var(--primary);
+}
+
+/* ================= MAIN CONTENT ================= */
+/* ================= FULLSCREEN CHAT MODE ================= */
+
+/* Hide header and tabs when in fullscreen chat */
+.book-management.fullscreen-chat {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 200;
+  margin: 0;
+  padding: 0;
+}
+
+.book-management.fullscreen-chat .book-management-header {
+  display: none !important;
+}
+
+.book-management.fullscreen-chat .tools-scroll-container-convert {
+  display: none !important;
+}
+
+/* Fullscreen chat content - takes entire viewport */
+.book-management.fullscreen-chat .file-converter-content-convert.fullscreen-chat-content {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 100vh !important;
+  min-width: 100vw !important;
+  overflow: hidden;
+  z-index: 200;
+  background: #0c1317;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure no scrolling interference */
+.book-management.fullscreen-chat body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ================= RESPONSIVE CHAT LAYOUTS ================= */
+
+/* Mobile and Desktop - Fullscreen chat is handled above */
+@media (max-width: 768px) {
+  .book-management.fullscreen-chat .file-converter-content-convert.fullscreen-chat-content {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+@media (min-width: 769px) {
+  .book-management.fullscreen-chat .file-converter-content-convert.fullscreen-chat-content {
+    width: 100vw;
+    height: 100vh;
+  }
+}
+
+/* ================= MAIN CONTENT ================= */
+
+.file-converter-content-convert {
+  padding: 20px;
+  min-height: calc(100vh - 150px);
+  margin-top: 90px;
+  animation: fadeIn 0.4s ease-in-out;
+  /* Let the document own scrolling for a consistent mobile experience. */
+  -webkit-overflow-scrolling: touch;
+  /* Prevent unwanted text selection during swipe */
+  user-select: none;
+  -webkit-user-select: none;
+  /* Smooth transitions for tab changes */
+  transition: opacity 0.3s ease;
+  overflow: visible;
+  scroll-behavior: smooth;
+  box-sizing: border-box;
+}
+
+html:has(.book-management),
+html:has(.book-management) body {
+  scroll-behavior: smooth;
+  overscroll-behavior-y: none;
+}
+
+.book-management .containerpast {
+  background: transparent;
+  box-shadow: none;
+}
+
+.book-management .empty-statepast {
+  background: transparent;
+  box-shadow: none;
+  margin-top: 0;
+}
+
+/* Fixed layout for ChatMe tab - no scrolling, fills viewport */
+.book-management .file-converter-content-convert[data-active-tab="chatme"] {
+  position: absolute;
+  top: 102px;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: calc(100vh - 102px);
+  margin-top: 0;
+  padding: 0;
+  min-height: auto;
+  overflow: hidden;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  background-color: #0b1216;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 768px) {
+  .book-management-header {
+    padding: 12px 16px;
+    background: var(--bg-main);
+    backdrop-filter: none;
+  }
+
+  .header-title {
+    font-size: 22px;
+  }
+
+  .tools-scroll-container-convert {
+    top: 48px;
+    background: var(--bg-main);
+    backdrop-filter: none;
+  }
+
+  .tool-group-convert {
+    justify-content: space-around;
+    gap: 24px;
+    padding: 0 24px;
+  }
+
+  .tool-button-convert.active-convert {
+    border-bottom: none;
+  }
+
+  .file-converter-content-convert {
+    padding: 18px;
+    margin-top: 86px;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  /* Fixed layout for ChatMe on mobile */
+  .book-management .file-converter-content-convert[data-active-tab="chatme"] {
+    position: absolute;
+    top: 98px;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: calc(100vh - 98px);
+    margin-top: 0;
+    padding: 0;
+    min-height: 0;
+    overflow: hidden;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+    background-color: #0b1216;
+  }
+
+  /* Mobile-specific swipe optimizations */
+  .tool-group-convert {
+    /* Ensure smooth momentum scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tool-button-convert {
+    /* Increase touch target size for mobile */
+    min-width: 70px;
+    padding: 12px 16px;
+  }
+
+  .file-converter-content-convert {
+    /* Ensure touch events work properly */
+    touch-action: pan-y;
+  }
+}
+
+/* Further optimization for small phones */
+@media (max-width: 480px) {
+  .tool-button-convert {
+    padding: 9px 14px;
+    font-size: 13px;
+    border-radius: 10px;
+    min-width: 60px;
+  }
+
+  .tools-scroll-container-convert {
+    /* Tighter spacing on very small screens */
+    padding: 6px 0;
+  }
+
+  .tool-group-convert {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .file-converter-content-convert {
+    padding: 16px;
+  }
+
+  /* Ensure swipe is the primary interaction method */
+  .file-converter-content-convert {
+    touch-action: pan-y;
+    /* Prevent bounce effect on iOS */
+    overscroll-behavior: contain;
+  }
+}

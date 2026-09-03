@@ -1,0 +1,568 @@
+/**
+ * Mobile Zoom Layout CSS
+ * Styles for mobile-specific zoom controls and gestures
+ * Only applies on screens ≤ 768px width
+ * Desktop layout remains completely unchanged
+ */
+
+/* ==========================================
+   MOBILE ZOOM CONTAINER - IN HEADER
+   ========================================== */
+
+.mobile-zoom-container {
+  position: static;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  backdrop-filter: none;
+  box-shadow: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  pointer-events: auto;
+  flex-wrap: wrap;
+}
+
+.mobile-zoom-container.expanded {
+  transform: none;
+  opacity: 1;
+}
+
+.mobile-zoom-container.collapsed {
+  transform: none;
+  opacity: 1;
+  padding: 8px 16px;
+}
+
+/* ==========================================
+   ZOOM BUTTONS - HEADER STYLE
+   ========================================== */
+
+.mobile-zoom-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.15s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: auto;
+  outline: none;
+}
+
+.mobile-zoom-btn:not(.disabled):active,
+.mobile-zoom-btn:not(.disabled):focus {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(0.92);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15);
+  outline: none;
+}
+
+.mobile-zoom-btn:not(.disabled):hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.mobile-zoom-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+}
+
+.mobile-zoom-btn.zoom-in-btn svg,
+.mobile-zoom-btn.zoom-out-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.5;
+}
+
+/* ==========================================
+   ZOOM LEVEL DISPLAY - HEADER STYLE
+   ========================================== */
+
+.mobile-zoom-level {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  min-width: auto;
+  justify-content: center;
+}
+
+.zoom-percentage {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.mobile-zoom-reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: auto;
+  outline: none;
+}
+
+.mobile-zoom-reset:active,
+.mobile-zoom-reset:focus {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(0.95);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15);
+  outline: none;
+}
+
+.mobile-zoom-reset:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ==========================================
+   CLOSE BUTTON
+   ========================================== */
+
+.mobile-zoom-close {
+  display: none;
+}
+
+/* ==========================================
+   ZOOM INDICATOR (COLLAPSED)
+   ========================================== */
+
+.mobile-zoom-indicator {
+  display: none;
+}
+
+/* ==========================================
+   RESPONSIVE DESIGN
+   ========================================== */
+
+/* Tablets (768px - 1024px) - Show zoom controls */
+@media (max-width: 1024px) {
+  .mobile-zoom-container {
+    bottom: 16px;
+    right: 16px;
+    gap: 6px;
+    padding: 6px 10px;
+  }
+
+  .mobile-zoom-btn {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .mobile-zoom-level {
+    min-width: 65px;
+    gap: 6px;
+  }
+
+  .zoom-percentage {
+    font-size: 13px;
+  }
+
+  .mobile-zoom-close {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+/* Large phones (640px - 768px) - Slightly compact */
+@media (max-width: 768px) {
+  .mobile-zoom-container {
+    bottom: 12px;
+    right: 12px;
+    gap: 6px;
+    padding: 6px 10px;
+  }
+
+  .mobile-zoom-btn {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    font-size: 16px;
+  }
+
+  .mobile-zoom-level {
+    min-width: 60px;
+    gap: 5px;
+  }
+
+  .zoom-percentage {
+    font-size: 12px;
+  }
+
+  .mobile-zoom-reset {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+
+  .mobile-zoom-close {
+    width: 30px;
+    height: 30px;
+  }
+
+  .mobile-zoom-indicator {
+    width: 40px;
+    height: 40px;
+    font-size: 12px;
+  }
+}
+
+/* Standard phones (480px - 640px) - Compact */
+@media (max-width: 640px) {
+  .mobile-zoom-container {
+    bottom: 10px;
+    right: 10px;
+    gap: 5px;
+    padding: 5px 8px;
+  }
+
+  .mobile-zoom-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    font-size: 15px;
+  }
+
+  .mobile-zoom-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .mobile-zoom-level {
+    min-width: 55px;
+    gap: 4px;
+  }
+
+  .zoom-percentage {
+    font-size: 11px;
+  }
+
+  .mobile-zoom-reset {
+    font-size: 9px;
+    padding: 2px 5px;
+  }
+
+  .mobile-zoom-close {
+    width: 28px;
+    height: 28px;
+  }
+
+  .mobile-zoom-close svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .mobile-zoom-indicator {
+    width: 36px;
+    height: 36px;
+    font-size: 11px;
+  }
+}
+
+/* Small phones (380px - 480px) - Ultra-compact */
+@media (max-width: 480px) {
+  .mobile-zoom-container {
+    bottom: 8px;
+    right: 8px;
+    gap: 4px;
+    padding: 4px 6px;
+  }
+
+  .mobile-zoom-btn {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    font-size: 14px;
+  }
+
+  .mobile-zoom-btn svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2.5;
+  }
+
+  .mobile-zoom-level {
+    min-width: 50px;
+    gap: 3px;
+  }
+
+  .zoom-percentage {
+    font-size: 10px;
+  }
+
+  .mobile-zoom-reset {
+    font-size: 8px;
+    padding: 2px 4px;
+  }
+
+  .mobile-zoom-close {
+    width: 26px;
+    height: 26px;
+  }
+
+  .mobile-zoom-close svg {
+    width: 12px;
+    height: 12px;
+    stroke-width: 3;
+  }
+
+  .mobile-zoom-indicator {
+    width: 32px;
+    height: 32px;
+    font-size: 10px;
+  }
+}
+
+/* Extra small phones (< 380px) - Maximum compression */
+@media (max-width: 380px) {
+  .mobile-zoom-container {
+    bottom: 6px;
+    right: 6px;
+    gap: 3px;
+    padding: 3px 5px;
+  }
+
+  .mobile-zoom-btn {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    min-height: 30px;
+    font-size: 12px;
+  }
+
+  .mobile-zoom-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .mobile-zoom-level {
+    display: none; /* Hide percentage to save space */
+  }
+
+  .mobile-zoom-close {
+    width: 24px;
+    height: 24px;
+  }
+
+  .mobile-zoom-indicator {
+    width: 30px;
+    height: 30px;
+    font-size: 9px;
+  }
+}
+
+/* ==========================================
+   LANDSCAPE ORIENTATION ADJUSTMENTS
+   ========================================== */
+
+@media (max-width: 768px) and (orientation: landscape) {
+  .mobile-zoom-container {
+    bottom: 8px;
+    right: 8px;
+    padding: 4px 6px;
+    gap: 4px;
+  }
+
+  .mobile-zoom-btn {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    font-size: 13px;
+  }
+
+  .mobile-zoom-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .zoom-percentage {
+    font-size: 9px;
+  }
+
+  .mobile-zoom-close {
+    width: 26px;
+    height: 26px;
+  }
+
+  .mobile-zoom-indicator {
+    width: 32px;
+    height: 32px;
+    font-size: 9px;
+  }
+}
+
+/* ==========================================
+   DESKTOP (> 768px) - HIDE CONTROLS
+   ========================================== */
+
+@media (min-width: 769px) {
+  .mobile-zoom-container {
+    display: none !important;
+  }
+}
+
+/* ==========================================
+   ACCESSIBILITY
+   ========================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-zoom-container,
+  .mobile-zoom-btn,
+  .mobile-zoom-reset,
+  .mobile-zoom-close,
+  .mobile-zoom-indicator {
+    transition: none;
+  }
+
+  .mobile-zoom-btn:not(.disabled):active,
+  .mobile-zoom-reset:active,
+  .mobile-zoom-close:active,
+  .mobile-zoom-indicator:active {
+    transform: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: more) {
+  .mobile-zoom-container {
+    border-width: 2px;
+    background: rgba(12, 109, 88, 0.98);
+  }
+
+  .mobile-zoom-btn {
+    border-width: 2px;
+  }
+}
+
+/* ==========================================
+   DARK MODE SUPPORT
+   ========================================== */
+
+@media (prefers-color-scheme: dark) {
+  .mobile-zoom-container {
+    background: rgba(12, 109, 88, 0.95);
+  }
+
+  .mobile-zoom-btn:not(.disabled):hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  .mobile-zoom-container {
+    background: rgba(200, 230, 201, 0.92);
+    border-color: rgba(56, 142, 60, 0.4);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .mobile-zoom-btn {
+    background: rgba(56, 142, 60, 0.2);
+    color: #1b5e20;
+  }
+
+  .mobile-zoom-btn:not(.disabled):hover {
+    background: rgba(56, 142, 60, 0.3);
+  }
+
+  .mobile-zoom-level {
+    color: #1b5e20;
+  }
+
+  .zoom-percentage {
+    color: #1b5e20;
+  }
+
+  .mobile-zoom-reset {
+    background: rgba(56, 142, 60, 0.15);
+    color: #1b5e20;
+  }
+}
+
+/* ==========================================
+   PORTRAIT ORIENTATION (PHONES)
+   ========================================== */
+
+@media (max-width: 768px) and (orientation: portrait) {
+  .mobile-zoom-container {
+    bottom: 16px;
+    right: 16px;
+  }
+}
+
+/* ==========================================
+   NOTCH/SAFE AREA HANDLING (iOS)
+   ========================================== */
+
+@supports (padding: max(0px)) {
+  @media (max-width: 768px) {
+    .mobile-zoom-container {
+      bottom: max(12px, env(safe-area-inset-bottom));
+      right: max(12px, env(safe-area-inset-right));
+    }
+  }
+
+  @media (max-width: 480px) {
+    .mobile-zoom-container {
+      bottom: max(8px, env(safe-area-inset-bottom));
+      right: max(8px, env(safe-area-inset-right));
+    }
+  }
+}
+
+/* ==========================================
+   TOUCH AND POINTER INTERACTIONS
+   ========================================== */
+
+@media (hover: hover) {
+  .mobile-zoom-btn:not(.disabled):hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .mobile-zoom-reset:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .mobile-zoom-close:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
+@media (hover: none) {
+  /* Touch devices - no hover effects already handled by :active */
+}

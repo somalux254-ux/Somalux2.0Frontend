@@ -1,0 +1,290 @@
+.upload-page-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #0a0e11;
+  display: flex;
+  flex-direction: column;
+  z-index: 9999;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+.upload-page-header {
+  padding: 16px 20px;
+  background-color: #0a0e11;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.upload-page-header-btn {
+  background: none;
+  border: none;
+  color: #8696a0;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.upload-page-header-btn:hover {
+  color: #e9edef;
+  background-color: #1a2332;
+}
+
+.upload-page-header-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #e9edef;
+  flex: 1;
+}
+
+/* Mobile Tab Navigation */
+.upload-page-mobile-tabs {
+  display: none;
+  flex-shrink: 0;
+  background-color: #0a0e11;
+  gap: 0;
+}
+
+.upload-page-mobile-tab-btn {
+  flex: 1;
+  padding: 14px 8px;
+  background: transparent;
+  border: none;
+  color: #8696a0;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-page-mobile-tab-btn:hover {
+  color: #e9edef;
+}
+
+.upload-page-mobile-tab-btn.active {
+  color: #00a884;
+}
+
+.upload-page-mobile-tab-label {
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.upload-page-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.upload-page-spinner {
+  width: 36px;
+  height: 36px;
+  border: 2px solid #374151;
+  border-top: 2px solid #00a884;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.upload-page-loading-text {
+  color: #8696a0;
+  font-size: 13px;
+  margin: 0;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Scrollbar styling */
+.upload-page-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.upload-page-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.upload-page-container::-webkit-scrollbar-thumb {
+  background: rgba(0, 168, 132, 0.3);
+  border-radius: 3px;
+}
+
+.upload-page-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 168, 132, 0.5);
+}
+
+/* Ensure Upload component fills remaining space */
+.upload-page-container > div:last-child {
+  flex: 1;
+  overflow-y: auto;
+  width: 100%;
+  background-color: #0a0e11;
+}
+
+.upload-page-container .panel {
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  background-color: #0a0e11;
+}
+
+/* Default - Large screens (1024px and up) */
+@media (min-width: 1025px) {
+  .upload-page-header {
+    padding: 16px 20px;
+  }
+
+  .upload-page-header-title {
+    font-size: 18px;
+  }
+
+  .upload-page-mobile-tabs {
+    display: none !important;
+  }
+}
+
+/* Tablets and smaller (1024px and below) */
+@media (max-width: 1024px) {
+  .upload-page-header {
+    padding: 14px 16px;
+  }
+
+  .upload-page-header-title {
+    font-size: 16px;
+  }
+}
+
+/* Medium tablets (768px and below) - Show mobile tabs */
+@media (max-width: 768px) {
+  .upload-page-header {
+    padding: 12px 14px;
+  }
+
+  .upload-page-header-title {
+    font-size: 15px;
+  }
+
+  .upload-page-header-btn {
+    padding: 4px;
+  }
+
+  .upload-page-spinner {
+    width: 32px;
+    height: 32px;
+  }
+
+  .upload-page-loading-text {
+    font-size: 12px;
+  }
+
+  .upload-page-mobile-tabs {
+    display: flex;
+  }
+
+  .upload-page-mobile-tab-btn {
+    padding: 12px 6px;
+  }
+
+  .upload-page-mobile-tab-label {
+    font-size: 13px;
+  }
+}
+
+/* Small phones (480px and below) */
+@media (max-width: 480px) {
+  .upload-page-header {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .upload-page-header-title {
+    font-size: 14px;
+  }
+
+  .upload-page-header-btn {
+    padding: 4px;
+  }
+
+  .upload-page-spinner {
+    width: 28px;
+    height: 28px;
+    border: 1.5px solid #374151;
+    border-top: 1.5px solid #00a884;
+  }
+
+  .upload-page-loading-text {
+    font-size: 11px;
+  }
+
+  .upload-page-mobile-tabs {
+    display: flex;
+  }
+
+  .upload-page-mobile-tab-btn {
+    padding: 10px 4px;
+  }
+
+  .upload-page-mobile-tab-label {
+    font-size: 12px;
+  }
+}
+
+/* Extra small phones (320px and below) */
+@media (max-width: 360px) {
+  .upload-page-header {
+    padding: 8px 10px;
+  }
+
+  .upload-page-header-title {
+    font-size: 13px;
+  }
+
+  .upload-page-mobile-tab-btn {
+    padding: 8px 2px;
+  }
+
+  .upload-page-mobile-tab-label {
+    font-size: 11px;
+  }
+}
+
+/* Ensure body doesn't scroll */
+body.upload-page-open {
+  overflow: hidden;
+}
+
+/* Hide Upload component's built-in tabs and header on mobile */
+@media (max-width: 768px) {
+  .upload-page-container .upload-tabs {
+    display: none !important;
+  }
+
+  .upload-page-container .panel-title {
+    display: none !important;
+  }
+}

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b1216" />
+    <meta name="color-scheme" content="#0b1216">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#0b1216">
+    <meta name="apple-mobile-web-app-title" content="Somalux.co.ke">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Somalux.co.ke">
+    <meta name="msapplication-TileColor" content="#0b1216">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://somalux.co.ke/">
+    <meta property="og:title" content="Somalux.co.ke">
+    <meta property="og:description" content="Authenticity.">
+    <meta property="og:image" content="https://somalux.co.ke/somalux-logo.svg">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://somalux.co.ke/">
+    <meta name="twitter:title" content="Somalux.co.ke">
+    <meta name="twitter:description" content="Authentic Connections.">
+    <meta name="twitter:image" content="https://somalux.co.ke/somalux-logo.svg">
+    
+    <!-- App Icons -->
+    <link rel="icon" type="image/png" sizes="48x48" href="%PUBLIC_URL%/Som48.png">
+    <link rel="icon" type="image/png" sizes="72x72" href="%PUBLIC_URL%/Som72.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="%PUBLIC_URL%/Som152.png">
+    
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" crossorigin="use-credentials" />
+    
+    <title>Somalux ~ Authenticity</title>
+    
+    <style>
+      :root {
+        --bg-dark: #0b1216; /* Main dark background */
+        --bg-light: #2a3942; /* Secondary dark background */
+        --text-primary: #e9edef; /* Primary text color */
+        --text-secondary: #8696a0; /* Secondary text color */
+        --primary: #00a884; /* Primary accent color */
+        --primary-hover: #008069; /* Darker primary accent */
+        --accent: #008069; /* Accent color */
+        --error: #f15e6c; /* Error color */
+        --warning: #f8961e; /* Warning color */
+        --success: #00a884; /* Success color */
+        
+        --radius: 12px;
+        --radius-sm: 8px;
+        --shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        --shadow-hover: 0 4px 15px rgba(0, 0, 0, 0.4);
+        --transition: all 0.3s ease;
+      }
+      
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      
+      html, body {
+        height: 100%;
+        width: 100%;
+        scrollbar-width: none; /* Firefox */
+      }
+      
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--bg-dark);
+        color: var(--text-primary);
+        -webkit-tap-highlight-color: transparent;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      
+      /* Hide scrollbar for Chrome, Safari and Opera */
+      body::-webkit-scrollbar {
+        width: 0;
+      }
+      
+      /* Main app container */
+      #root {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none; /* Firefox */
+      }
+      
+      /* Hide scrollbar for Chrome, Safari and Opera */
+      #root::-webkit-scrollbar {
+        display: none;
+      }
+      
+      /* Splash Screen */
+      .splash-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #0b1216;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        opacity: 1;
+        transition: opacity 0.5s ease;
+      }
+      
+      .splash-screen.hidden {
+        display: none;
+      }
+      
+      .splash-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background-color: #0b1216;
+      }
+      
+      .splash-fallback {
+        position: absolute;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        text-align: center;
+        color: var(--text-primary);
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        background: transparent;
+        border: none;
+        padding: 0;
+        box-shadow: none;
+      }
+      
+      .splash-logo {
+        width: 32px;
+        height: 32px;
+        object-fit: contain;
+      }
+      
+      .splash-fallback h2 {
+        font-size: 12px;
+        margin: 0;
+        color: #d0d0d0;
+        font-weight: 400;
+        letter-spacing: 0.5px;
+      }
+      
+      .splash-fallback p {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin: 5px 0 0 0;
+        letter-spacing: 0.5px;
+      }
+      
+      .brand-primary {
+        animation: fadeOutUp 1.5s ease-in-out 1.5s forwards;
+      }
+      
+      .brand-secondary {
+        animation: fadeInUp 1.5s ease-in-out 1.5s forwards;
+        opacity: 0;
+      }
+      
+      @keyframes fadeOutUp {
+        0% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+      }
+      
+      @keyframes fadeInUp {
+        0% {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      /* Install Prompt */
+      .install-prompt {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: black;
+        color: var(--text-primary);
+        padding: 15px 20px;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        display: flex;
+        align-items: center;
+        z-index: 1000;
+        max-width: 90%;
+        animation: slideUp 0.3s ease-out;
+        border: 1px solid var(--bg-light);
+      }
+      
+      .install-prompt.hidden {
+        display: none;
+      }
+      
+      .install-prompt p {
+        margin-right: 15px;
+        font-size: 14px;
+      }
+      
+      .install-btn {
+        background-color: black;
+        color: var(--text-primary);
+        border: none;
+        padding: 8px 15px;
+        border-radius: var(--radius-sm);
+        font-weight: bold;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: var(--transition);
+      }
+      
+      .install-btn:hover {
+        background-color: var(--primary-hover);
+      }
+      
+      .close-prompt {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        margin-left: 14px;
+        font-size: 20px;
+        cursor: pointer;
+        transition: var(--transition);
+      }
+      
+      .close-prompt:hover {
+        color: var(--text-primary);
+      }
+      
+      /* Animations */
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      
+      @keyframes fadeInUp {
+        from { 
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to { 
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      @keyframes fadeInScale {
+        from { 
+          opacity: 0;
+          transform: scale(0.8);
+        }
+        to { 
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      
+      @keyframes bounce {
+        0%, 80%, 100% { 
+          transform: translateY(0);
+          opacity: 0.4;
+        }
+        40% { 
+          transform: translateY(-10px);
+          opacity: 1;
+        }
+      }
+      
+      @keyframes slideUp {
+        from { 
+          opacity: 0;
+          transform: translate(-50%, 20px);
+        }
+        to { 
+          opacity: 1;
+          transform: translate(-50%, 0);
+        }
+      }
+      
+      /* iOS safe areas */
+      @supports (padding-top: env(safe-area-inset-top)) {
+        body {
+          padding-top: env(safe-area-inset-top);
+          padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        .install-prompt {
+          bottom: calc(20px + env(safe-area-inset-bottom));
+        }
+      }
+      
+      /* No JavaScript Warning */
+      .no-script-warning {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--bg-dark);
+        color: var(--text-primary);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        text-align: center;
+        z-index: 1000;
+      }
+      
+      .no-script-warning h1 {
+        font-size: 24px;
+        margin-bottom: 20px;
+        color: var(--text-primary);
+      }
+      
+      .no-script-warning p {
+        margin-bottom: 15px;
+        line-height: 1.5;
+        color: var(--text-secondary);
+      }
+    </style>
+</head>
+<body>
+    <noscript>
+      <div class="no-script-warning">
+        <div>
+          <h1>JavaScript is required</h1>
+          <p>
+            Somalux.co.ke requires JavaScript to work properly.<br>
+            Please enable JavaScript in your browser settings to continue.
+          </p>
+        </div>
+      </div>
+    </noscript>
+    
+    <!-- Install Prompt -->
+    <div class="install-prompt hidden" id="installPrompt">
+      <p>Somalux.co.ke</p>
+      <button class="install-btn" id="installBtn">Install</button>
+      <button class="close-prompt" id="closePrompt">×</button>
+    </div>
+    
+    <!-- Main App Content -->
+    <div id="root"></div>
+    
+    <script>
+      // PWA Installation Handling
+      (function() {
+        let deferredPrompt;
+        const installPrompt = document.getElementById('installPrompt');
+        const installBtn = document.getElementById('installBtn');
+        const closePrompt = document.getElementById('closePrompt');
+        
+        if (installPrompt && installBtn && closePrompt) {
+          window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            setTimeout(() => {
+              installPrompt.classList.remove('hidden');
+            }, 3000);
+          });
+          
+          installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User response: ${outcome}`);
+            deferredPrompt = null;
+            installPrompt.classList.add('hidden');
+          });
+          
+          closePrompt.addEventListener('click', () => {
+            installPrompt.classList.add('hidden');
+          });
+        }
+      })();
+      
+    </script>
+</body>
+</html>    

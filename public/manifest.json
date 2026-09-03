@@ -1,0 +1,43 @@
+{
+  "name": "Somalux",
+  "short_name": "Somalux",
+  "description": "Somalux - Your ultimate campus social network",
+  "start_url": "/?utm_source=pwa",
+  "display": "standalone",
+  "background_color": "#0b1216",
+  "theme_color": "#0b1216",
+  "categories": ["social", "education", "networking"],
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "id": "/",
+  "prefer_related_applications": false,
+  
+  "icons": [
+    { "src": "/Som48.png", "type": "image/png", "sizes": "48x48", "purpose": "any" },
+    { "src": "/Som72.png", "type": "image/png", "sizes": "72x72", "purpose": "any" },
+    { "src": "/Som96.png", "type": "image/png", "sizes": "96x96", "purpose": "any maskable" },
+    { "src": "/Som144.png", "type": "image/png", "sizes": "144x144", "purpose": "any" },
+    { "src": "/Som152.png", "type": "image/png", "sizes": "152x152", "purpose": "any maskable" }
+  ],
+  
+  "screenshots": [
+    {
+      "src": "/screenshots/mobile-screenshot.png",
+      "type": "image/png",
+      "sizes": "1080x1920",
+      "form_factor": "narrow"
+    }
+  ],
+  
+  "shortcuts": [
+    {
+      "name": "New Post",
+      "short_name": "Post",
+      "description": "Create a new campus post",
+      "url": "/new-post",
+      "icons": [
+        { "src": "/icons/shortcut-post.png", "sizes": "96x96", "type": "image/png" }
+      ]
+    }
+  ]
+}

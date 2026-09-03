@@ -1,0 +1,127 @@
+/* DownloadLimitModal.css */
+
+.download-limit-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 16px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.download-limit-modal-content {
+  background: #111b21;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  max-width: 360px;
+  width: 100%;
+  color: #e9edef;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Body */
+.download-limit-modal-body {
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
+}
+
+.limit-title {
+  margin: 0;
+  font-size: 16px;
+  color: #e9edef;
+  font-weight: 500;
+}
+
+.limit-message {
+  margin: 0;
+  font-size: 13px;
+  color: #8696a0;
+  line-height: 1.5;
+}
+
+.upgrade-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #00a884;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+/* Footer */
+.download-limit-modal-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px 20px;
+  flex-shrink: 0;
+}
+
+.btn-secondary,
+.btn-primary {
+  flex: 1;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #8696a0;
+}
+
+.btn-secondary:hover {
+  color: #8696a0;
+}
+
+.btn-primary {
+  background: #00a884;
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background: #00a884;
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .download-limit-modal-content {
+    max-width: 100%;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .btn-secondary,
+  .btn-primary {
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+}

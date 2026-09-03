@@ -1,0 +1,360 @@
+/* Admin Notifications Page Styling */
+
+.admin-notifications-container {
+  padding: 24px;
+  background: #0b1216;
+  color: #e9edef;
+  min-height: 100vh;
+}
+
+.admin-notifications-header {
+  margin-bottom: 32px;
+}
+
+.admin-notifications-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  color: #e9edef;
+}
+
+.admin-notifications-header p {
+  margin: 0;
+  color: #8696a0;
+  font-size: 14px;
+}
+
+/* Tabs Styling */
+.admin-notifications-tabs {
+  padding: 0 16px;
+  border-bottom: 1px solid #2a3942;
+  margin-bottom: 24px;
+  background: #111b21;
+  border-radius: 8px 8px 0 0;
+}
+
+.admin-notifications-tabs .MuiTab-root {
+  color: #8696a0;
+  text-transform: none;
+  font-size: 14px;
+  min-width: auto;
+  padding: 16px 12px;
+  margin-right: 8px;
+  transition: color 0.2s ease;
+}
+
+.admin-notifications-tabs .MuiTab-root:hover {
+  color: #e9edef;
+}
+
+.admin-notifications-tabs .Mui-selected {
+  color: #00a884 !important;
+}
+
+.admin-notifications-tabs .MuiTabs-indicator {
+  background-color: #00a884 !important;
+}
+
+/* Content Area */
+.admin-notifications-content {
+  background: #111b21;
+  border-radius: 8px;
+  padding: 24px;
+  border: 1px solid #2a3942;
+}
+
+/* Form Elements */
+.admin-notifications-content .MuiTextField-root {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.admin-notifications-content .MuiTextField-root .MuiInputBase-root {
+  background: #0b1216;
+  color: #e9edef;
+  border-color: #2a3942;
+}
+
+.admin-notifications-content .MuiTextField-root .MuiInputBase-root:hover {
+  border-color: #3d4c56;
+}
+
+.admin-notifications-content .MuiInputBase-input {
+  color: #e9edef;
+  caret-color: #00a884;
+}
+
+.admin-notifications-content .MuiInputBase-input::placeholder {
+  color: #8696a0;
+  opacity: 0.7;
+}
+
+.admin-notifications-content .MuiFormLabel-root {
+  color: #8696a0 !important;
+}
+
+.admin-notifications-content .Mui-focused .MuiFormLabel-root {
+  color: #00a884 !important;
+}
+
+/* Buttons */
+.admin-notifications-content .MuiButton-root {
+  border-radius: 6px;
+  text-transform: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.admin-notifications-content .MuiButton-contained {
+  background-color: #00a884;
+  color: #fff;
+}
+
+.admin-notifications-content .MuiButton-contained:hover {
+  background-color: #009670;
+}
+
+.admin-notifications-content .MuiButton-outlined {
+  border-color: #2a3942;
+  color: #e9edef;
+}
+
+.admin-notifications-content .MuiButton-outlined:hover {
+  border-color: #00a884;
+  background-color: rgba(0, 168, 132, 0.1);
+}
+
+/* Recipient Selection */
+.recipient-filter-section {
+  background: #0b1216;
+  border: 1px solid #2a3942;
+  border-radius: 6px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.recipient-filter-section h3 {
+  color: #e9edef;
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+/* Chips */
+.admin-notifications-content .MuiChip-root {
+  background: #2a3942;
+  color: #e9edef;
+  border: 1px solid #3d4c56;
+}
+
+.admin-notifications-content .MuiChip-filled {
+  background: rgba(0, 168, 132, 0.2);
+  color: #00a884;
+}
+
+/* Tables */
+.admin-notifications-content .MuiTable-root {
+  color: #e9edef;
+}
+
+.admin-notifications-content .MuiTableHead-root {
+  background: #0b1216;
+  border-bottom: 2px solid #2a3942;
+}
+
+.admin-notifications-content .MuiTableHead-root .MuiTableCell-root {
+  color: #e9edef;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  border-bottom-color: #2a3942;
+  padding: 12px 16px;
+  background: #0b1216;
+}
+
+.admin-notifications-content .MuiTableBody-root .MuiTableRow-root {
+  border-bottom: 1px solid #2a3942;
+  transition: background-color 0.2s ease;
+}
+
+.admin-notifications-content .MuiTableBody-root .MuiTableRow-root:hover {
+  background-color: rgba(0, 168, 132, 0.05);
+}
+
+.admin-notifications-content .MuiTableCell-root {
+  color: #e9edef;
+  border-bottom-color: #2a3942;
+  padding: 14px 16px;
+  font-size: 13px;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-badge.draft {
+  background: rgba(230, 124, 115, 0.15);
+  color: #ff8a65;
+}
+
+.status-badge.scheduled {
+  background: rgba(66, 133, 244, 0.15);
+  color: #42a5f5;
+}
+
+.status-badge.sending {
+  background: rgba(251, 188, 5, 0.15);
+  color: #fdd835;
+}
+
+.status-badge.sent {
+  background: rgba(0, 168, 132, 0.15);
+  color: #00a884;
+}
+
+.status-badge.failed {
+  background: rgba(234, 67, 53, 0.15);
+  color: #ea4335;
+}
+
+/* Cards */
+.admin-notifications-content .MuiCard-root {
+  background: #0b1216;
+  border: 1px solid #2a3942;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.admin-notifications-content .MuiCardContent-root {
+  color: #e9edef;
+  padding: 16px;
+}
+
+.admin-notifications-content .MuiCard-root h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e9edef;
+}
+
+.admin-notifications-content .MuiCard-root p {
+  margin: 0;
+  font-size: 12px;
+  color: #8696a0;
+}
+
+/* Alerts */
+.admin-notifications-content .MuiAlert-root {
+  border-radius: 8px !important;
+  margin-bottom: 20px;
+}
+
+.admin-notifications-content .MuiAlert-standardSuccess {
+  background-color: rgba(0, 168, 132, 0.1) !important;
+  color: #00a884 !important;
+  border: 1px solid rgba(0, 168, 132, 0.3) !important;
+}
+
+.admin-notifications-content .MuiAlert-standardError {
+  background-color: rgba(234, 67, 53, 0.1) !important;
+  color: #ff8a65 !important;
+  border: 1px solid rgba(234, 67, 53, 0.3) !important;
+}
+
+.admin-notifications-content .MuiAlert-standardWarning {
+  background-color: rgba(251, 188, 5, 0.1) !important;
+  color: #fdd835 !important;
+  border: 1px solid rgba(251, 188, 5, 0.3) !important;
+}
+
+.admin-notifications-content .MuiAlert-standardInfo {
+  background-color: rgba(66, 133, 244, 0.1) !important;
+  color: #42a5f5 !important;
+  border: 1px solid rgba(66, 133, 244, 0.3) !important;
+}
+
+/* Loading States */
+.admin-notifications-content .MuiCircularProgress-root {
+  color: #00a884;
+}
+
+.admin-notifications-content .MuiSkeleton-root {
+  background: linear-gradient(90deg, #1a252e 25%, #2a3942 50%, #1a252e 75%);
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #8696a0;
+}
+
+.empty-state h2 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #e9edef;
+}
+
+.empty-state p {
+  margin: 0 0 20px 0;
+  font-size: 14px;
+}
+
+.empty-state-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #2a3942;
+}
+
+.form-actions button {
+  flex: 1;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .admin-notifications-container {
+    padding: 16px;
+  }
+
+  .admin-notifications-content {
+    padding: 16px;
+  }
+
+  .admin-notifications-tabs {
+    padding: 0 8px;
+  }
+
+  .admin-notifications-header h1 {
+    font-size: 20px;
+  }
+
+  /* Table overflow on mobile */
+  .admin-notifications-content .MuiTableContainer-root {
+    overflow-x: auto;
+  }
+
+  /* Form actions on mobile */
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+}
