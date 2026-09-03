@@ -9,14 +9,11 @@ import { SomaLux } from './SomaLux';
 import SpeedTracker from './SpeedTracker';
 import { supabase } from './SomaLux/Books/supabaseClient';
 import { handleOAuthCallback } from './utils/oauthHandler';
-// Register the service worker so the site is installable as a PWA.
+// Remove old PWA workers so the website offers the native APK instead.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
-    try {
-      await navigator.serviceWorker.register('/service-worker.js');
-    } catch (error) {
-      console.warn('Service worker registration failed:', error);
-    }
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map((registration) => registration.unregister()));
   });
 }
 
