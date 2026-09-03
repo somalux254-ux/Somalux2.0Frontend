@@ -15,6 +15,13 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.38);
 }
 
+.native-install-logo {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  object-fit: contain;
+}
+
 .native-install-prompt div {
   display: grid;
   gap: 4px;
@@ -23,7 +30,8 @@
 }
 
 .native-install-prompt strong {
-  font-size: 15px;
+  font-size: 14px;
+  white-space: nowrap;
 }
 
 .native-install-prompt span {
