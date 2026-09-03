@@ -7,6 +7,7 @@ import { BookManagement } from "./SomaLux/BookDashboard/BookManagement";
 import { BooksAdmin } from "./SomaLux/Books/Admin/BooksAdmin";
 import { SubscriptionThanks } from "./SomaLux/Subscriptions/SubscriptionThanks";
 import { EmailSender } from "./SomaLux/Admin/EmailSender";
+import NativeInstallPrompt from "./components/NativeInstallPrompt";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -15,6 +16,7 @@ export function SomaLux() {
     return (
         <FeatureFlagsProvider>
             <div className="SomaLux">
+                <NativeInstallPrompt />
                 {/* Global Toasts */}
                 <ToastContainer
                     position="top-right"
