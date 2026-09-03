@@ -1,13 +1,13 @@
 .native-install-prompt {
   position: fixed;
-  right: 18px;
-  bottom: 18px;
+  right: 16px;
+  bottom: 16px;
   z-index: 1000;
   display: flex;
   align-items: center;
-  gap: 14px;
-  max-width: min(460px, calc(100vw - 28px));
-  padding: 12px 14px;
+  gap: 12px;
+  max-width: min(390px, calc(100vw - 24px));
+  padding: 10px 12px;
   color: #e9edef;
   background: #101b20;
   border: 1px solid #2b454c;
@@ -22,12 +22,12 @@
 }
 
 .native-install-prompt strong {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .native-install-prompt span {
   color: #a9b8bc;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .native-install-action {
@@ -35,7 +35,7 @@
   align-items: center;
   gap: 6px;
   flex: 0 0 auto;
-  padding: 9px 11px;
+  padding: 8px 10px;
   color: #071411;
   background: #00a884;
   border-radius: 6px;
@@ -61,9 +61,9 @@
 
 @media (max-width: 560px) {
   .native-install-prompt {
-    right: 12px;
-    bottom: 12px;
-    left: 12px;
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
     gap: 10px;
   }
 

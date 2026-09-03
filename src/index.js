@@ -9,14 +9,14 @@ import { SomaLux } from './SomaLux';
 import SpeedTracker from './SpeedTracker';
 import { supabase } from './SomaLux/Books/supabaseClient';
 import { handleOAuthCallback } from './utils/oauthHandler';
-// Remove legacy service workers so stale bundles cannot keep issuing old requests.
+// Register the service worker so the site is installable as a PWA.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
-    const registrations = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(registrations.map(registration => registration.unregister()));
-
-    const cacheNames = await caches.keys();
-    await Promise.all(cacheNames.map(cacheName => caches.delete(cacheName)));
+    try {
+      await navigator.serviceWorker.register('/service-worker.js');
+    } catch (error) {
+      console.warn('Service worker registration failed:', error);
+    }
   });
 }
 

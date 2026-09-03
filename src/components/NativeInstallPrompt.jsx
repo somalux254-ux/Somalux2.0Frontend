@@ -10,22 +10,27 @@ export const NativeInstallPrompt = () => {
   const [isVisible, setIsVisible] = React.useState(() => {
     const isStandalone = window.matchMedia?.('(display-mode: standalone)').matches
       || window.navigator.standalone === true;
-    const wasDismissed = window.localStorage.getItem(DISMISSED_KEY) === 'true';
-    return !Capacitor.isNativePlatform() && !isStandalone && !wasDismissed;
+    let wasDismissed = false;
+    try {
+      wasDismissed = window.localStorage.getItem(DISMISSED_KEY) === 'true';
+    } catch (error) {}
+    return Capacitor.getPlatform() === 'web' && !isStandalone && !wasDismissed;
   });
 
   const dismissPrompt = () => {
-    window.localStorage.setItem(DISMISSED_KEY, 'true');
+    try {
+      window.localStorage.setItem(DISMISSED_KEY, 'true');
+    } catch (error) {}
     setIsVisible(false);
   };
 
   if (!isVisible) return null;
 
   return (
-    <aside className="native-install-prompt" role="status">
+    <aside className="native-install-prompt" role="status" aria-label="Install SomaLux">
       <div>
-        <strong>Get the SomaLux app</strong>
-        <span>Download the Android app for the full experience.</span>
+        <strong>Get SomaLux</strong>
+        <span>Install the Android app</span>
       </div>
       <a className="native-install-action" href={APK_DOWNLOAD_URL} onClick={dismissPrompt}>
         <FiDownload aria-hidden="true" />
