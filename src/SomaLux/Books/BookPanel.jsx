@@ -4,8 +4,7 @@ import { supabase } from './supabaseClient';
 import { initializeSession, setupAuthListener } from '../../utils/sessionManager';
 import { Download } from './Download';
 import { AuthModal } from './AuthModal';
-import { SubscriptionModal } from './SubscriptionModal';
-import VerificationTierModal from './VerificationTierModal';
+import SubscriptionModal from '../Subscriptions/SubscriptionModal';
 import { FaSearch } from 'react-icons/fa';
 import {
   FiBook,
@@ -78,12 +77,12 @@ export const BookPanel = ({ demoMode = false }) => {
   const [welcomeMessage, setWelcomeMessage] = useState(demoMode);
   const [user, setUser] = useState(null);
   const [subscription, setSubscription] = useState(null);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [checkingSubscription, setCheckingSubscription] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authAction, setAuthAction] = useState('action');
   const [loadingUser, setLoadingUser] = useState(true);
   const [showReader, setShowReader] = useState(false);
-  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
   const [focusedBookId, setFocusedBookId] = useState(null);
   const [focusedBookLoading, setFocusedBookLoading] = useState(false);
@@ -128,6 +127,12 @@ export const BookPanel = ({ demoMode = false }) => {
 
   // ⚡ Debounce search term to avoid excessive filtering on every keystroke
   useEffect(() => {
+    if (!user) {
+      setDebouncedSearchTerm('');
+      setSearchTerm('');
+      return undefined;
+    }
+
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
       setCurrentPage(1); // Reset to page 1 on search
@@ -973,6 +978,8 @@ export const BookPanel = ({ demoMode = false }) => {
   // Debounced search effect: when searchTerm changes, perform server-side search
   useEffect(() => {
     const term = (searchTerm || '').trim();
+    if (!user) return undefined;
+
     if (!term) {
       // The initial catalogue load already handles an empty search.
       if (previousSearchTermRef.current) fetchAll(true, 1);
@@ -989,7 +996,7 @@ export const BookPanel = ({ demoMode = false }) => {
     }, 300);
 
     return () => clearTimeout(id);
-  }, [searchTerm]);
+  }, [searchTerm, user]);
 
   // Background search fetch that stores results in cache without touching UI state
   const fetchSearchBackground = async (term, page = 1) => {
@@ -1285,6 +1292,12 @@ export const BookPanel = ({ demoMode = false }) => {
             value={searchTerm}
             inputMode="search"
             enterKeyHint="search"
+            onFocus={(e) => {
+              if (!loadingUser && !user) {
+                e.currentTarget.blur();
+                requireAuth('search');
+              }
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();
@@ -1292,6 +1305,7 @@ export const BookPanel = ({ demoMode = false }) => {
               }
             }}
             onChange={(e) => {
+              if (!user) return;
               setSearchTerm(e.target.value);
               setWelcomeMessage(false);
             }}
@@ -1774,8 +1788,8 @@ export const BookPanel = ({ demoMode = false }) => {
                     book={selectedBook}
                     variant="full"
                     user={user}
+                    onUpgradeClick={() => setShowSubscriptionModal(true)}
                     className="btn-readBKP btn-action-primaryBKP"
-                    onUpgradeClick={() => setShowSubscriptionModal?.(true)}
                     onDownloadStart={async () => {
                       if (!requireAuth('download')) return false;
 
@@ -1916,23 +1930,11 @@ export const BookPanel = ({ demoMode = false }) => {
 
       <SubscriptionModal
         isOpen={showSubscriptionModal}
-        onClose={() => {
-          setShowSubscriptionModal(false);
-        }}
-        user={user}
-        onSubscribed={async (sub) => {
-          setSubscription(sub);
-          setShowSubscriptionModal(false);
-        }}
-      />
-
-      <VerificationTierModal
-        isOpen={showSubscriptionModal}
         onClose={() => setShowSubscriptionModal(false)}
-        userTier={user?.subscription_tier || 'basic'}
-        onSelectTier={(tier) => {
-          // This will handle tier selection
-          // In next phase: integrate payment processing
+        user={user}
+        product="books"
+        onSubscribed={(sub) => {
+          setSubscription(sub);
           setShowSubscriptionModal(false);
         }}
       />

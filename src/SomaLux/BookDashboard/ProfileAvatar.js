@@ -76,7 +76,10 @@ export const ProfileAvatar = ({
     };
     const prevAvatarPath = extractPathFromUrl(prevAvatarUrl);
 
-    if (!authUser || !authUser.id) {
+    const { data: { session } = {} } = await supabase.auth.getSession();
+    const sessionUser = session?.user;
+
+    if (!sessionUser?.id) {
       toast.info('Sign in to save your profile photo permanently');
       return;
     }
@@ -85,8 +88,7 @@ export const ProfileAvatar = ({
 
     try {
       const ext = file.name.split('.').pop();
-      // Simplify file path - just use timestamp and extension
-      const fileName = `${Date.now()}.${ext}`;
+      const fileName = `${sessionUser.id}/${Date.now()}.${ext}`;
       console.log('Uploading file as:', fileName);
 
       // Upload to storage bucket
@@ -123,7 +125,7 @@ export const ProfileAvatar = ({
       }
 
       // Update local storage
-      const stored = getStoredUserProfile(authUser);
+      const stored = getStoredUserProfile(sessionUser);
       const merged = { ...stored, avatar: publicUrl, avatar_path: fileName };
       const key = authUser?.id ? `userProfile_${authUser.id}` : 'userProfile';
       localStorage.setItem(key, JSON.stringify(merged));
@@ -135,8 +137,8 @@ export const ProfileAvatar = ({
       // Update avatar map
       try {
         const map = JSON.parse(localStorage.getItem('avatarsByEmail') || '{}');
-        if (authUser?.email) {
-          map[authUser.email] = publicUrl;
+        if (sessionUser.email) {
+          map[sessionUser.email] = publicUrl;
           localStorage.setItem('avatarsByEmail', JSON.stringify(map));
         }
       } catch (e) {
@@ -151,7 +153,7 @@ export const ProfileAvatar = ({
             avatar_url: publicUrl,
             avatar_path: fileName  // Also save the file name for reference
           })
-          .eq('id', authUser?.id);
+          .eq('id', sessionUser.id);
         if (profileError) {
           console.warn('Failed to update profile avatar_url:', profileError?.message);
         } else {

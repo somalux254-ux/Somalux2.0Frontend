@@ -1,0 +1,195 @@
+html,
+body,
+#root {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+[data-theme="light"] .book-management,
+[data-theme="light"] .user-profile-container {
+  background: var(--bg-main) !important;
+  color: var(--text-main) !important;
+}
+
+[data-theme="light"] .settings-stp-page-container,
+[data-theme="light"] .settings-stp-page-header,
+[data-theme="light"] .settings-stp-page-content {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .settings-stp-page-title,
+[data-theme="light"] .settings-stp-page-header .settings-stp-back-btn {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .settings-stp-tab-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(23, 32, 39, 0.14) !important;
+  box-shadow: 0 2px 8px rgba(23, 32, 39, 0.08) !important;
+}
+
+[data-theme="light"] .settings-stp-tab-card:hover,
+[data-theme="light"] .settings-stp-tab-card:focus,
+[data-theme="light"] .settings-stp-tab-card:focus-visible {
+  background: #ffffff !important;
+  border-color: rgba(0, 168, 68, 0.35) !important;
+  box-shadow: 0 3px 10px rgba(23, 32, 39, 0.12) !important;
+}
+
+[data-theme="light"] .settings-stp-tab-card .tab-card-label {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .settings-stp-tab-card .tab-card-description {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="light"] .settings-stp-tab-card .tab-card-icon,
+[data-theme="light"] .settings-stp-tab-card .tab-card-arrow {
+  color: #52616b !important;
+}
+
+[data-theme="light"] .chrome-dropdown {
+  background: #eef1f2 !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-muted) !important;
+  box-shadow: 0 10px 30px rgba(23, 32, 39, 0.18) !important;
+}
+
+[data-theme="light"] .chrome-user-block {
+  border-bottom-color: var(--border-muted) !important;
+}
+
+[data-theme="light"] .chrome-user-block h4,
+[data-theme="light"] .chrome-user-block p,
+[data-theme="light"] .genres-block h5,
+[data-theme="light"] .library-info,
+[data-theme="light"] .profile-dropdown-label {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .chrome-dropdown h4 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .chrome-dropdown p {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="light"] .chrome-dropdown .profile-actions-section {
+  border-top-color: var(--border-muted) !important;
+}
+
+[data-theme="light"] .chrome-dropdown .profile-actions-grid button {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .chrome-dropdown .profile-actions-grid button[style*="34B7F1"] {
+  color: #087ea4 !important;
+}
+
+[data-theme="light"] .chrome-item,
+[data-theme="light"] .library-item,
+[data-theme="light"] .genre-item {
+  background: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-muted) !important;
+}
+
+[data-theme="light"] .settings-user-agreement-page .agreement-text section,
+[data-theme="light"] .settings-user-agreement-page .agreement-text details,
+[data-theme="light"] .settings-usage-policy-page .agreement-text details {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 10px 0 !important;
+}
+
+[data-theme="dark"] .settings-user-agreement-page .agreement-text section,
+[data-theme="dark"] .settings-user-agreement-page .agreement-text details,
+[data-theme="dark"] .settings-usage-policy-page .agreement-text details {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 10px 0 !important;
+}
+
+[data-theme="light"] .book-management-header,
+[data-theme="light"] .tools-scroll-container-convert,
+[data-theme="light"] .book-management,
+[data-theme="light"] .book-management .file-converter-content-convert,
+[data-theme="light"] .book-management .containerBKP {
+  background: #ffffff !important;
+}
+
+[data-theme="light"] .book-management-header,
+[data-theme="light"] .tools-scroll-container-convert {
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+
+[data-theme="light"] .book-management.scrolled .book-management-header {
+  box-shadow: none !important;
+}
+
+[data-theme="light"] .book-management .header-title,
+[data-theme="light"] .book-management .tool-button-convert {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .book-management .tool-button-convert.active-convert {
+  color: #008f3d !important;
+  border-bottom-color: #008f3d !important;
+}
+
+[data-theme="light"] .book-management .file-converter-content-convert,
+[data-theme="light"] .book-management .containerBKP,
+[data-theme="light"] .book-management .book-cardBKP,
+[data-theme="light"] .book-management .search-containerBKP,
+[data-theme="light"] .book-management .details-containerBKP,
+[data-theme="light"] .book-management .stats-containerBKP {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-muted) !important;
+}
+
+[data-theme="light"] .book-management .book-cardBKP {
+  background-color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(23, 32, 39, 0.08) !important;
+}
+
+[data-theme="light"] .book-management .titleBKP,
+[data-theme="light"] .book-management .subtitleBKP,
+[data-theme="light"] .book-management .book-cardBKP,
+[data-theme="light"] .book-management .book-cardBKP * {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .book-management .book-cardBKP .subtitleBKP,
+[data-theme="light"] .book-management .book-cardBKP .text-muted,
+[data-theme="light"] .book-management .book-cardBKP small {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="light"] .book-management .file-converter-content-convert[data-active-tab="chatme"] {
+  background-color: var(--bg-primary) !important;
+}
+
+[data-theme="dark"] .book-management .file-converter-content-convert,
+[data-theme="dark"] .book-management .containerBKP,
+[data-theme="dark"] .book-management .gridBKP,
+[data-theme="dark"] .book-management .book-cardBKP,
+[data-theme="dark"] .book-management .search-containerBKP,
+[data-theme="dark"] .book-management .details-containerBKP,
+[data-theme="dark"] .book-management .stats-containerBKP,
+[data-theme="dark"] .book-management .file-converter-content-convert[data-active-tab="chatme"] {
+  background-color: var(--bg-primary) !important;
+}
+
+[data-theme="dark"] .book-management .book-cardBKP {
+  background: transparent !important;
+  border: 0.5px solid rgba(179, 188, 197, 0.2) !important;
+  border-radius: 8px !important;
+}

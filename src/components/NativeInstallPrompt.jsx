@@ -39,7 +39,7 @@ export const NativeInstallPrompt = () => {
       <img className="native-install-logo" src="/Som96.png" alt="" />
       <div>
         <strong>SomaLux</strong>
-        <span>Download the Android app for a faster, fuller reading experience.</span>
+        <span>Download the Android app for a better experience.</span>
       </div>
       <a className="native-install-action" href={APK_DOWNLOAD_URL} onClick={dismissPrompt}>
         <FiDownload size={24} aria-hidden="true" />

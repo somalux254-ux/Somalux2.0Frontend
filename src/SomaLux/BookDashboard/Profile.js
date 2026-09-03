@@ -5,8 +5,6 @@ import { userCache } from "../Books/utils/cacheManager";
 import { supabase } from "../Books/supabaseClient";
 import { ProfileAvatar, ProfilePlaceholder } from "./ProfileAvatar";
 import { AuthModals } from "./AuthModals";
-import VerificationTierModal from "../Books/VerificationTierModal";
-import QRCodeShare from "../../components/QRCodeShare";
 import { getCurrentUserProfile } from "../Books/Admin/api";
 import "./Profile.css";
 
@@ -17,8 +15,6 @@ export const Profile = ({ user: propUser = null }) => {
   const navigate = useNavigate();
   const [authUser, setAuthUser] = useState(null);
   const [currentUserTier, setCurrentUserTier] = useState('basic');
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [showQRCode, setShowQRCode] = useState(false);
   const [showActionsGrid, setShowActionsGrid] = useState(false);
 
   // Local state
@@ -151,18 +147,6 @@ export const Profile = ({ user: propUser = null }) => {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
-
-  // Prevent body scroll when QR Code modal is open
-  useEffect(() => {
-    if (showQRCode) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [showQRCode]);
 
   // Prevent body scroll when Actions Grid modal is open
   useEffect(() => {
@@ -472,12 +456,12 @@ export const Profile = ({ user: propUser = null }) => {
               {/* Avatar & Info */}
               <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-start', flex: 1 }}>
                 {/* Avatar */}
-                <div style={{ flexShrink: 0, marginTop: '-18px', marginLeft: '-18px' }}>
+                <div style={{ flexShrink: 0, marginTop: '-18px', marginLeft: '-10px' }}>
                   <ProfileAvatar
                     profileImage={profileImage}
                     setProfileImage={setProfileImage}
                     authUser={authUser}
-                    size={40}
+                    size={52}
                     showUploadButton={true}
                   />
                 </div>
@@ -496,7 +480,7 @@ export const Profile = ({ user: propUser = null }) => {
             </div>
 
             {/* Actions & Auth Section - Right below profile */}
-            <div style={{
+            <div className="profile-auth-actions" style={{
               padding: '0',
               marginTop: '8px',
               display: 'flex',
@@ -504,43 +488,6 @@ export const Profile = ({ user: propUser = null }) => {
               alignItems: 'center',
               justifyContent: 'flex-end',
             }}>
-              {/* Grid Actions Button */}
-              {authUser && (
-                <button
-                  onClick={() => setShowActionsGrid(!showActionsGrid)}
-                  aria-label={showActionsGrid ? 'Close profile menu' : 'Open profile menu'}
-                  style={{
-                    padding: '4px',
-                    fontWeight: '600',
-                    color: '#00a884',
-                    background: 'transparent',
-                    border: 'none',
-                    borderRadius: '3px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                  title="Quick actions"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="-6.5 0 32 32"
-                    version="1.1"
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-hidden="true"
-                    fill="currentColor"
-                    style={{
-                      transform: showActionsGrid ? 'rotate(180deg)' : 'rotate(0deg)',
-                      transition: 'transform 0.2s ease',
-                    }}
-                  >
-                    <path d="M18.813 11.406l-7.906 9.906c-0.75 0.906-1.906 0.906-2.625 0l-7.906-9.906c-0.75-0.938-0.375-1.656 0.781-1.656h16.875c1.188 0 1.531 0.719 0.781 1.656z"></path>
-                  </svg>
-                </button>
-              )}
-
               {/* Auth Button */}
               {!authUser && (
                 <button
@@ -570,15 +517,15 @@ export const Profile = ({ user: propUser = null }) => {
             </div>
           </div>
 
-          {/* Actions Grid Dropdown - Inside Profile Dropdown */}
-          {showActionsGrid && (
-            <div style={{
-              padding: '12px',
-              background: '#0d1217',
-              borderRadius: '8px',
-              border: 'none',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
-              marginTop: '12px'
+          {/* Profile actions */}
+          {authUser && (
+            <div className="profile-actions-section" style={{
+              padding: '10px 10px 10px',
+              background: 'transparent',
+              borderRadius: 0,
+              borderTop: '0.5px solid rgba(42, 57, 66, 0.7)',
+              boxShadow: 'none',
+              marginTop: '10px'
             }}>
               <div className="profile-actions-grid" style={{
                 display: 'flex',
@@ -626,6 +573,33 @@ export const Profile = ({ user: propUser = null }) => {
                 >
                   Upload
                 </button>
+
+                {/* Settings */}
+                <button
+                  onClick={() => {
+                    setShowActionsGrid(false);
+                    setIsOpen(false);
+                    navigate('/settings');
+                  }}
+                  style={{
+                    padding: '5px 9px',
+                    background: 'transparent',
+                    border: '1px solid #8696a0',
+                    color: '#c9d3d8',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '10px',
+                    fontWeight: '600',
+                    borderRadius: '4px',
+                    whiteSpace: 'nowrap',
+                    width: '100%'
+                  }}
+                >
+                  Settings
+                </button>
+
                 </div>
 
                 {/* Right Column - 3 buttons */}
@@ -636,106 +610,6 @@ export const Profile = ({ user: propUser = null }) => {
                   flex: 1
                 }}>
 
-                {/* QR Code */}
-                <button
-                  onClick={() => {
-                    setShowActionsGrid(false);
-                    setShowQRCode(true);
-                  }}
-                  style={{
-                    padding: '5px 9px',
-                    background: 'transparent',
-                    border: '1px solid #a78bfa',
-                    color: '#a78bfa',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    fontSize: '10px',
-                    fontWeight: '600',
-                    borderRadius: '4px',
-                    whiteSpace: 'nowrap',
-                    width: '100%',
-                    justifyContent: 'center'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(167, 139, 250, 0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
-                >
-                  <span>QR Code</span>
-                </button>
-
-                {/* Upgrade */}
-                {currentUserTier === 'basic' && (
-                  <button
-                    onClick={() => {
-                      setShowActionsGrid(false);
-                      setShowVerificationModal(true);
-                    }}
-                    style={{
-                      padding: '5px 9px',
-                      background: 'transparent',
-                      border: '1px solid #f59e0b',
-                      color: '#f59e0b',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      fontSize: '10px',
-                      fontWeight: '600',
-                      borderRadius: '4px',
-                      whiteSpace: 'nowrap',
-                      width: '100%',
-                      justifyContent: 'center'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(245, 158, 11, 0.1)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                    }}
-                  >
-                    <span>Upgrade</span>
-                  </button>
-                )}
-
-                {/* Sign Out */}
-                <button
-                  onClick={() => {
-                    setShowActionsGrid(false);
-                    setShowSignOutModal(true);
-                  }}
-                  style={{
-                    padding: '5px 9px',
-                    background: 'transparent',
-                    border: '1px solid #ff6b6b',
-                    color: '#ff6b6b',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    fontSize: '10px',
-                    fontWeight: '600',
-                    borderRadius: '4px',
-                    whiteSpace: 'nowrap',
-                    width: '100%',
-                    justifyContent: 'center'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 107, 107, 0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
-                >
-                  <span>Sign Out</span>
-                </button>
                 </div>
               </div>
             </div>
@@ -756,71 +630,8 @@ export const Profile = ({ user: propUser = null }) => {
         markProfileSignedOut={markProfileSignedOut}
       />
 
-      {/* Verification Tier Modal */}
-      <VerificationTierModal
-        isOpen={showVerificationModal}
-        onClose={() => setShowVerificationModal(false)}
-        userTier={currentUserTier || 'basic'}
-        onSelectTier={(tier) => {
-          // This will handle tier selection
-          // In next phase: integrate payment processing
-          setShowVerificationModal(false);
-        }}
-        isLoading={false}
-      />
       </div>
 
-      {/* QR Code Share Modal - Outside all containers for proper centering */}
-      {showQRCode && (
-        <div className="qr-modal-overlay" onClick={() => setShowQRCode(false)}>
-          <div 
-            className="qr-modal-container"
-            onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: '450px', overflow: 'visible', position: 'relative' }}
-          >
-            {/* Close Button */}
-            <button
-              className="qr-modal-close-btn"
-              onClick={() => setShowQRCode(false)}
-              aria-label="Close"
-              style={{
-                position: 'absolute',
-                top: '10px',
-                right: '-15px',
-                background: 'none',
-                border: 'none',
-                fontSize: '28px',
-                width: '38px',
-                height: '38px',
-                cursor: 'pointer',
-                color: '#8696a0',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s',
-                zIndex: 10
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 107, 107, 0.1)';
-                e.currentTarget.style.color = '#ff6b6b';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'none';
-                e.currentTarget.style.color = '#8696a0';
-              }}
-            >
-              ×
-            </button>
-
-            <QRCodeShare 
-              url="https://somalux.co.ke"
-              title="Scan to Visit SomaLux"
-              description="Share this QR code to help others discover our platform"
-            />
-          </div>
-        </div>
-      )}
     </>
   );
 

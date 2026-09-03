@@ -179,7 +179,6 @@ export const Download = ({
   downloadText = 'Save',
   downloadingText = 'Saving...',
   user,
-  onUpgradeClick,
   className,
 }) => {
   const [downloading, setDownloading] = useState(false);
@@ -303,10 +302,6 @@ export const Download = ({
           remaining={limitInfo?.remaining}
           limit={limitInfo?.limit}
           error={limitInfo?.error}
-          onUpgradeClick={() => {
-            setShowLimitModal(false);
-            onUpgradeClick?.();
-          }}
         />
       </>
     );
@@ -339,10 +334,6 @@ export const Download = ({
         remaining={limitInfo?.remaining}
         limit={limitInfo?.limit}
         error={limitInfo?.error}
-        onUpgradeClick={() => {
-          setShowLimitModal(false);
-          onUpgradeClick?.();
-        }}
       />
     </>
   );

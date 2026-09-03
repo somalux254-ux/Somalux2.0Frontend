@@ -27,13 +27,14 @@
 
 .auth-modal-close {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 2px;
+  right: 2px;
+  z-index: 1;
   background: transparent;
   border: none;
   color: var(--text-light);                 /* #8696a0 */
   cursor: pointer;
-  padding: 8px;
+  padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;

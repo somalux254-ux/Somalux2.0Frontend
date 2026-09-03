@@ -5,7 +5,9 @@ import { FeatureFlagsProvider } from "./context/FeatureFlagsContext";
 import UserUploadPage from "./SomaLux/User/UserProfile/UserUploadPage";
 import { BookManagement } from "./SomaLux/BookDashboard/BookManagement";
 import { BooksAdmin } from "./SomaLux/Books/Admin/BooksAdmin";
-import { SubscriptionThanks } from "./SomaLux/Subscriptions/SubscriptionThanks";
+import SettingsPage from './SomaLux/Settings/SettingsPage';
+import { NotificationProvider } from './SomaLux/contexts/NotificationContext';
+import { supabase } from './SomaLux/Books/supabaseClient';
 import { EmailSender } from "./SomaLux/Admin/EmailSender";
 import NativeInstallPrompt from "./components/NativeInstallPrompt";
 
@@ -40,11 +42,16 @@ export function SomaLux() {
                         {/* Books */}
                         <Route path="/BookManagement" element={<BookManagement />} />
                         <Route path="/BookManagement/:tab" element={<BookManagement />} />
+                        <Route path="/settings" element={
+                            <NotificationProvider>
+                                <SettingsPage
+                                    onBack={() => window.history.back()}
+                                    onLogout={() => supabase.auth.signOut()}
+                                />
+                            </NotificationProvider>
+                        } />
                         <Route path="/books/admin/*" element={<BooksAdmin />} />
                         <Route path="/past-papers/admin" element={<Navigate to="/books/admin/content?tab=pastpapers" replace />} />
-
-                        {/* Subscription */}
-                        <Route path="/subscription/thanks" element={<SubscriptionThanks />} />
 
                         {/* Email */}
                         <Route path="/admin/email" element={<EmailSender />} />

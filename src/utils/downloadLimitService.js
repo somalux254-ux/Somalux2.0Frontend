@@ -65,7 +65,7 @@ export const checkDownloadLimit = (user) => {
       remaining: 0,
       limit,
       error: isBasic
-        ? `You've reached your daily limit of ${limit} downloads. Upgrade to Premium for unlimited downloads.`
+        ? `You've reached your daily limit of ${limit} downloads for today.`
         : `You've reached your download limit for today.`
     };
   }

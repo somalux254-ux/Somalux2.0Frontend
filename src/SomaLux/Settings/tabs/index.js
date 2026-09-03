@@ -1,0 +1,10 @@
+export { NotificationsTab } from './NotificationsTab';
+export { PrivacyTab } from './PrivacyTab';
+export { PreferencesTab } from './PreferencesTab';
+export { AccountTab } from './AccountTab';
+export { HelpTab } from './HelpTab';
+export { FeedbackTab } from './FeedbackTab';
+export { AgreementTab } from './UserAgreement';
+export { UsagePolicy } from './UsagePolicy';
+export { LanguageTab } from './LanguageTab';
+export { AppsTab } from './AppsTab';

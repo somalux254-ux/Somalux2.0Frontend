@@ -17,6 +17,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess, action = 'action' }) => 
       'like': 'like this book',
       'share': 'share a book',
       'download': 'download this book',
+      'search': 'search and discover books',
       'share': 'share this book',
       'action': 'continue with this action'
     };
@@ -117,12 +118,13 @@ export const AuthModal = ({ isOpen, onClose, onSuccess, action = 'action' }) => 
             onClick={(e) => e.stopPropagation()}
           >
             <button className="auth-modal-close" onClick={onClose}>
-              <FiX size={24} />
+              <FiX size={18} />
             </button>
 
             <div className="auth-container">
               <h3>Sign in to:</h3>
               <ul className="auth-features">
+                <li>Search and discover books</li>
                 <li>Download and read books</li>
                 <li>Share and discuss books</li>
                 <li>Save your favorites and reading history</li>

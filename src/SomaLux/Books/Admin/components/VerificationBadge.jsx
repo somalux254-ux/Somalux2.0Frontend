@@ -111,11 +111,11 @@ const VerificationBadge = ({
   // Create SVG path for checkmark inside the badge
   const createCheckmarkPath = (iconSize) => {
     if (iconSize === 8) {
-      return "M3.5 5L5.5 7L8 4.5"; // Small
+      return "M2.5 6L5 8.5L9.5 3.5"; // Small
     } else if (iconSize === 10) {
-      return "M4 6L6 8L9.5 4.5"; // Medium
+      return "M2.5 6L5.5 9L9.5 4"; // Medium
     } else {
-      return "M5 7.5L7.5 10L11.5 5.5"; // Large
+      return "M2 6L5.5 9.5L10 3.5"; // Large
     }
   };
 

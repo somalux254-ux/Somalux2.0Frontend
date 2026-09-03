@@ -19,7 +19,7 @@ import {
 import { ShareButton } from './PastpaperShare';
 import { Download } from './PastpaperDownload';
 import { AuthModal } from '../Books/AuthModal';
-import VerificationTierModal from '../Books/VerificationTierModal';
+import SubscriptionModal from '../Subscriptions/SubscriptionModal';
 import SecureReader from '../Books/SecureReader';
 import SimpleScrollReader from '../Books/SimpleScrollReader';
 import { FaSearch, FaFacebook, FaLinkedin, FaWhatsapp } from 'react-icons/fa';
@@ -79,9 +79,9 @@ export const PaperPanel = ({ demoMode = false }) => {
   const [universities, setUniversities] = useState([]);
   const [faculties, setFaculties] = useState([]);
   const [subscription, setSubscription] = useState(null);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [checkingSubscription, setCheckingSubscription] = useState(false);
   const [showBookmarksPanel, setShowBookmarksPanel] = useState(false);
-  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [selectedUniversity, setSelectedUniversity] = useState(null);
   const [universityLikes, setUniversityLikes] = useState(() => {
     try {
@@ -1373,7 +1373,6 @@ export const PaperPanel = ({ demoMode = false }) => {
           }}
           setSelectedUniversity={setSelectedUniversity}
           user={user}
-          setShowSubscriptionModal={setShowSubscriptionModal}
         />
       ) : (
         <>
@@ -1879,17 +1878,12 @@ export const PaperPanel = ({ demoMode = false }) => {
         action={authAction}
       />
 
-      <VerificationTierModal
+      <SubscriptionModal
         isOpen={showSubscriptionModal}
-        onClose={() => {
-          setShowSubscriptionModal(false);
-        }}
-        userTier={user?.subscription_tier || 'basic'}
-        onSelectTier={(tier) => {
-          // The tier selection will be handled by VerificationTierModal
-          // which handles the payment flow
-          setShowSubscriptionModal(false);
-        }}
+        onClose={() => setShowSubscriptionModal(false)}
+        user={user}
+        product="pastpapers"
+        onSubscribed={() => setShowSubscriptionModal(false)}
       />
 
       {/* Enhanced User Upload Past Paper Modal - Simplified */}

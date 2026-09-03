@@ -63,7 +63,7 @@
 .chrome-dropdown {
   position: absolute;
   top: 48px;
-  right: 0;
+  right: 8px;
   width: max-content;
   min-width: 220px;
   max-width: min(280px, calc(100vw - 24px));
@@ -114,15 +114,15 @@
 
 .profile-pic-wrapper {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 52px;
+  height: 52px;
   margin: 0 auto 8px;
   display: inline-block;
 }
 
 .profile-large {
-  width: 40px;
-  height: 40px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   object-fit: cover;
   border: none;
@@ -259,76 +259,6 @@
 /* BULLETPROOF SIGN-OUT MODAL — WORKS 100% EVERYWHERE           */
 /* ============================================================= */
 .profile-signout-overlay {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  background: rgba(0, 0, 0, 0.78) !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  z-index: 2147483647 !important;
-  padding: 20px !important;
-  margin: 0 !important;
-  box-sizing: border-box !important;
-}
-
-.profile-signout-modal {
-  background: #111b21 !important;
-  border: 1px solid #2a3942 !important;
-  border-radius: 18px !important;
-  width: 100% !important;
-  max-width: 420px !important;
-  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.6) !important;
-  overflow: hidden !important;
-  animation: profileModalPop 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
-}
-
-@keyframes profileModalPop {
-  from { opacity: 0; transform: translateY(30px) scale(0.92); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.profile-signout-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px 12px;
-  border-bottom: 1px solid #2a3942;
-}
-
-.profile-signout-header h2 { margin: 0; font-size: 19px; font-weight: 600; color: #e9edef; }
-
-.profile-signout-close {
-  background: transparent;
-  border: none;
-  font-size: 32px;
-  color: #8696a0;
-  cursor: pointer;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.profile-signout-close:hover { background: #1c262d; color: #c9d3d8; }
-
-.profile-signout-body { padding: 20px 24px; color: #c9d3d8; }
-.profile-signout-body p { margin: 0 0 18px; font-size: 14.5px; line-height: 1.55; }
-
-.profile-reason-toggle {
-  background: none;
-  border: none;
-  color: #00a884;
-  font-size: 13.5px;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 10px 0;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -397,83 +327,6 @@
 .profile-btn-confirm:hover { background: #ff5449; }
 .profile-btn-confirm:active { background: #e63228; }
 
-/* QR Code Modal */
-.qr-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(10px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 99999 !important;
-  padding: 1rem;
-  animation: fadeIn 0.35s ease-out;
-  overflow: auto;
-}
-
-.qr-modal-container {
-  background: transparent;
-  border-radius: 0;
-  width: auto;
-  max-width: none;
-  min-width: 0;
-  box-shadow: none;
-  border: none;
-  overflow: visible;
-  animation: modalPop 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  box-sizing: border-box;
-  margin: auto;
-}
-
-.qr-modal-header {
-  padding: 24px 28px 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #202c33;
-}
-
-.qr-modal-header h2 {
-  margin: 0;
-  font-size: 1.6rem;
-  font-weight: 600;
-  color: #e9edef;
-}
-
-.qr-modal-close-btn {
-  background: none;
-  border: none;
-  font-size: 32px;
-  width: 44px;
-  height: 44px;
-  cursor: pointer;
-  color: #8696a0;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.qr-modal-close-btn:hover {
-  background: rgba(255, 107, 107, 0.1);
-  color: #ff6b6b;
-}
-
-.qr-modal-body {
-  padding: 24px 28px;
-  color: #e9edef;
-  width: 100%;
-  box-sizing: border-box;
-}
-
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -496,8 +349,7 @@
 
 /* Mobile */
 @media (max-width: 480px) {
-  .chrome-dropdown { width: max-content; max-width: calc(100vw - 24px); right: -12px; border-radius: 6px !important; }
+  .chrome-dropdown { width: max-content; max-width: calc(100vw - 24px); right: 4px; border-radius: 6px !important; }
   .library-stats, .last-opened { grid-template-columns: 1fr; }
   .profile-signout-modal { max-width: 92vw; }
-  .qr-modal-container { max-width: 92vw; }
 }

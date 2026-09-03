@@ -16,9 +16,9 @@
 }
 
 .native-install-logo {
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
   object-fit: contain;
 }
 
@@ -27,6 +27,7 @@
   gap: 4px;
   min-width: 0;
   flex: 1;
+  padding-right: 18px;
 }
 
 .native-install-prompt strong {
@@ -42,6 +43,7 @@
 
 .native-install-action {
   display: inline-flex;
+  align-self: flex-end;
   align-items: center;
   gap: 7px;
   flex: 0 0 auto;
@@ -62,8 +64,10 @@
 
 .native-install-close {
   display: inline-flex;
-  flex: 0 0 auto;
-  padding: 4px;
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  padding: 3px;
   color: #a9b8bc;
   background: transparent;
   border: 0;
