@@ -4,14 +4,15 @@ const http = require('http');
 const isWindows = process.platform === 'win32';
 const command = (name) => (isWindows ? `${name}.cmd` : name);
 const wirelessMode = process.env.ANDROID_LIVE_RELOAD === 'wireless';
+const liveReloadHost = process.env.CAPACITOR_LIVE_RELOAD_HOST || process.env.ANDROID_LIVE_RELOAD_HOST || '127.0.0.1';
 const adbPath = isWindows
   ? `${process.env.ANDROID_HOME || 'C:\\Users\\Paltech\\AppData\\Local\\Android\\Sdk'}\\platform-tools\\adb.exe`
   : 'adb';
 
-const getWirelessTarget = () => {
+const getConnectedTarget = () => {
   const result = spawnSync(adbPath, ['devices'], { encoding: 'utf8', windowsHide: true });
   if (result.status !== 0) return null;
-  const wirelessDevice = result.stdout
+  const devices = result.stdout
     .split(/\r?\n/)
     .find((line) => {
       if (!line.endsWith('\tdevice')) return false;
@@ -19,15 +20,20 @@ const getWirelessTarget = () => {
       return (serial.startsWith('adb-') && serial.includes('_adb-tls-connect._tcp'))
         || /^\d+\.\d+\.\d+\.\d+:\d+$/.test(serial);
     });
-  return wirelessDevice ? wirelessDevice.split('\t')[0] : null;
+  if (devices) return devices.split('\t')[0];
+
+  const usbDevice = result.stdout
+    .split(/\r?\n/)
+    .find((line) => line.endsWith('\tdevice'));
+  return usbDevice ? usbDevice.split('\t')[0] : null;
 };
 
-const reconnectWirelessTarget = () => {
-  const target = getWirelessTarget();
+const reconnectTarget = () => {
+  const target = getConnectedTarget();
   if (target) return target;
   const result = spawnSync(adbPath, ['connect', '192.168.100.33:5555'], { encoding: 'utf8', windowsHide: true });
   if (result.status !== 0) return null;
-  return getWirelessTarget();
+  return getConnectedTarget();
 };
 
 const waitForServer = (url, attempts = 60) => new Promise((resolve, reject) => {
@@ -67,9 +73,9 @@ if (!wirelessMode) {
   process.exit(1);
 }
 
-const wirelessTarget = reconnectWirelessTarget();
-if (!wirelessTarget) {
-  console.error('No wireless Android device found. Pair Wireless Debugging, then run adb connect PHONE_IP:PORT.');
+const deviceTarget = reconnectTarget();
+if (!deviceTarget) {
+  console.error('No Android device found. Connect a device with USB debugging or run adb connect PHONE_IP:PORT.');
   process.exit(1);
 }
 
@@ -97,14 +103,22 @@ serverIsAvailable('http://127.0.0.1:3000')
   })
   .then(() => waitForServer('http://127.0.0.1:3000'))
   .then(() => {
+    const reverse = spawnSync(adbPath, ['-s', deviceTarget, 'reverse', 'tcp:3000', 'tcp:3000'], {
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+    if (reverse.status !== 0) {
+      throw new Error(`Unable to create ADB reverse tunnel: ${reverse.stderr || reverse.stdout}`);
+    }
+
     const capacitorArgs = [
       'cap', 'run', 'android',
       '--no-sync',
       '--live-reload',
-      '--host', '127.0.0.1',
+      '--host', liveReloadHost,
       '--port', '3000',
       '--forwardPorts', '3000:3000',
-      '--target', wirelessTarget,
+      '--target', deviceTarget,
     ];
 
     const capacitor = spawn(command('npx'), capacitorArgs, {

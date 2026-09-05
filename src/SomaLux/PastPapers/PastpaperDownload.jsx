@@ -4,7 +4,6 @@ import { FiDownload } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
 import { supabase } from '../Books/supabaseClient';
-import { trackPastPaperDownload } from '../Books/Admin/pastPapersApi';
 import { downloadOptimizer } from '../../utils/DownloadOptimizer';
 import { checkDownloadLimit, recordDownload } from '../../utils/downloadLimitService';
 import DownloadLimitModal from '../Books/DownloadLimitModal';
@@ -183,10 +182,7 @@ export const Download = ({
         (paper.title || paper.course || 'past-paper').replace(/\s+/g, '_') + '.pdf'
       );
 
-      // Track download
       if (paper.id) {
-        await trackPastPaperDownload(paper.id);
-        // Record in download history
         await recordDownload(user, 'paper', paper.id, paper.title || paper.course);
       }
 

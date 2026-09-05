@@ -17,6 +17,7 @@ export const useSwipeTabs = (tabs, activeTab, setActiveTab, containerRef) => {
   const touchEndX = useRef(0);
   const touchEndY = useRef(0);
   const isSwiping = useRef(false);
+  const isReaderGesture = useRef(false);
 
   // Minimum distance to consider a gesture as a swipe (in pixels)
   const SWIPE_THRESHOLD = 50;
@@ -26,6 +27,12 @@ export const useSwipeTabs = (tabs, activeTab, setActiveTab, containerRef) => {
   const handleTouchStart = (e) => {
     // Only detect swipe for touch devices (not mouse)
     if (e.touches && e.touches.length === 1) {
+      isReaderGesture.current = Boolean(e.target.closest?.('.ssr-overlay, .ssr-container'));
+      if (isReaderGesture.current) {
+        isSwiping.current = false;
+        return;
+      }
+
       touchStartX.current = e.touches[0].clientX;
       touchStartY.current = e.touches[0].clientY;
       isSwiping.current = true;
@@ -40,6 +47,11 @@ export const useSwipeTabs = (tabs, activeTab, setActiveTab, containerRef) => {
   };
 
   const handleTouchEnd = () => {
+    if (isReaderGesture.current) {
+      isReaderGesture.current = false;
+      return;
+    }
+
     if (!isSwiping.current) return;
     isSwiping.current = false;
 

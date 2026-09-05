@@ -1,9 +1,42 @@
 import { supabase } from '../supabaseClient';
 import { API_URL } from '../../../config';
+import { getBackendOrigin } from './api';
 
 const API_BASE = API_URL;
 
 const PAST_PAPERS_BUCKET = 'past-papers';
+const signedPastPaperUrlCache = new Map();
+
+export async function getPastPaperSignedUrl(paperId) {
+  if (!paperId) throw new Error('Past paper id is required');
+
+  const cached = signedPastPaperUrlCache.get(paperId);
+  if (cached?.expiresAt > Date.now()) return cached.url;
+  if (cached?.request) return cached.request;
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('Not authenticated');
+
+  const request = fetch(`${getBackendOrigin()}/api/elib/pastpapers/${encodeURIComponent(paperId)}/signed-url`, {
+    headers: { Authorization: `Bearer ${session.access_token}` }
+  }).then(async response => {
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.signedUrl) {
+      throw new Error(result.error || `Failed to get past paper URL (${response.status})`);
+    }
+    signedPastPaperUrlCache.set(paperId, {
+      url: result.signedUrl,
+      expiresAt: Date.now() + Math.max((result.expiresIn || 600) - 30, 30) * 1000
+    });
+    return result.signedUrl;
+  }).catch(error => {
+    signedPastPaperUrlCache.delete(paperId);
+    throw error;
+  });
+
+  signedPastPaperUrlCache.set(paperId, { request, expiresAt: 0 });
+  return request;
+}
 
 // =====================================================
 // PAST PAPERS CRUD OPERATIONS
@@ -46,12 +79,7 @@ export async function fetchPastPapers({
   }
   try {
     // Column mapping for sorting (frontend -> database)
-    const sortColumnMap = {
-      'downloads_count': 'downloads_count',
-      'downloads': 'downloads_count'
-    };
-    
-    const dbSortCol = sortColumnMap[sort.col] || sort.col || 'created_at';
+    const dbSortCol = sort.col || 'created_at';
     
     let query = supabase
       .from('past_papers')
@@ -65,7 +93,6 @@ export async function fetchPastPapers({
         semester,
         exam_type,
         file_path,
-        downloads_count,
         created_at, 
         uploaded_by,
         title,
@@ -299,7 +326,6 @@ export async function createPastPaper({ metadata, pdfFile }) {
       exam_type: metadata.exam_type || 'Main',
       university_id: metadata.university_id || null,
       uploaded_by: user.id,
-      downloads_count: 0,
       created_at: nowIso,
       updated_at: nowIso
     };
@@ -449,34 +475,6 @@ export async function deletePastPaper({ id, file_path }) {
   } catch (err) {
     console.error('Error in deletePastPaper:', err);
     throw err;
-  }
-}
-
-// =====================================================
-// PAST PAPER VIEWS & DOWNLOADS TRACKING
-// =====================================================
-
-
-
-export async function trackPastPaperDownload(paperId) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  try {
-    // Increment downloads count
-    const { error: rpcError } = await supabase.rpc('increment_past_paper_downloads', { p_paper_id: paperId });
-    
-    if (rpcError) {
-      console.error('RPC Error incrementing downloads:', rpcError);
-      console.error('Paper ID:', paperId, 'Type:', typeof paperId);
-      throw rpcError;
-    }
-    
-    // Clear cache to get fresh data
-    try { clearPastPapersCache(); } catch (e) {}
-  } catch (error) {
-    console.error('Download tracking error:', error);
-    throw error; // Re-throw so UI can handle it
   }
 }
 
@@ -661,19 +659,12 @@ export async function getPastPaperStats() {
       .from('past_papers')
       .select('*', { count: 'exact', head: true });
 
-    const { data: downloadData } = await supabase
-      .from('past_papers')
-      .select('downloads_count');
-
-    const totalDownloads = (downloadData || []).reduce((sum, item) => sum + (item.downloads_count || 0), 0);
-
     return {
-      totalPapers: totalPapers || 0,
-      totalDownloads
+      totalPapers: totalPapers || 0
     };
   } catch (error) {
     console.error('Error fetching past paper stats:', error);
-    return { totalPapers: 0, totalDownloads: 0 };
+    return { totalPapers: 0 };
   }
 }
 
@@ -695,66 +686,6 @@ export async function getPastPaperCountByUniversity(universityId, subscriptionTi
   } catch (error) {
     console.error('Error fetching past paper count:', error);
     return 0;
-  }
-}
-
-export async function trackPastPaperView(paperId) {
-  try {
-    console.log('🔍 Calling trackPastPaperView for paper:', paperId);
-    const { data, error } = await supabase.rpc('increment_past_paper_views', {
-      p_paper_id: paperId
-    });
-    
-    console.log('📊 RPC Response - Data:', data, 'Error:', error);
-    
-    if (error) {
-      console.error('❌ Error incrementing past paper views:', error);
-      return null;
-    }
-    
-    console.log('✅ Successfully tracked view. New count:', data);
-    return data;
-  } catch (error) {
-    console.error('❌ Past paper view tracking error:', error);
-    return null;
-  }
-}
-
-export async function togglePastPaperLike(paperId, userId) {
-  try {
-    const { data, error } = await supabase.rpc('toggle_past_paper_like', {
-      p_paper_id: paperId,
-      p_user_id: userId || 'anonymous'
-    });
-    
-    if (error) {
-      console.error('Error toggling past paper like:', error);
-      return null;
-    }
-    
-    return data; // { liked: boolean, count: number }
-  } catch (error) {
-    console.error('Past paper like toggle error:', error);
-    return null;
-  }
-}
-
-export async function togglePastPaperBookmark(paperId, userId) {
-  try {
-    const { data, error } = await supabase.rpc('toggle_past_paper_bookmark', {
-      p_paper_id: paperId,
-      p_user_id: userId || 'anonymous'
-    });
-    
-    if (error) {
-      console.error('Error toggling past paper bookmark:', error);
-      return null;
-    }
-    
-    return data; // { bookmarked: boolean, count: number }
-  } catch (error) {
-    console.error('Past paper bookmark toggle error:', error);
-    return null;
   }
 }
 
@@ -889,7 +820,12 @@ export async function logUploadHistory({
       .single();
 
     if (error) {
-      console.error('⚠️ Failed to log upload history:', error);
+      // History is auxiliary telemetry; older deployments may not have the table yet.
+      if (error.code === '42P01' || error.code === 'PGRST205') {
+        console.warn('⚠️ Upload history table is not deployed; continuing without history logging.');
+      } else {
+        console.error('⚠️ Failed to log upload history:', error);
+      }
       return null;
     }
 
@@ -1166,7 +1102,7 @@ export async function extractFirstPageMetadata(pdfFile) {
     const formData = new FormData();
     formData.append('pdf', pdfFile);
     
-    const response = await fetch('/api/past-papers/extract-first-page', {
+    const response = await fetch(`${API_BASE}/api/past-papers/extract-first-page`, {
       method: 'POST',
       body: formData
     });
@@ -1233,7 +1169,7 @@ export async function extractFirstPageMetadataBatch(pdfFiles) {
       formData.append('pdfs', file);
     });
     
-    const response = await fetch('/api/past-papers/extract-first-page-batch', {
+    const response = await fetch(`${API_BASE}/api/past-papers/extract-first-page-batch`, {
       method: 'POST',
       body: formData
     });

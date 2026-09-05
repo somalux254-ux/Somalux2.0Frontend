@@ -169,7 +169,7 @@ const fetchFromBackendAPI = async (searchTerm) => {
     const cached = getFromCache(searchTerm);
     if (cached) return cached;
     
-    const API_URL = process.env.REACT_APP_API_URL || 'https://somalux-q2bw.onrender.com';
+    const API_URL = process.env.REACT_APP_API_URL || 'https://somalux-backend-xfq9.onrender.com';
     const url = `${API_URL}/api/explain`;
     
     const response = await fetchWithTimeout(url, {
@@ -224,7 +224,7 @@ const fetchFromGoogleKnowledgeGraph = async (searchTerm) => {
   try {
     console.log('🔍 Fetching from Google Knowledge Graph (via backend):', searchTerm);
     
-    const API_URL = process.env.REACT_APP_API_URL || 'https://somalux-q2bw.onrender.com';
+    const API_URL = process.env.REACT_APP_API_URL || 'https://somalux-backend-xfq9.onrender.com';
     const url = `${API_URL}/api/knowledge-graph`;
     
     const response = await fetchWithTimeout(url, {

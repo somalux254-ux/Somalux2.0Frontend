@@ -436,6 +436,10 @@ const TextSelectionPanel = ({
   const handleReadAloud = () => {
     if (isMobile && navigator.vibrate) navigator.vibrate(30);
     // Check browser support for Web Speech API
+    if (!window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') {
+      console.warn('Text-to-speech is not available on this device');
+      return;
+    }
     const utterance = new SpeechSynthesisUtterance(selectedText);
     utterance.rate = 1;
     utterance.pitch = 1;
@@ -1493,7 +1497,7 @@ const TextSelectionPanel = ({
                   <button
                     className="stop-btn"
                     onClick={() => {
-                      window.speechSynthesis.cancel();
+                      window.speechSynthesis?.cancel?.();
                       backToToolbar();
                     }}
                   >

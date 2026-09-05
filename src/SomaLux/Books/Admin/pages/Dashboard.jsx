@@ -20,7 +20,7 @@ import {
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
-    counts: { books: 0, users: 0, downloads: 0, views: 0, universities: 0, pastPapers: 0 },
+    counts: { books: 0, users: 0, downloads: 0, views: 0, universities: 0, pastPapers: 0, androidApkDownloads: 0 },
     monthly: [],
     top: [],
     topPastPapers: [],
@@ -228,19 +228,20 @@ const Dashboard = () => {
   }
 
   return (
-    <Box sx={{ padding: 0.5 }}>
+    <Box className="overview-page" sx={{ padding: 0.5 }}>
       <Grid container spacing={0.5}>
         <Grid size={{ xs: 12 }}>
-          <Typography variant="h5" sx={{ color: '#e9edef', mb: 0.25, fontSize: '1.1rem' }}>
+          <Typography
+            className="overview-page-title"
+            variant="h5"
+            sx={{ color: '#e9edef', mb: 0.25, fontSize: '1.1rem' }}
+          >
             Overview
-          </Typography>
-          <Typography variant="body2" sx={{ color: '#8696a0', fontSize: '0.75rem' }}>
-            High-level summary of books, users, universities and reading activity.
           </Typography>
         </Grid>
 
         <Grid size={{ xs: 12 }}>
-          <Grid container spacing={0.5}>
+          <Grid container spacing={0.5} className="admin-summary-cards">
             <Grid size={{ xs: 12, sm: 6, md: 4, lg: 1.7 }}>
               <Card sx={{ background: '#111b21', borderRadius: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
                 <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 0.2, padding: 0.75 }}>
@@ -251,9 +252,6 @@ const Dashboard = () => {
                       {formatTrend(uploadsTrend)}
                     </Box>
                   </Box>
-                  <Typography variant="caption" sx={{ color: '#8696a0', mt: 0.1, fontSize: '0.6rem' }}>
-                    Overall books in library
-                  </Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -267,9 +265,6 @@ const Dashboard = () => {
                       —
                     </Box>
                   </Box>
-                  <Typography variant="caption" sx={{ color: '#8696a0', mt: 0.1, fontSize: '0.6rem' }}>
-                    Registered readers
-                  </Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -283,9 +278,6 @@ const Dashboard = () => {
                       —
                     </Box>
                   </Box>
-                  <Typography variant="caption" sx={{ color: '#8696a0', mt: 0.1, fontSize: '0.6rem' }}>
-                    Partner institutions
-                  </Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -299,9 +291,19 @@ const Dashboard = () => {
                       —
                     </Box>
                   </Box>
-                  <Typography variant="caption" sx={{ color: '#8696a0', mt: 0.1, fontSize: '0.6rem' }}>
-                    Available exam papers
-                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 1.7 }}>
+              <Card sx={{ background: '#111b21', borderRadius: 1, boxShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>
+                <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 0.2, padding: 0.75 }}>
+                  <Typography variant="caption" sx={{ color: '#8696a0', fontSize: '0.65rem' }}>Android APK Downloads</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 0.1 }}>
+                    <Typography variant="h5" sx={{ color: '#e9edef', fontSize: '1.1rem' }}>{stats.counts.androidApkDownloads || 0}</Typography>
+                    <Box sx={{ fontSize: 10, px: 0.5, py: 0.15, borderRadius: 999, bgcolor: 'rgba(139,92,246,0.1)', color: '#a78bfa' }}>
+                      GitHub
+                    </Box>
+                  </Box>
                 </CardContent>
               </Card>
             </Grid>

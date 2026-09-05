@@ -1,9 +1,10 @@
 import React from 'react';
 import { FiDownload, FiX } from 'react-icons/fi';
 import { Capacitor } from '@capacitor/core';
+import { API_URL } from '../config';
 import './NativeInstallPrompt.css';
 
-const APK_DOWNLOAD_URL = 'https://github.com/somalux254-ux/Somalux2.0Frontend/releases/latest/download/somalux.apk';
+const APK_DOWNLOAD_URL = `${API_URL}/api/android/apk/download?source=website-prompt`;
 const DISMISSED_KEY = 'somalux-apk-download-prompt-dismissed-v2';
 const LEGACY_DISMISSED_KEYS = [
   'somalux-native-install-prompt-dismissed',

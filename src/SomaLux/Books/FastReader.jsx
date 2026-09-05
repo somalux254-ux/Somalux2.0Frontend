@@ -337,8 +337,8 @@ const FastReader = ({ src, title, author, onClose, userId, bookId }) => {
           )}
 
           <div
-            style={isMobileDevice ? {
-              transform: `scale(${mobileScale})`,
+            style={{
+              transform: `scale(${isMobileDevice ? mobileScale : scale / 1.2})`,
               transformOrigin: 'top center',
               transition: 'transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
               willChange: 'transform',
@@ -346,7 +346,7 @@ const FastReader = ({ src, title, author, onClose, userId, bookId }) => {
               pointerEvents: 'auto',
               backfaceVisibility: 'hidden',
               perspective: '1000px'
-            } : {}}
+            }}
           >
             <Document
               file={src}
@@ -359,7 +359,7 @@ const FastReader = ({ src, title, author, onClose, userId, bookId }) => {
               <div key={page} className={`fast-page-wrapper ${page === pageNumber ? 'current' : ''}`}>
                 <Page
                   pageNumber={page}
-                  scale={isMobileDevice ? 1 : scale}
+                  scale={isMobileDevice ? 1 : 1.2}
                   renderTextLayer={true}
                   renderAnnotationLayer={false}
                   canvasBackground="white"

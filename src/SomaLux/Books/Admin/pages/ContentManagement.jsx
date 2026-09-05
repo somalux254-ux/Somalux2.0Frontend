@@ -60,8 +60,8 @@ const ContentManagement = ({ userProfile }) => {
   }, []);
 
   return (
-    <div>
-      <div className="content-tabs">
+    <div className="content-page">
+      <div className="content-tabs content-page-tabs">
         <button 
           className={`content-tab ${activeTab === 'books' ? 'active' : ''}`}
           onClick={() => setActiveTab('books')}

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@capacitor-community/text-to-speech": "^8.0.2",
     "@capacitor/android": "^8.5.1",
     "@capacitor/app": "^8.1.1",
     "@capacitor/core": "^8.5.1",
@@ -41,15 +42,16 @@
     "styled-components": "^6.1.16"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "cross-env HOST=0.0.0.0 PORT=3000 react-scripts start",
     "start:3000": "PORT=3000 react-scripts start",
     "start:5173": "VITE_PORT=5173 react-scripts start",
     "build": "react-scripts build",
     "build:android": "cross-env REACT_APP_ANDROID_BUILD=true npm run build && npx cap sync android",
-    "android:live": "cross-env ANDROID_LIVE_RELOAD=wireless node scripts/android-live-reload.js",
-    "android:live:wifi": "cross-env ANDROID_LIVE_RELOAD=wireless node scripts/android-live-reload.js",
+    "android:live": "cross-env ANDROID_LIVE_RELOAD=wireless CAPACITOR_LIVE_RELOAD_HOST=192.168.100.5 node scripts/android-live-reload.js",
+    "android:live:wifi": "cross-env ANDROID_LIVE_RELOAD=wireless CAPACITOR_LIVE_RELOAD_HOST=192.168.100.5 node scripts/android-live-reload.js",
     "android:live:usb": "node scripts/android-live-reload.js",
-    "android:debug-live": "cross-env REACT_APP_ANDROID_BUILD=true CAPACITOR_LIVE_RELOAD=true CAPACITOR_LIVE_RELOAD_URL=http://192.168.100.5:3000 npm run build && npx cap sync android && node scripts/build-android-debug.js && npm run android:live",
+    "android:debug-live": "powershell -ExecutionPolicy Bypass -File scripts\\auto-debug-live.ps1",
+    "android:debug-live:auto": "powershell -ExecutionPolicy Bypass -File scripts\\auto-debug-live.ps1",
     "android:release": "cross-env REACT_APP_ANDROID_BUILD=true npm run build && npx cap sync android && node scripts/build-android-release.js",
     "android:open": "npx cap open android",
     "android:run": "npm run build:android && npx cap run android",

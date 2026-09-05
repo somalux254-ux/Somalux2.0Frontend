@@ -518,6 +518,14 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
     updateLensData
   ]);
 
+  const schedulePreciseSelection = useCallback(() => {
+    if (rafIdRef.current) return;
+    rafIdRef.current = requestAnimationFrame(() => {
+      rafIdRef.current = null;
+      detectPreciseSelection();
+    });
+  }, [detectPreciseSelection]);
+
   /**
    * COMPLETE SELECTION: Show panel after release
    * Called on mouseup/touchend to finalize selection and show the panel
@@ -591,19 +599,19 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
     const handleMouseUp = () => {
       selectionInProgressRef.current = false;
       if (completionTimeout) clearTimeout(completionTimeout);
-      // Update lens one final time
-      detectPreciseSelection();
-      // Then show the panel after a minimal delay to allow state updates
+      // Let the input event finish before measuring the selection.
       completionTimeout = setTimeout(() => {
-        completeSelection();
-        // Keep isSelecting true so lens stays visible alongside panel
+        detectPreciseSelection();
+        completionTimeout = setTimeout(() => {
+          completeSelection();
+        }, 10);
       }, 10);
     };
 
     const handleMouseMove = () => {
       // OPTIMIZED: Real-time detection during drag for smooth selection (lens only)
       if (selectionInProgressRef.current) {
-        detectPreciseSelection();
+        schedulePreciseSelection();
       }
     };
 
@@ -617,19 +625,18 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
     const handleTouchEnd = () => {
       selectionInProgressRef.current = false;
       if (completionTimeout) clearTimeout(completionTimeout);
-      // Update lens one final time
-      detectPreciseSelection();
-      // Then show the panel after a minimal delay
       completionTimeout = setTimeout(() => {
-        completeSelection();
-        // Keep isSelecting true so lens stays visible alongside panel
+        detectPreciseSelection();
+        completionTimeout = setTimeout(() => {
+          completeSelection();
+        }, 10);
       }, 10);
     };
 
     const handleTouchMove = () => {
       // OPTIMIZED: Real-time detection during touch drag (lens only)
       if (selectionInProgressRef.current) {
-        detectPreciseSelection();
+        schedulePreciseSelection();
       }
     };
 
@@ -677,7 +684,7 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
       container.removeEventListener('keyup', handleKeyUp, true);
       container.removeEventListener('contextmenu', handleContextMenu, true);
     };
-  }, [containerSelector, detectPreciseSelection, completeSelection]);
+  }, [containerSelector, detectPreciseSelection, schedulePreciseSelection, completeSelection]);
 
   return {
     selection,

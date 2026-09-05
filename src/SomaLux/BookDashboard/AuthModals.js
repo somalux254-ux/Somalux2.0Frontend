@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { supabase } from "../Books/supabaseClient";
-import { clearSessionCache } from "../../utils/sessionManager";
+import { signOutCompletely } from "../../utils/sessionManager";
 import { AuthModal } from "../Books/AuthModal";
 import "./AuthModals.css"; // Import this CSS file
 
@@ -34,19 +34,12 @@ export const AuthModals = ({
     try {
       setShowSignOutModal(false);
       
-      // Clear session cache FIRST (critical for preventing auto-login)
-      clearSessionCache();
-      
-      // Supabase sign out NEXT (non-blocking)
-      supabase.auth.signOut().catch(e => console.error("Sign out error:", e));
+      await signOutCompletely(supabase);
       
       // Clear local state immediately - no delays
       setAuthUser(null);
       setSignOutReason("");
       setShowReasonInput(false);
-      localStorage.removeItem("userProfile");
-      window.dispatchEvent(new CustomEvent("authChanged", { detail: { user: null } }));
-
       // Send feedback asynchronously (non-blocking) with timeout
       if (signOutReason.trim() && authUser?.email) {
         // Fire and forget - don't await

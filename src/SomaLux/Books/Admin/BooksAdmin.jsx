@@ -14,6 +14,7 @@ import { API_URL } from '../../../config';
 import './admin.css';
 import { AdminUIProvider } from './AdminUIContext';
 import { supabase } from '../supabaseClient';
+import { pushBackAction, popBackAction } from '../../services/backNavigation';
 import UploadHistoryPage from './pages/UploadHistoryPage';
 import profilePlaceholder from '../../BookDashboard/user-profile.svg';
 
@@ -90,6 +91,12 @@ export const BooksAdmin = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    const handleNativeBack = () => navigate('/BookManagement');
+    pushBackAction(handleNativeBack);
+    return () => popBackAction(handleNativeBack);
+  }, [navigate]);
 
   const ADMIN_EMAILS = ['campuslives254@gmail.com', 'paltechsomalux@gmail.com', 'eliblearning@gmail.com'];
   const userEmail = userProfile?.email || authUserEmail;
@@ -200,11 +207,11 @@ export const BooksAdmin = () => {
 
             {canAccessContentFeatures && (
               <>
-                <NavLink to="/books/admin/auto-upload" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                <NavLink to="/books/admin/auto-upload" className={({ isActive }) => `nav-item mobile-hidden-nav-item ${isActive ? 'active' : ''}`}>
                   <FiRefreshCw /> <span className="nav-label">Auto Upload</span>
                 </NavLink>
 
-                <NavLink to="/books/admin/auto-download" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                <NavLink to="/books/admin/auto-download" className={({ isActive }) => `nav-item mobile-hidden-nav-item ${isActive ? 'active' : ''}`}>
                   <FiDownload /> <span className="nav-label">Auto Download</span>
                 </NavLink>
 
@@ -279,19 +286,25 @@ export const BooksAdmin = () => {
             </NavLink>
           )}
 
+          {isAdmin && (
+            <NavLink to="/books/admin/users" className={({ isActive }) => `bottom-item ${isActive ? 'active' : ''}`}>
+              <FiUsers /> <span>Users</span>
+            </NavLink>
+          )}
+
           {canAccessContentFeatures && (
-            <NavLink to="/books/admin/auto-upload" className={({ isActive }) => `bottom-item ${isActive ? 'active' : ''}`}>
+            <NavLink to="/books/admin/auto-upload" className={({ isActive }) => `bottom-item mobile-hidden-bottom-item ${isActive ? 'active' : ''}`}>
               <FiRefreshCw /> <span>Auto Upload</span>
             </NavLink>
           )}
 
           {canAccessContentFeatures && (
-            <NavLink to="/books/admin/auto-download" className={({ isActive }) => `bottom-item ${isActive ? 'active' : ''}`}>
+            <NavLink to="/books/admin/auto-download" className={({ isActive }) => `bottom-item mobile-hidden-bottom-item ${isActive ? 'active' : ''}`}>
               <FiDownload /> <span>Auto Download</span>
             </NavLink>
           )}
 
-          <NavLink to="/books/admin/upload-history" className={({ isActive }) => `bottom-item ${isActive ? 'active' : ''}`}>
+          <NavLink to="/books/admin/upload-history" className={({ isActive }) => `bottom-item mobile-hidden-bottom-item ${isActive ? 'active' : ''}`}>
             <FiClock /> <span>Upload History</span>
           </NavLink>
 
@@ -300,9 +313,13 @@ export const BooksAdmin = () => {
         {/* MAIN AREA */}
         <div className="admin-main">
           <header className="admin-topbar">
-            <button className="back-link" onClick={() => navigate('/BookManagement')}>
+            <button
+              className="back-link"
+              onClick={() => navigate('/BookManagement')}
+              aria-label="Back to Books"
+              title="Back to Books"
+            >
               <FiChevronLeft />
-              <span>Back</span>
             </button>
 
             <div className="admin-breadcrumbs">
@@ -325,18 +342,18 @@ export const BooksAdmin = () => {
             {userProfile && (
               <div className="admin-user-summary">
                 <div className="admin-user-info">
-                  <div className="admin-user-name">{userProfile.display_name || userProfile.email}</div>
+                  <div className="admin-user-name">{userProfile.display_name || userProfile.full_name || userProfile.name || 'User'}</div>
                   <div className="admin-user-role">{userProfile.role ? userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1) : 'Admin'}</div>
                 </div>
                 <div className="admin-user-avatar">
                   {userProfile.avatar_url ? (
                     <img 
                       src={userProfile.avatar_url} 
-                      alt={userProfile.display_name || userProfile.email}
+                      alt={userProfile.display_name || userProfile.full_name || userProfile.name || 'User'}
                       onError={(e) => {
                         e.target.style.display = 'none';
                         if (e.target.parentElement) {
-                          const initials = (userProfile.display_name || userProfile.email || '?').charAt(0).toUpperCase();
+                          const initials = (userProfile.display_name || userProfile.full_name || userProfile.name || '?').charAt(0).toUpperCase();
                           e.target.parentElement.textContent = initials;
                         }
                       }}

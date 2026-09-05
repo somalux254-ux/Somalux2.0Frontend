@@ -3,16 +3,69 @@ import { API_URL } from '../../../config';
 
 const API_BASE = API_URL;
 const BOOKS_BUCKET = 'elib-books';
+const signedBookUrlCache = new Map();
 
 // Backend origin helper (mirrors patterns used elsewhere in the app)
 export function getBackendOrigin() {
   if (typeof window === 'undefined') return API_URL;
   if (window.__API_ORIGIN__) return window.__API_ORIGIN__;
+  const isNativeCapacitor = Boolean(
+    window.Capacitor?.isNativePlatform?.() ||
+    window.Capacitor?.getPlatform?.() === 'android' ||
+    window.Capacitor?.getPlatform?.() === 'ios'
+  );
+  if (isNativeCapacitor) return API_URL;
   const { protocol, hostname } = window.location || {};
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return `${protocol}//${hostname}:5000`;
   }
   return API_URL;
+}
+
+export async function getBookSignedUrl(bookId) {
+  if (!bookId) throw new Error('Book id is required');
+
+  const cached = signedBookUrlCache.get(bookId);
+  if (cached && cached.expiresAt > Date.now()) {
+    console.log('[signed-url] Client cache hit', { bookId });
+    return cached.url;
+  }
+  if (cached?.request) {
+    console.log('[signed-url] Client request already in progress', { bookId });
+    return cached.request;
+  }
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('Not authenticated');
+
+  const requestStartedAt = Date.now();
+  console.log('[signed-url] Client request started', { bookId });
+  const request = fetch(`${getBackendOrigin()}/api/elib/books/${encodeURIComponent(bookId)}/signed-url`, {
+    headers: { Authorization: `Bearer ${session.access_token}` }
+  }).then(async response => {
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.signedUrl) {
+      throw new Error(result.error || `Failed to get book URL (${response.status})`);
+    }
+
+    console.log('[signed-url] Client request completed', {
+      bookId,
+      durationMs: Date.now() - requestStartedAt,
+      expiresIn: result.expiresIn || 600
+    });
+    signedBookUrlCache.set(bookId, {
+      url: result.signedUrl,
+      expiresAt: Date.now() + Math.max((result.expiresIn || 600) - 30, 30) * 1000
+    });
+    return result.signedUrl;
+  }).catch(error => {
+    signedBookUrlCache.delete(bookId);
+    console.error('[signed-url] Client request failed', { bookId, error: error.message });
+    throw error;
+  });
+
+  signedBookUrlCache.set(bookId, { request, expiresAt: 0 });
+  return request;
 }
 
 // Admin-only: fetch per-user search history from search_events
@@ -447,7 +500,7 @@ export async function fetchStats() {
 
     console.log('[fetchStats] Starting data fetch...');
     
-    const [booksCountRes, usersDataRes, universitiesCountVal, pastPapersCountVal, recentRes, allBooksRes, allPastPapersRes] = await Promise.all([
+    const [booksCountRes, usersDataRes, universitiesCountVal, pastPapersCountVal, apkDownloadsCountVal, recentRes, allBooksRes, allPastPapersRes] = await Promise.all([
       supabase.from('books').select('id', { count: 'exact', head: true }),
       (async () => {
         try {
@@ -490,6 +543,14 @@ export async function fetchStats() {
       })(),
       (async () => { const { count } = await supabase.from('universities').select('id', { count: 'exact', head: true }); return count || 0; })(),
       (async () => { const { count } = await supabase.from('past_papers').select('id', { count: 'exact', head: true }); return count || 0; })(),
+      (async () => {
+        const { count, error } = await supabase.from('android_apk_downloads').select('id', { count: 'exact', head: true });
+        if (error) {
+          console.warn('[fetchStats] APK download metrics unavailable:', error.message);
+          return 0;
+        }
+        return count || 0;
+      })(),
       supabase.from('books').select('id, title, author, cover_image_url, created_at').order('created_at', { ascending: false }).limit(10),
       supabase.from('books').select('id, created_at'),
       supabase.from('past_papers').select('id, created_at'),
@@ -526,7 +587,8 @@ export async function fetchStats() {
         books: booksCount, 
         users: usersCount, 
         universities: universitiesCount, 
-        pastPapers: pastPapersCount
+        pastPapers: pastPapersCount,
+        androidApkDownloads: apkDownloadsCountVal || 0
       },
       recent: recentRes.data || [],
       monthly: months.map(m => ({ month: m.label, uploads: m.uploads })),
@@ -1862,7 +1924,7 @@ export async function getSupabaseUsageReport() {
 // Update user subscription tier
 export async function updateUserTier(userId, tier) {
   const origin = getBackendOrigin();
-  const endpoint = `${origin}/api/elib/users/${userId}/tier`;
+  const endpoint = `${origin}/api/elib/users/${encodeURIComponent(userId)}/tier`;
   try {
     const { data: { session } } = await supabase.auth.getSession();
     const response = await fetch(endpoint, {
@@ -1875,9 +1937,16 @@ export async function updateUserTier(userId, tier) {
     });
     if (!response.ok) {
       const text = await response.text().catch(() => '');
-      throw new Error(text || `Failed to update user tier (status ${response.status})`);
+      let message = text;
+      try {
+        const payload = JSON.parse(text);
+        message = payload?.error || payload?.message || text;
+      } catch (parseError) {
+        // Keep plain-text server errors unchanged.
+      }
+      throw new Error(message || `Failed to update user tier (status ${response.status})`);
     }
-    const payload = await response.json();
+    const payload = await response.json().catch(() => ({}));
     return payload?.data || null;
   } catch (error) {
     console.error('[updateUserTier] Error:', error?.message || error);

@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { BookPanel } from "../Books/BookPanel";
 import { PaperPanel } from "../PastPapers/Pastpapers";
 import {Profile} from './Profile';   // ← imported here
 import VerificationBadge from "../Books/Admin/components/VerificationBadge";
 import { supabase } from "../Books/supabaseClient";
-import { useSwipeTabs } from './useSwipeTabs';
 import './BookManagement.css';
 
 export const BookManagement = () => {
@@ -14,7 +13,6 @@ export const BookManagement = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [currentUserTier, setCurrentUserTier] = useState('basic');
   const [isChatSelected, setIsChatSelected] = useState(false);
-  const contentRef = useRef(null);
 
   // Determine active tab from URL path
   const getActiveTabFromPath = () => {
@@ -74,10 +72,6 @@ export const BookManagement = () => {
     { id: 'pastpapers', label: 'ExamPapers' },
   ];
 
-  const swipeHandlers = useSwipeTabs(tabs, activeTab, (tabId) => {
-    navigateToTab(tabId);
-  }, contentRef);
-
   // Navigate to tab by updating URL
   const navigateToTab = (tabId) => {
     const basePath = '/BookManagement';
@@ -85,7 +79,23 @@ export const BookManagement = () => {
     navigate(`${basePath}${tabPath}`, { replace: false });
   };
 
-  // Scroll effect for header shadow
+  useEffect(() => {
+    document.body.classList.add('book-page-no-scrollbar');
+    document.documentElement.style.scrollbarWidth = 'none';
+    document.body.style.scrollbarWidth = 'none';
+    document.documentElement.style.msOverflowStyle = 'none';
+    document.body.style.msOverflowStyle = 'none';
+
+    return () => {
+      document.documentElement.classList.remove('book-page-no-scrollbar');
+      document.body.classList.remove('book-page-no-scrollbar');
+      document.documentElement.style.removeProperty('scrollbar-width');
+      document.body.style.removeProperty('scrollbar-width');
+      document.documentElement.style.removeProperty('-ms-overflow-style');
+      document.body.style.removeProperty('-ms-overflow-style');
+    };
+  }, []);
+
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener('scroll', handleScroll);
@@ -186,8 +196,6 @@ export const BookManagement = () => {
       {/* Main Content */}
       <div
         className="file-converter-content-convert"
-        ref={contentRef}
-        {...swipeHandlers}
         data-active-tab={activeTab}
       >
         {renderActiveComponent()}

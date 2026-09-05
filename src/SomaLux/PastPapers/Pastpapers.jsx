@@ -9,15 +9,13 @@ import {
   getFaculties,
   getUniversitiesForDropdown,
   createPastPaperSubmission,
-  togglePastPaperLike,
-  togglePastPaperBookmark
+  getPastPaperSignedUrl
 } from '../Books/Admin/pastPapersApi';
 import {
   fetchUniversities,
   toggleUniversityLike
 } from '../Books/Admin/campusApi';
 import { ShareButton } from './PastpaperShare';
-import { Download } from './PastpaperDownload';
 import { AuthModal } from '../Books/AuthModal';
 import SubscriptionModal from '../Subscriptions/SubscriptionModal';
 import SecureReader from '../Books/SecureReader';
@@ -26,7 +24,7 @@ import { FaSearch, FaFacebook, FaLinkedin, FaWhatsapp } from 'react-icons/fa';
 import { SiX, SiGoogledrive } from 'react-icons/si';
 import { 
   FiSearch, FiFileText, FiFilter, FiChevronRight, FiChevronLeft, FiX, 
-  FiTrendingUp, FiDownload, FiArrowLeft, FiEye, FiStar, FiMapPin, FiUpload, FiBook, FiBookmark, FiShare2, FiCopy, FiLink
+  FiTrendingUp, FiArrowLeft, FiEye, FiStar, FiMapPin, FiUpload, FiBook, FiBookmark, FiShare2, FiCopy, FiLink
 } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UniversityGrid } from './UniversityGrid';
@@ -34,23 +32,8 @@ import { FacultyGridDisplay } from './FacultyGridDisplay';
 import { API_URL } from '../../config';
 import { PaperGrid } from './PaperGrid';
 import { PulseLoader, InfiniteScrollLoader } from './PaperSkeleton';
+import { pushBackAction, popBackAction } from '../services/backNavigation';
 import './PaperPanel.css';
-
-/**
- * Utility: Preload PDF into cache for instant loading in modal
- * Uses service worker cache to ensure instant display when modal opens
- */
-const preloadPDFForInstantDisplay = (pdfUrl) => {
-  if (!pdfUrl) return;
-  
-  // Fetch in background to cache it with service worker
-  fetch(pdfUrl, { 
-    method: 'GET',
-    cache: 'force-cache' // Force browser to use cache aggressively
-  }).catch(() => {
-    // Silently fail - preloading is optional
-  });
-};
 
 export const PaperPanel = ({ demoMode = false }) => {
   const location = useLocation();
@@ -63,7 +46,7 @@ export const PaperPanel = ({ demoMode = false }) => {
   const [universitySearchTerm, setUniversitySearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(31);
+  const [pageSize] = useState(20);
   const [selectedPaper, setSelectedPaper] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
@@ -289,7 +272,7 @@ export const PaperPanel = ({ demoMode = false }) => {
       downloads: paper.downloads_count || 0,
       downloads_count: paper.downloads_count || 0,
       file_url: paper.file_url,
-      downloadUrl: paper.file_url || null,
+      downloadUrl: null,
       created_at: paper.created_at
     }));
   }, []);
@@ -946,13 +929,14 @@ export const PaperPanel = ({ demoMode = false }) => {
       return;
     }
 
-    // INSTANT LOADING: Preload PDF for lightning-fast modal display
-    if (paper.file_url || paper.downloadUrl) {
-      preloadPDFForInstantDisplay(paper.file_url || paper.downloadUrl);
-    }
-
     setSelectedPaper(paper);
     setWelcomeMessage(false);
+
+    getPastPaperSignedUrl(paper.id)
+      .then(signedUrl => {
+        setSelectedPaper(prev => prev?.id === paper.id ? { ...prev, downloadUrl: signedUrl } : prev);
+      })
+      .catch(error => console.warn('Failed to prewarm past paper URL:', { paperId: paper.id, error: error.message }));
     
   };
 
@@ -965,8 +949,7 @@ export const PaperPanel = ({ demoMode = false }) => {
     }
 
     try {
-      // Use the downloadUrl we already generated in loadPastPapers
-      const url = paper.downloadUrl;
+      const url = await getPastPaperSignedUrl(paper.id);
 
       if (!url) {
         console.warn('Unable to resolve reader URL for past paper', paper.id);
@@ -974,6 +957,7 @@ export const PaperPanel = ({ demoMode = false }) => {
       }
 
       setSelectedPaper(paper);
+      setSelectedPaper(prev => prev?.id === paper.id ? { ...prev, downloadUrl: url } : prev);
       setReaderUrl(url);
       setShowReader(true);
       
@@ -1022,6 +1006,49 @@ export const PaperPanel = ({ demoMode = false }) => {
     setShowFacultyGrid(false);
     // Keep universityFilter, searchTerm, and other paper viewing state intact
   }, []);
+
+  const handleNativeBack = useCallback(() => {
+    if (showSharingModal) {
+      setShowSharingModal(false);
+      return;
+    }
+
+    if (showReader) {
+      setShowReader(false);
+      setReaderUrl(null);
+      return;
+    }
+
+    if (selectedPaper) {
+      closeDetails();
+      return;
+    }
+
+    if (showFacultyGrid) {
+      setShowFacultyGrid(false);
+      return;
+    }
+
+    setUniversityFilter(null);
+    setFacultyFilter(null);
+    setSearchTerm('');
+    setUniversitySearchTerm('');
+  }, [selectedPaper, showFacultyGrid, showReader, showSharingModal]);
+
+  useEffect(() => {
+    const hasNestedView = Boolean(
+      showSharingModal ||
+      showReader ||
+      selectedPaper ||
+      showFacultyGrid ||
+      universityFilter
+    );
+
+    if (!hasNestedView) return undefined;
+
+    pushBackAction(handleNativeBack);
+    return () => popBackAction(handleNativeBack);
+  }, [handleNativeBack, selectedPaper, showFacultyGrid, showReader, showSharingModal, universityFilter]);
 
   const handleFacultySelect = useCallback((faculty) => {
     // Record view for this faculty in database
@@ -1168,75 +1195,6 @@ export const PaperPanel = ({ demoMode = false }) => {
       }
     } catch (err) {
       console.error('Failed to sync university like to database:', err);
-    }
-  };
-
-  const handleTogglePaperLike = async (paperId) => {
-    // Optimistic update
-    setPaperLikes(prev => {
-      const updated = { ...prev };
-      updated[paperId] = !updated[paperId];
-      localStorage.setItem('paperLikes', JSON.stringify(updated));
-      return updated;
-    });
-    
-    // Sync to database and get authoritative count
-    const userId = user?.id || 'anonymous-' + Math.random().toString(36).substr(2, 9);
-    try {
-      const result = await togglePastPaperLike(paperId, userId);
-      if (result) {
-        // Use the count from database (source of truth)
-        setPaperLikesCounts(counts => {
-          const updatedCounts = { ...counts };
-          updatedCounts[paperId] = result.count;
-          localStorage.setItem('paperLikesCounts', JSON.stringify(updatedCounts));
-          return updatedCounts;
-        });
-        
-        // Update the paper's likes_count in the papers list
-        setDisplayedPapers(prevPapers => prevPapers.map(p => 
-          p.id === paperId ? { ...p, likes_count: result.count } : p
-        ));
-      }
-    } catch (err) {
-      console.error('Failed to sync paper like to database:', err);
-    }
-  };
-
-  const handleTogglePaperBookmark = async (paperId) => {
-    // Optimistic update
-    setPaperBookmarks(prev => {
-      if (prev.includes(paperId)) {
-        const updated = prev.filter(id => id !== paperId);
-        localStorage.setItem('paperBookmarks', JSON.stringify(updated));
-        return updated;
-      } else {
-        const updated = [...prev, paperId];
-        localStorage.setItem('paperBookmarks', JSON.stringify(updated));
-        return updated;
-      }
-    });
-    
-    // Sync to database and get authoritative count
-    const userId = user?.id || 'anonymous-' + Math.random().toString(36).substr(2, 9);
-    try {
-      const result = await togglePastPaperBookmark(paperId, userId);
-      if (result) {
-        // Use the count from database (source of truth)
-        setpaperBookmarksCounts(counts => {
-          const updatedCounts = { ...counts };
-          updatedCounts[paperId] = result.count;
-          localStorage.setItem('paperBookmarksCounts', JSON.stringify(updatedCounts));
-          return updatedCounts;
-        });
-        
-        // Update the paper's bookmarks_count in the papers list
-        setDisplayedPapers(prevPapers => prevPapers.map(p => 
-          p.id === paperId ? { ...p, bookmarks_count: result.count } : p
-        ));
-      }
-    } catch (err) {
-      console.error('Failed to sync paper bookmark to database:', err);
     }
   };
 
@@ -1392,22 +1350,6 @@ export const PaperPanel = ({ demoMode = false }) => {
             />
           ) : (
             <>
-          {/* Back Button - Responsive Header */}
-          <div className="back-header-pastpast" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid rgba(134, 150, 160, 0.2)' }}>
-            <button 
-              onClick={() => {
-                setUniversityFilter(null);
-                setSearchTerm('');
-                setUniversitySearchTerm('');
-              }}
-              className="back-button-past"
-              title="Back to universities"
-            >
-              <FiChevronLeft size={18} /> Back
-            </button>
-            <span style={{ color: '#8696a0' }}>|</span>
-          </div>
-
           {/* Search and Filter Controls - Matching BookPanel Layout */}
           <PaperGrid
             displayedPapers={displayedPapers}
@@ -1425,14 +1367,11 @@ export const PaperPanel = ({ demoMode = false }) => {
             setSearchTerm={setSearchTerm}
             user={user}
             onPaperSelect={handlePaperClick}
-            onUploadClick={() => setShowUploadModal(true)}
-            onAdminClick={() => navigate('/past-papers/admin')}
-            paperLikes={paperLikes}
-            paperLikesCounts={paperLikesCounts}
-            onToggleLike={handleTogglePaperLike}
-            paperBookmarks={paperBookmarks}
-            paperBookmarksCounts={paperBookmarksCounts}
-            onToggleBookmark={handleTogglePaperBookmark}
+            onBack={() => {
+              setUniversityFilter(null);
+              setSearchTerm('');
+              setUniversitySearchTerm('');
+            }}
             faculties={faculties}
             facultyFilter={facultyFilter}
             onFacultyClick={handleFacultyGridOpen}
@@ -1465,10 +1404,10 @@ export const PaperPanel = ({ demoMode = false }) => {
 
               <div className="modal-bodyBKP" style={{ paddingTop: '0', paddingLeft: '0', paddingRight: '0' }}>
                 <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '0.2rem' }}>
-                  {selectedPaper.file_url || selectedPaper.downloadUrl ? (
+                  {selectedPaper.downloadUrl ? (
                     <div style={{ width: '100%', maxWidth: '400px', display: 'flex', justifyContent: 'center', borderRadius: '8px', overflow: 'hidden', background: '#121a1f', padding: '0.2rem' }}>
                       <Suspense fallback={<div style={{ width: '100%', minHeight: '600px' }} />}>
-                        <Document file={selectedPaper.file_url || selectedPaper.downloadUrl} loading="">
+                        <Document file={selectedPaper.downloadUrl} loading="">
                           <Page pageNumber={1} width={380} renderTextLayer={false} renderAnnotationLayer={false} loading="" />
                         </Document>
                       </Suspense>
@@ -1510,15 +1449,6 @@ export const PaperPanel = ({ demoMode = false }) => {
 
               <div className="modal-actionspast" style={{ marginTop: '16px', paddingTop: '16px' }}>
                 <div className="actions-primary-rowpast">
-                  <Download 
-                    paper={selectedPaper} 
-                    variant="full" 
-                    user={user}
-                    onUpgradeClick={() => setShowSubscriptionModal(true)}
-                    downloadText="Save"
-                    downloadingText="Saving..."
-                    className="btn-readBKP btn-action-primaryBKP"
-                  />
                   <button
                     className="btn-readBKP btn-action-primaryBKP"
                     onClick={() => setShowSharingModal(true)}
@@ -2109,6 +2039,7 @@ export const PaperPanel = ({ demoMode = false }) => {
       {showReader && selectedPaper && readerUrl && (
         <SimpleScrollReader
           src={readerUrl}
+          cacheKey={`paper:${selectedPaper.id}`}
           title={selectedPaper.title}
           author={selectedPaper.courseCode || ''}
           sampleText={`${selectedPaper.university} - ${selectedPaper.year}`}

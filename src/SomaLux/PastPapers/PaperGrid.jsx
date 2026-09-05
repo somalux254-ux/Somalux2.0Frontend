@@ -1,7 +1,8 @@
 import React, { useRef, useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { FiFileText, FiFilter, FiX, FiDownload, FiUpload, FiEye, FiBookmark, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiFileText, FiFilter, FiX, FiDownload, FiEye, FiBookmark, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { AiOutlineHeart, AiFillHeart } from 'react-icons/ai';
+import { FaSearch } from 'react-icons/fa';
 import { formatNumber } from './formatNumber';
 import './PaperPanel.css';
 import '../Books/Admin/admin.css';
@@ -35,8 +36,7 @@ export const PaperGrid = React.memo(({
   setSearchTerm,
   user,
   onPaperSelect,
-  onUploadClick,
-  onAdminClick,
+  onBack,
   paperLikes = {},
   paperLikesCounts = {},
   onToggleLike,
@@ -96,13 +96,23 @@ export const PaperGrid = React.memo(({
     }, 2600);
   }, []);
 
-  const totalPages = Math.max(1, Math.ceil(filteredPapers.length / pageSize));
-
   return (
     <>
       {/* Search and Filter Controls */}
       <div className="controlspast">
+        <button
+          onClick={onBack}
+          className="back-button-past"
+          aria-label="Back to universities"
+          title="Back to universities"
+        >
+          <FiChevronLeft size={20} aria-hidden="true" />
+        </button>
+
         <div className="search-containerpast">
+          <span className="search-iconpast" aria-hidden="true">
+            <FaSearch size={14} />
+          </span>
           <input
             ref={searchInputRef}
             type="text"
@@ -141,26 +151,6 @@ export const PaperGrid = React.memo(({
           >
             <FiFilter /> {activeFilter !== 'all' && '• '}Filters
           </button>
-
-          {((user?.role === 'admin' || user?.role === 'editor') || ['campuslives254@gmail.com', 'paltechsomalux@gmail.com', 'eliblearning@gmail.com'].includes(user?.email)) && (
-            <button
-              onClick={onAdminClick}
-              className="filter-buttonpast"
-              title="Open Admin Dashboard"
-            >
-              {user?.role === 'admin' || ['campuslives254@gmail.com', 'paltechsomalux@gmail.com', 'eliblearning@gmail.com'].includes(user?.email) ? 'Admin' : 'Editor'}
-            </button>
-          )}
-
-          {user && (
-            <button
-              onClick={onUploadClick}
-              className="filter-buttonpast"
-              title="Upload a past paper"
-            >
-              <FiUpload size={16} /> Upload
-            </button>
-          )}
 
           {showFilters && (
             <div 
@@ -276,7 +266,7 @@ export const PaperGrid = React.memo(({
                     </div>
 
                     {/* Stats Footer */}
-                    <div style={{ 
+                    <div className="paper-stats-footerpast" style={{ 
                       display: 'flex', 
                       justifyContent: 'space-between',
                       alignItems: 'center',
@@ -407,7 +397,7 @@ export const PaperGrid = React.memo(({
                       </div>
 
                       {/* Stats Footer */}
-                      <div style={{ 
+                      <div className="paper-stats-footerpast" style={{ 
                         display: 'flex', 
                         justifyContent: 'space-between',
                         alignItems: 'center',
@@ -498,29 +488,23 @@ export const PaperGrid = React.memo(({
 
           {/* Pagination Controls */}
           <div
-            className="actions"
-            style={{
-              marginTop: 10,
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: '16px'
-            }}
+            className="book-pagination-actions"
+            style={{ marginTop: 10 }}
           >
-            <button className="btn" disabled={currentPage <= 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}>
-              ← Prev
+            <button
+              className="btn book-pagination-button"
+              disabled={currentPage <= 1}
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            >
+              <FiChevronLeft size={16} aria-hidden="true" /> Prev
             </button>
 
-            <span
-              style={{
-                color: '#cfd8dc',
-                fontSize: 12
-              }}
+            <button
+              className="btn book-pagination-button"
+              disabled={currentPage >= Math.max(1, Math.ceil(filteredPapers.length / pageSize))}
+              onClick={() => setCurrentPage(p => Math.min(Math.max(1, Math.ceil(filteredPapers.length / pageSize)), p + 1))}
             >
-              Page {currentPage} of {totalPages}
-            </span>
-
-            <button className="btn" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}>
-              Next →
+              Next <FiChevronRight size={16} aria-hidden="true" />
             </button>
           </div>
     </>

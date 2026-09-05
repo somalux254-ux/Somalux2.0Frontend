@@ -83,14 +83,16 @@
 
 .profile-actions-grid {
   display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   column-gap: 8px !important;
   row-gap: 14px !important;
-  align-items: stretch;
+  align-items: center;
+  justify-items: center;
 }
 
 .profile-action-column {
-  display: contents !important;
+  display: flex !important;
+  align-items: center;
 }
 
 .profile-actions-grid button {

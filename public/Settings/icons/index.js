@@ -1,1 +1,0 @@
-export { UsageRulesIcon } from './UsageRulesIcon';

@@ -1,7 +1,8 @@
 import './SettingsPage.css';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { pushBackAction, popBackAction, runBackAction } from '../services/backNavigation';
-import { FiChevronLeft, FiBell, FiSliders, FiUser, FiHelpCircle, FiChevronRight, FiMessageSquare, FiFileText, FiPackage } from 'react-icons/fi';
+import { FiChevronLeft, FiBell, FiSliders, FiUser, FiHelpCircle, FiChevronRight, FiMessageSquare, FiFileText, FiPackage, FiUpload } from 'react-icons/fi';
 import { PadlockIcon } from './PadlockIcon';
 
 // Import tab components
@@ -25,6 +26,7 @@ import { applyAppTheme, getInitialTheme } from '../../theme';
 import { UsageRulesIcon } from './icons/UsageRulesIcon';
 
 function SettingsPage({ onBack, onLogout }) {
+  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState('main');
   const [headerOverride, setHeaderOverride] = useState(null);
   const [settings, setSettings] = useState({
@@ -175,7 +177,8 @@ function SettingsPage({ onBack, onLogout }) {
     { id: 'agreement', label: 'User Agreement', icon: FiFileText, description: 'Terms & conditions' },
     { id: 'usage', label: 'Usage Policy', icon: UsageRulesIcon, description: 'Platform guidelines' },
     { id: 'about', label: 'About Us', icon: FiFileText, description: 'Learn about Somalux' },
-    { id: 'apps', label: 'Apps', icon: FiPackage, description: 'Manage applications' }
+    { id: 'apps', label: 'Apps', icon: FiPackage, description: 'Manage applications' },
+    { id: 'uploads', label: 'Uploads', icon: FiUpload, description: 'Upload content' }
   ];
 
   const renderHeaderTitle = () => {
@@ -229,7 +232,11 @@ function SettingsPage({ onBack, onLogout }) {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    setCurrentPage(tab.id);
+                    if (tab.id === 'uploads') {
+                      navigate('/user/upload');
+                    } else {
+                      setCurrentPage(tab.id);
+                    }
                   }}
                 >
                   <div className="tab-card-left">

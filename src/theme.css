@@ -6,6 +6,22 @@ body,
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
+*,
+*::before,
+*::after {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+*::-webkit-scrollbar,
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-thumb {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+  background: transparent !important;
+}
+
 [data-theme="light"] .book-management,
 [data-theme="light"] .user-profile-container {
   background: var(--bg-main) !important;
@@ -25,17 +41,18 @@ body,
 }
 
 [data-theme="light"] .settings-stp-tab-card {
-  background: #ffffff !important;
-  border: 1px solid rgba(23, 32, 39, 0.14) !important;
-  box-shadow: 0 2px 8px rgba(23, 32, 39, 0.08) !important;
+  background: rgba(0, 168, 68, 0.22) !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 [data-theme="light"] .settings-stp-tab-card:hover,
+[data-theme="light"] .settings-stp-tab-card:active,
 [data-theme="light"] .settings-stp-tab-card:focus,
 [data-theme="light"] .settings-stp-tab-card:focus-visible {
-  background: #ffffff !important;
-  border-color: rgba(0, 168, 68, 0.35) !important;
-  box-shadow: 0 3px 10px rgba(23, 32, 39, 0.12) !important;
+  background: rgba(0, 168, 68, 0.22) !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 [data-theme="light"] .settings-stp-tab-card .tab-card-label {
@@ -136,7 +153,19 @@ body,
 
 [data-theme="light"] .book-management .header-title,
 [data-theme="light"] .book-management .tool-button-convert {
-  color: var(--text-primary) !important;
+  color: #000000 !important;
+}
+
+[data-theme="light"] .book-management .tool-button-convert:not(.active-convert) {
+  color: #000000 !important;
+}
+
+[data-theme="dark"] .book-management .header-title {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .book-management .tool-button-convert:not(.active-convert) {
+  color: #ffffff !important;
 }
 
 [data-theme="light"] .book-management .tool-button-convert.active-convert {
@@ -157,6 +186,7 @@ body,
 
 [data-theme="light"] .book-management .book-cardBKP {
   background-color: #ffffff !important;
+  border: 0.5px solid #c7d1d6 !important;
   box-shadow: 0 2px 8px rgba(23, 32, 39, 0.08) !important;
 }
 
@@ -189,7 +219,5 @@ body,
 }
 
 [data-theme="dark"] .book-management .book-cardBKP {
-  background: transparent !important;
-  border: 0.5px solid rgba(179, 188, 197, 0.2) !important;
-  border-radius: 8px !important;
+  border: 0.5px solid #2a3942 !important;
 }

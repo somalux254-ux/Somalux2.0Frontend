@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from 'react-router-dom';
-import { FiUser } from 'react-icons/fi';
+import { FiSettings, FiUser, FiShield } from 'react-icons/fi';
 import { userCache } from "../Books/utils/cacheManager";
 import { supabase } from "../Books/supabaseClient";
 import { ProfileAvatar, ProfilePlaceholder } from "./ProfileAvatar";
@@ -8,7 +8,7 @@ import { AuthModals } from "./AuthModals";
 import { getCurrentUserProfile } from "../Books/Admin/api";
 import "./Profile.css";
 
-export const Profile = ({ user: propUser = null }) => {
+export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const dropdownRef = useRef(null);
@@ -531,51 +531,20 @@ export const Profile = ({ user: propUser = null }) => {
                 display: 'flex',
                 flexDirection: 'row',
                 gap: '16px',
-                justifyContent: 'space-between'
+                justifyContent: 'center'
               }}>
-                {/* Left Column - 2 buttons */}
+                {/* Settings action */}
                 <div className="profile-action-column" style={{
                   display: 'flex',
-                  flexDirection: 'column',
-                  gap: '10px',
-                  flex: 1
+                  flexDirection: 'row',
+                  gap: '24px',
+                  alignItems: 'center'
                 }}>
-                {/* Upload */}
-                <button
-                  onClick={() => {
-                    setShowActionsGrid(false);
-                    setIsOpen(false);
-                    navigate('/user/upload');
-                  }}
-                  style={{
-                    padding: '5px 9px',
-                    background: 'transparent',
-                    border: '1px solid #34B7F1',
-                    color: '#34B7F1',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    fontSize: '10px',
-                    fontWeight: '600',
-                    borderRadius: '4px',
-                    whiteSpace: 'nowrap',
-                    width: '100%',
-                    justifyContent: 'center'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(52, 183, 241, 0.1)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
-                >
-                  Upload
-                </button>
-
                 {/* Settings */}
                 <button
+                  type="button"
+                  aria-label="Settings"
+                  title="Settings"
                   onClick={() => {
                     setShowActionsGrid(false);
                     setIsOpen(false);
@@ -590,25 +559,73 @@ export const Profile = ({ user: propUser = null }) => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '10px',
+                    gap: '8px',
+                    fontSize: '11px',
                     fontWeight: '600',
                     borderRadius: '4px',
                     whiteSpace: 'nowrap',
-                    width: '100%'
+                    width: 'auto'
                   }}
                 >
-                  Settings
+                  <FiSettings size={16} aria-hidden="true" />
+                  <span>Settings</span>
                 </button>
 
-                </div>
-
-                {/* Right Column - 3 buttons */}
-                <div className="profile-action-column" style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '10px',
-                  flex: 1
-                }}>
+                {(authUser.role === 'admin' || authUser.role === 'editor' ||
+                  ['campuslives254@gmail.com', 'paltechsomalux@gmail.com', 'eliblearning@gmail.com']
+                    .includes(authUser.email?.toLowerCase())) && (
+                  <button
+                    type="button"
+                    aria-label="Admin dashboard"
+                    title="Admin dashboard"
+                    onClick={() => {
+                      setShowActionsGrid(false);
+                      setIsOpen(false);
+                      navigate('/books/admin');
+                    }}
+                    style={{
+                      position: 'relative',
+                      padding: '5px 9px',
+                      background: 'transparent',
+                      border: '1px solid #8696a0',
+                      color: '#c9d3d8',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      fontSize: '11px',
+                      fontWeight: '600',
+                      borderRadius: '4px',
+                      whiteSpace: 'nowrap',
+                      width: 'auto'
+                    }}
+                  >
+                    <FiShield size={16} aria-hidden="true" />
+                    <span>{authUser.role === 'editor' ? 'Editor' : 'Admin'}</span>
+                    {pendingSubmissions > 0 && (
+                      <span style={{
+                        position: 'absolute',
+                        top: -6,
+                        right: -6,
+                        background: '#ea4335',
+                        color: '#fff',
+                        borderRadius: '50%',
+                        minWidth: 18,
+                        height: 18,
+                        padding: '0 3px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '10px',
+                        fontWeight: '600',
+                        border: '2px solid #0b1216'
+                      }}>
+                        {pendingSubmissions > 99 ? '99+' : pendingSubmissions}
+                      </span>
+                    )}
+                  </button>
+                )}
 
                 </div>
               </div>

@@ -2,10 +2,14 @@ package com.somalux.app.plugins;
 
 import android.app.Activity;
 import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.View;
 import android.view.Window;
 
+import androidx.core.view.WindowInsetsControllerCompat;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -20,7 +24,12 @@ public class SystemBarsPlugin extends Plugin {
         getContext().getSharedPreferences("theme", 0).edit().putString("mode", theme).apply();
         boolean light = "light".equals(theme);
         Activity activity = getActivity();
-        activity.runOnUiThread(() -> applyTheme(activity.getWindow(), light));
+        activity.runOnUiThread(() -> {
+            applyTheme(activity.getWindow(), light);
+            new Handler(Looper.getMainLooper()).postDelayed(
+                () -> applyTheme(activity.getWindow(), light), 250
+            );
+        });
 
         JSObject result = new JSObject();
         result.put("theme", light ? "light" : "dark");
@@ -29,6 +38,7 @@ public class SystemBarsPlugin extends Plugin {
 
     private void applyTheme(Window window, boolean light) {
         int background = Color.parseColor(light ? "#FFFFFF" : "#0C1317");
+        window.setBackgroundDrawable(new ColorDrawable(background));
         window.setStatusBarColor(background);
         window.setNavigationBarColor(background);
 
@@ -36,18 +46,9 @@ public class SystemBarsPlugin extends Plugin {
             window.setNavigationBarContrastEnforced(false);
         }
 
-        View decorView = window.getDecorView();
-        int flags = decorView.getSystemUiVisibility();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            flags = light
-                ? flags | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                : flags & ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            flags = light
-                ? flags | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                : flags & ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
-        }
-        decorView.setSystemUiVisibility(flags);
+        WindowInsetsControllerCompat controller =
+            new WindowInsetsControllerCompat(window, window.getDecorView());
+        controller.setAppearanceLightStatusBars(light);
+        controller.setAppearanceLightNavigationBars(light);
     }
 }

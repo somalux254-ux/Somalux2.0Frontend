@@ -8,7 +8,11 @@ import android.widget.FrameLayout;
 import android.os.Handler;
 import android.os.Looper;
 import android.content.res.Configuration;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import androidx.core.view.WindowInsetsControllerCompat;
 import com.getcapacitor.BridgeActivity;
+import com.somalux.app.plugins.NativePdfRendererPlugin;
 import com.somalux.app.plugins.SystemBarsPlugin;
 
 public class MainActivity extends BridgeActivity {
@@ -17,6 +21,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(android.os.Bundle savedInstanceState) {
         registerPlugin(SystemBarsPlugin.class);
+        registerPlugin(NativePdfRendererPlugin.class);
         super.onCreate(savedInstanceState);
 
         showPaltechSplash();
@@ -44,8 +49,6 @@ public class MainActivity extends BridgeActivity {
     public void onResume() {
         super.onResume();
 
-        applySystemBarsFromAndroidTheme();
-        
         // Hide navigation bar buttons and make them overlay the app
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             getWindow().setDecorFitsSystemWindows(false);
@@ -56,6 +59,11 @@ public class MainActivity extends BridgeActivity {
             flags |= View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;
             decorView.setSystemUiVisibility(flags);
         }
+
+        applySystemBarsFromAndroidTheme();
+        new Handler(Looper.getMainLooper()).postDelayed(
+            this::applySystemBarsFromAndroidTheme, 250
+        );
         
     }
 
@@ -64,7 +72,9 @@ public class MainActivity extends BridgeActivity {
         boolean light = "light".equals(mode)
             || ("system".equals(mode) && (getResources().getConfiguration().uiMode
             & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_NO);
+
         int background = light ? 0xFFFFFFFF : 0xFF0C1317;
+        getWindow().setBackgroundDrawable(new ColorDrawable(background));
         getWindow().setStatusBarColor(background);
         getWindow().setNavigationBarColor(background);
 
@@ -72,18 +82,9 @@ public class MainActivity extends BridgeActivity {
             getWindow().setNavigationBarContrastEnforced(false);
         }
 
-        View decorView = getWindow().getDecorView();
-        int flags = decorView.getSystemUiVisibility();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            flags = light
-                ? flags | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-                : flags & ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            flags = light
-                ? flags | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-                : flags & ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
-        }
-        decorView.setSystemUiVisibility(flags);
+        WindowInsetsControllerCompat controller =
+            new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
+        controller.setAppearanceLightStatusBars(light);
+        controller.setAppearanceLightNavigationBars(light);
     }
 }

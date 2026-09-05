@@ -57,7 +57,6 @@ export async function fetchPastPapers({
         semester,
         exam_type,
         file_path,
-        downloads_count,
         created_at, 
         uploaded_by,
         title,
@@ -201,7 +200,6 @@ export async function createPastPaper({ metadata, pdfFile }) {
     uploaded_by: user.id,
     created_at: nowIso,
     updated_at: nowIso,
-    downloads_count: 0,
     views: 0
   };
   const { data, error } = await supabase
@@ -338,65 +336,6 @@ export async function deletePastPaper({ id, file_path }) {
 }
 
 // =====================================================
-// PAST PAPER VIEWS & DOWNLOADS TRACKING
-// =====================================================
-
-export async function trackPastPaperView(paperId) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  try {
-    // Record unique view
-    await supabase
-      .from('past_paper_views')
-      .insert({ paper_id: paperId, user_id: user.id });
-    
-    // Call RPC function to increment views (SECURITY DEFINER bypasses RLS)
-    const { error } = await supabase.rpc('increment_past_paper_views_v2', {
-      p_paper_id: paperId
-    });
-    
-    if (error) {
-      console.error('Error incrementing paper views:', error);
-    }
-    
-    // Clear cache to get fresh data
-    try { clearPastPapersCache(); } catch (e) {}
-  } catch (error) {
-    // Ignore duplicate view errors (unique constraint) and PostgREST 409 conflicts
-    const msg = String(error?.message || '');
-    const details = String(error?.details || '');
-    const code = String(error?.code || '');
-    const isDuplicate = /duplicate/i.test(msg) || /duplicate/i.test(details) || code === '23505' || code === '409';
-    if (!isDuplicate) {
-      console.error('View tracking error:', error);
-    }
-  }
-}
-
-export async function trackPastPaperDownload(paperId) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  try {
-    // Increment downloads count
-    const { error: rpcError } = await supabase.rpc('increment_past_paper_downloads', { p_paper_id: paperId });
-    
-    if (rpcError) {
-      console.error('RPC Error incrementing downloads:', rpcError);
-      console.error('Paper ID:', paperId, 'Type:', typeof paperId);
-      throw rpcError;
-    }
-    
-    // Clear cache to get fresh data
-    try { clearPastPapersCache(); } catch (e) {}
-  } catch (error) {
-    console.error('Download tracking error:', error);
-    throw error; // Re-throw so UI can handle it
-  }
-}
-
-// =====================================================
 // UTILITY FUNCTIONS
 // =====================================================
 
@@ -483,19 +422,12 @@ export async function getPastPaperStats() {
       .from('past_papers')
       .select('*', { count: 'exact', head: true });
 
-    const { data: downloadData } = await supabase
-      .from('past_papers')
-      .select('downloads_count');
-
-    const totalDownloads = (downloadData || []).reduce((sum, item) => sum + (item.downloads_count || 0), 0);
-
     return {
-      totalPapers: totalPapers || 0,
-      totalDownloads
+      totalPapers: totalPapers || 0
     };
   } catch (error) {
     console.error('Error fetching past paper stats:', error);
-    return { totalPapers: 0, totalDownloads: 0 };
+    return { totalPapers: 0 };
   }
 }
 

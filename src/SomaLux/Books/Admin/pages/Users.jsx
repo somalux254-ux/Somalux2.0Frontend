@@ -1,9 +1,36 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchProfiles, fetchUploadCountsByUser, updateUserRole, fetchAuthenticatedUsers } from '../api';
-import { FiSearch } from 'react-icons/fi';
+import { FiCheck, FiChevronDown, FiFilter, FiSearch } from 'react-icons/fi';
 import UsersAnalytics from './UsersAnalytics';
 import profilePlaceholder from '../../../BookDashboard/user-profile.svg';
+
+const highlightSearchText = (text, searchText) => {
+  const value = String(text || '');
+  const query = String(searchText || '').trim();
+  if (!query) return value;
+
+  const lowerValue = value.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  const parts = [];
+  let start = 0;
+  let matchIndex = lowerValue.indexOf(lowerQuery, start);
+
+  while (matchIndex !== -1) {
+    if (matchIndex > start) parts.push(value.slice(start, matchIndex));
+    parts.push(
+      <span className="admin-search-match" key={`${matchIndex}-${query}`}>
+        {value.slice(matchIndex, matchIndex + query.length)}
+      </span>
+    );
+    start = matchIndex + query.length;
+    matchIndex = lowerValue.indexOf(lowerQuery, start);
+  }
+
+  if (start === 0) return value;
+  if (start < value.length) parts.push(value.slice(start));
+  return parts;
+};
 
 const Users = ({ isSuperAdmin }) => {
   const [rows, setRows] = useState([]);
@@ -16,6 +43,8 @@ const Users = ({ isSuperAdmin }) => {
   const [sortDir, setSortDir] = useState('desc'); // 'asc' or 'desc'
   const [page, setPage] = useState(1);
   const [pageSize] = useState(15);
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const filterMenuRef = useRef(null);
   const navigate = useNavigate();
 
   const SUPERADMIN_EMAILS = ['campuslives254@gmail.com', 'paltechsomalux@gmail.com', 'eliblearning@gmail.com'];
@@ -181,64 +210,133 @@ const Users = ({ isSuperAdmin }) => {
     setPage(1);
   }, [search, roleFilter, activeFilter, sortBy, sortDir]);
 
+  useEffect(() => {
+    const closeFilterMenu = (event) => {
+      if (filterMenuRef.current && !filterMenuRef.current.contains(event.target)) {
+        setFilterMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', closeFilterMenu);
+    return () => document.removeEventListener('mousedown', closeFilterMenu);
+  }, []);
+
+  const applyFilter = (value) => {
+    if (value.startsWith('role:')) {
+      setRoleFilter(value.substring(5));
+      setActiveFilter('');
+      setSortBy('latest_login');
+      setSortDir('desc');
+    } else if (value.startsWith('active:')) {
+      setActiveFilter(value.substring(7));
+      setRoleFilter('');
+      setSortBy('latest_login');
+      setSortDir('desc');
+    } else if (value.startsWith('sort:')) {
+      const parts = value.substring(5).split(':');
+      setSortBy(parts[0]);
+      setSortDir(parts[1]);
+      setRoleFilter('');
+      setActiveFilter('');
+    }
+    setFilterMenuOpen(false);
+  };
+
+  const activeFilterLabel = roleFilter
+    ? roleFilter.charAt(0).toUpperCase() + roleFilter.slice(1)
+    : activeFilter
+      ? activeFilter.replace('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+      : sortBy === 'latest_login'
+        ? sortDir === 'asc' ? 'Oldest first' : 'Newest first'
+        : 'Filters';
+
   const isSuperadminEmail = (email) => {
     return SUPERADMIN_EMAILS.includes(email);
   };
 
   return (
-    <div className="panel">
+    <div className="panel users-panel">
       <div className="panel-title">Users</div>
       
       <UsersAnalytics rows={rows} />
       
-      <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="users-controls" style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: '1 1 250px', minWidth: '200px', maxWidth: '270px' }}>
           <FiSearch style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#8696a0', fontSize: '14px' }} />
           <input
-            type="text"
+            type="search"
+            enterKeyHint="search"
             placeholder="Search by name or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') e.currentTarget.blur();
+            }}
             className="input"
-            style={{ paddingLeft: 32, width: '100%', backgroundColor: 'black', color: 'white', fontSize: '13px' }}
+            style={{ paddingLeft: 32, width: '100%', backgroundColor: 'black', fontSize: '13px' }}
           />
         </div>
-        <select
-          className="select"
-          value={roleFilter ? `role:${roleFilter}` : activeFilter ? `active:${activeFilter}` : `sort:${sortBy}:${sortDir}`}
-          onChange={(e) => {
-            const value = e.target.value;
-            if (value.startsWith('role:')) {
-              setRoleFilter(value.substring(5));
-              setActiveFilter('');
-              setSortBy('latest_login');
-              setSortDir('desc');
-            } else if (value.startsWith('active:')) {
-              setActiveFilter(value.substring(7));
-              setRoleFilter('');
-              setSortBy('latest_login');
-              setSortDir('desc');
-            } else if (value.startsWith('sort:')) {
-              const parts = value.substring(5).split(':');
-              setSortBy(parts[0]);
-              setSortDir(parts[1]);
-              setRoleFilter('');
-              setActiveFilter('');
-            }
-          }}
-          style={{ minWidth: 200, width: 'auto' }}
-        >
-          <option value="role:">All Roles</option>
-          <option value="role:admin">Admin</option>
-          <option value="role:editor">Editor</option>
-          <option value="role:viewer">Viewer</option>
-          <option value="active:">All Status</option>
-          <option value="active:online">Online</option>
-          <option value="active:offline">Offline</option>
-          <option value="active:signed_out">Signed Out</option>
-          <option value="sort:latest_login:desc">Login (Newest)</option>
-          <option value="sort:latest_login:asc">Login (Oldest)</option>
-        </select>
+        <div className="users-filter-menu" ref={filterMenuRef}>
+          <button
+            type="button"
+            className={`users-filter-trigger${filterMenuOpen ? ' is-open' : ''}`}
+            onClick={() => setFilterMenuOpen((open) => !open)}
+            aria-expanded={filterMenuOpen}
+            aria-haspopup="menu"
+          >
+            <FiFilter />
+            <span>{activeFilterLabel}</span>
+            <FiChevronDown className="users-filter-chevron" />
+          </button>
+          {filterMenuOpen && (
+            <div className="users-filter-panel" role="menu">
+              <div className="users-filter-group">
+                <div className="users-filter-heading">Role</div>
+                {['', 'admin', 'editor', 'viewer'].map((role) => (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className={`users-filter-option${role && roleFilter === role ? ' is-selected' : ''}`}
+                    onClick={() => applyFilter(`role:${role}`)}
+                    key={role || 'all-roles'}
+                  >
+                    <span>{role ? role.charAt(0).toUpperCase() + role.slice(1) : 'All roles'}</span>
+                    {role && roleFilter === role && <FiCheck />}
+                  </button>
+                ))}
+              </div>
+              <div className="users-filter-group">
+                <div className="users-filter-heading">Status</div>
+                {['', 'online', 'offline', 'signed_out'].map((status) => (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className={`users-filter-option${status && activeFilter === status ? ' is-selected' : ''}`}
+                    onClick={() => applyFilter(`active:${status}`)}
+                    key={status || 'all-status'}
+                  >
+                    <span>{status ? status.replace('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()) : 'All status'}</span>
+                    {status && activeFilter === status && <FiCheck />}
+                  </button>
+                ))}
+              </div>
+              <div className="users-filter-group">
+                <div className="users-filter-heading">Sort by login</div>
+                {[['desc', 'Newest first'], ['asc', 'Oldest first']].map(([direction, label]) => (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className={`users-filter-option${sortBy === 'latest_login' && sortDir === direction && !roleFilter && !activeFilter ? ' is-selected' : ''}`}
+                    onClick={() => applyFilter(`sort:latest_login:${direction}`)}
+                    key={direction}
+                  >
+                    <span>{label}</span>
+                    {sortBy === 'latest_login' && sortDir === direction && !roleFilter && !activeFilter && <FiCheck />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div style={{ overflowX: 'auto', width: '100%' }}>
@@ -280,10 +378,10 @@ const Users = ({ isSuperAdmin }) => {
                       <img src={profilePlaceholder} alt="Profile placeholder" style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
                     )}
                   </div>
-                  <span>{u.full_name || u.display_name || '—'}</span>
+                  <span>{highlightSearchText(u.full_name || u.display_name || '—', search)}</span>
                 </div>
               </td>
-              <td>{u.email}</td>
+              <td>{highlightSearchText(u.email, search)}</td>
               <td>
                 <span style={{
                   fontSize: '12px',
@@ -351,7 +449,7 @@ const Users = ({ isSuperAdmin }) => {
       {filteredRows.length > 0 && (
         <div className="actions" style={{ marginTop: 10, justifyContent: 'space-between' }}>
           <button className="btn" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Prev</button>
-          <span style={{ color: '#cfd8dc' }}>Page {page} of {totalPages} ({filteredRows.length} users)</span>
+          <span className="users-pagination-label" style={{ color: '#cfd8dc' }}>Page {page} of {totalPages} ({filteredRows.length} users)</span>
           <button className="btn" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next</button>
         </div>
       )}

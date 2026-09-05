@@ -1548,34 +1548,35 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
       let year = '';
       let semester = '';
       let exam_type = '';
+      const fileExtractedMetadata = i === 0 ? extractedMetadata : null;
 
       try {
         // ✅ PRIORITY 1: Use first-page extracted metadata (highest accuracy)
-        if (extractedMetadata && extractedMetadata.source === 'first-page-extracted' && extractedMetadata.validation.isValid) {
-          console.log('✅ [UPLOAD] Using FIRST-PAGE extracted metadata (quality: ' + extractedMetadata.validation.quality + ')');
+        if (fileExtractedMetadata && fileExtractedMetadata.source === 'first-page-extracted' && fileExtractedMetadata.validation.isValid) {
+          console.log('✅ [UPLOAD] Using FIRST-PAGE extracted metadata (quality: ' + fileExtractedMetadata.validation.quality + ')');
           
-          unit_code = extractedMetadata.unitCode || '';
-          unit_name = extractedMetadata.unitName || '';
-          year = extractedMetadata.year || null;
-          semester = extractedMetadata.semester || '';
-          exam_type = extractedMetadata.examType || 'Main';
+          unit_code = fileExtractedMetadata.unitCode || '';
+          unit_name = fileExtractedMetadata.unitName || '';
+          year = fileExtractedMetadata.year || null;
+          semester = fileExtractedMetadata.semester || '';
+          exam_type = fileExtractedMetadata.examType || 'Main';
           
           console.log('📖 [UPLOAD] First-page extracted:', { 
             unit_code, 
             unit_name, 
             year, 
-            validationScore: extractedMetadata.validation.score 
+            validationScore: fileExtractedMetadata.validation.score 
           });
         }
         // ✅ PRIORITY 2: Use backend extracted metadata (OCR + direct text)
-        else if (extractedMetadata && extractedMetadata.source === 'backend-extracted') {
+        else if (fileExtractedMetadata && fileExtractedMetadata.source === 'backend-extracted') {
           console.log('✅ [UPLOAD] Using BACKEND extracted metadata from PDF');
           
-          unit_code = extractedMetadata.unitCode || '';
-          unit_name = extractedMetadata.unitName || '';
-          year = extractedMetadata.year || null;
-          semester = extractedMetadata.semester || '';
-          exam_type = extractedMetadata.examType || 'Main';
+          unit_code = fileExtractedMetadata.unitCode || '';
+          unit_name = fileExtractedMetadata.unitName || '';
+          year = fileExtractedMetadata.year || null;
+          semester = fileExtractedMetadata.semester || '';
+          exam_type = fileExtractedMetadata.examType || 'Main';
           
           console.log('📊 [UPLOAD] Backend extracted:', { unit_code, unit_name, year, semester, exam_type });
         } 
@@ -1682,8 +1683,8 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
         }
         
         // Fallback: try extracted metadata university
-        if (!selectedUniversity && extractedMetadata?.university) {
-          selectedUniversity = findMatchingUniversity(extractedMetadata.university, universities);
+        if (!selectedUniversity && fileExtractedMetadata?.university) {
+          selectedUniversity = findMatchingUniversity(fileExtractedMetadata.university, universities);
           if (selectedUniversity) {
             console.log('✅ Using extracted university:', selectedUniversity);
           }
@@ -1848,7 +1849,7 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
         };
         
         // Faculty priority: user selection > extracted > Google Search > Semantic detection > code guessing > 'Unknown'
-        let selectedFaculty = useCustomFaculty ? customFaculty : (faculty || extractedMetadata?.faculty);
+        let selectedFaculty = useCustomFaculty ? customFaculty : (faculty || fileExtractedMetadata?.faculty);
         
         // Try Google Search if faculty not selected by user and not found from PDF extraction
         if (!faculty && !customFaculty && !selectedFaculty && selectedUniversity && unit_code) {
@@ -1909,11 +1910,11 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
         metadata = {
           university_id: finalUniversity || null,
           faculty: selectedFaculty,
-          unit_code: unit_code || extractedMetadata?.unitCode || '',
-          unit_name: unit_name || extractedMetadata?.unitName || '',
-          year: (year && !isNaN(year)) ? Number(year) : (extractedMetadata?.year || new Date().getFullYear()),
-          semester: semester || extractedMetadata?.semester || '',
-          exam_type: exam_type || extractedMetadata?.examType || 'Main',
+          unit_code: unit_code || fileExtractedMetadata?.unitCode || '',
+          unit_name: unit_name || fileExtractedMetadata?.unitName || '',
+          year: (year && !isNaN(year)) ? Number(year) : (fileExtractedMetadata?.year || new Date().getFullYear()),
+          semester: semester || fileExtractedMetadata?.semester || '',
+          exam_type: exam_type || fileExtractedMetadata?.examType || 'Main',
           uploaded_by: userProfile?.id || userProfile?.uid || null
         };
 

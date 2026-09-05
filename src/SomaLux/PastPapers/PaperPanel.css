@@ -161,9 +161,9 @@
   margin-top: 0;
   padding: 0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: var(--bg-dark);
+  background-color: transparent;
   color: var(--text-dark);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: none;
 }
 
 @media (min-width: 768px) {
@@ -202,7 +202,7 @@
   top: 0.75rem;
   right: 0.75rem;
   background: none;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.03);
   cursor: pointer;
   color: var(--text-light);
 }
@@ -248,11 +248,28 @@
 .controlspast {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
   position: relative;
   align-items: center;
   width: 100%;
   flex-wrap: nowrap;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.controlspast::-webkit-scrollbar,
+.gridpast::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.controlspast > .back-button-past {
+  flex: 0 0 auto;
+  align-self: center;
+  height: 32px;
+  padding: 0 8px;
+  box-sizing: border-box;
 }
 
 /* Mobile: Keep controls in single horizontal line with proper spacing */
@@ -289,7 +306,7 @@
 
 .back-button-past {
   background: none;
-  border: none;
+  border: 1px solid var(--border-color, #2a3942);
   color: var(--primary);
   cursor: pointer;
   font-size: 0.9em;
@@ -315,34 +332,42 @@
 .search-containerpast {
   flex: 1 1 auto;
   background: var(--bg-dark);
-  padding: 0.25rem 0.35rem;
+  padding: 0.25rem 0.5rem;
+  min-height: 32px;
+  box-sizing: border-box;
   border-radius: 6px;
   display: flex;
   align-items: center;
   min-width: 150px;
-  border: 1px solid var(--bg-darker);
+  border: 0.5px solid var(--border-color, #2a3942);
+  margin-left: auto;
+  margin-right: auto;
 }
 
 @media (min-width: 768px) {
   .search-containerpast {
-    max-width: 70%;
+    max-width: 60%;
   }
 }
 
 @media (max-width: 640px) {
-  .search-containerpast {
-    flex: 1 1 100%;
-    min-width: 100%;
-    max-width: 100%;
+  .controlspast > .back-button-past {
+    display: none;
+  }
+
+  .controlspast .search-containerpast {
+    flex: 0 1 87%;
+    min-width: 0;
+    max-width: 87%;
     margin-bottom: 0.5rem;
   }
 }
 
 @media (max-width: 520px) {
   .search-containerpast {
-    flex: 1 1 auto;
+    flex: 0 1 87%;
     min-width: auto;
-    max-width: 100%;
+    max-width: 87%;
   }
 
   .filter-wrapperpast {
@@ -353,7 +378,7 @@
 .search-inputpast {
   flex: 1;
   min-width: 0;
-  padding: 0.2rem 0.5rem;
+  padding: 0.15rem 0.75rem;
   border: none;
   background: transparent !important;
   font-size: 0.85rem;
@@ -361,6 +386,13 @@
   outline: none;
   border-radius: 4px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.search-iconpast {
+  display: flex;
+  align-items: center;
+  margin-right: 0.5rem;
+  color: var(--text-light);
 }
 
 @media (max-width: 520px) {
@@ -524,65 +556,75 @@
 
 .gridpast {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
+  justify-content: start;
   margin-bottom: 1.5rem;
   margin-left: 0;
   margin-right: 0;
   padding-left: 0;
   padding-right: 0;
-}
-
-/* Small phones -> 3 columns with slightly larger cards */
-@media (min-width: 420px) {
-  .gridpast {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  background: transparent;
 }
 
 /* Tablets */
 @media (min-width: 768px) {
   .gridpast {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(160px, 180px));
     gap: 1.2rem;
     margin-left: 0;
     margin-right: 0;
     padding-left: 0;
     padding-right: 0;
+    margin-top: 1rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
 }
 
 /* Desktop wide */
 @media (min-width: 1024px) {
   .gridpast {
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(160px, 180px));
   }
 }
 
 @media (min-width: 1280px) {
   .gridpast {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(160px, 180px));
   }
 }
 
 .paper-cardpast {
   background: var(--bg-dark);
-  border-radius: 8px;
-  overflow: visible;
+  border-radius: 6px;
+  overflow: hidden;
   box-shadow: none;
   transition: none;
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  border: 0.5px solid var(--border-color, #2a3942);
   display: flex;
   flex-direction: column;
   cursor: pointer;
   position: relative;
-  height: 100%;
+  height: auto;
   padding: 0;
+  width: 73%;
+  justify-self: center;
+}
+
+@media (max-width: 767px) {
+  .paper-cardpast {
+    width: 82%;
+  }
 }
 
 .paper-cardpast:hover {
   box-shadow: none;
   transform: none;
+}
+
+.paper-stats-footerpast {
+  display: none !important;
 }
 
 .paper-coverpast {
@@ -600,7 +642,8 @@
 
 .paper-snapshotpast {
   width: 100%;
-  height: 140px;
+  aspect-ratio: 10 / 7;
+  height: 100px;
   background: var(--bg-dark);
   border-bottom: none;
   display: flex;
@@ -614,29 +657,49 @@
   object-fit: cover;
 }
 
+.paper-cardpast > .paper-snapshotpast,
+.paper-cardpast > .university-coverpast {
+  border-radius: 6px 6px 0 0;
+}
+
+.university-coverpast {
+  width: 100%;
+  height: 168px;
+  object-fit: cover;
+  border-bottom: 1px solid #2a3942;
+}
+
+@media (min-width: 1280px) {
+  .university-coverpast {
+    height: 210px;
+  }
+}
+
 @media (min-width: 640px) {
   .paper-snapshotpast {
-    height: 160px;
+    height: 120px;
   }
 }
 
 @media (min-width: 768px) {
   .paper-snapshotpast {
-    height: 160px;
+    height: 120px;
   }
 }
 
 @media (min-width: 1280px) {
   .paper-snapshotpast {
-    height: 170px;
+    height: 130px;
   }
-}.card-contentpast {
+}
+
+.card-contentpast {
   padding: 0.75rem 0.5rem;
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-height: 60px;
+  min-height: 0;
 }
 
 @media (min-width: 768px) {
@@ -687,7 +750,6 @@
 
 @media (max-width: 768px) {
   .paper-iconpast {
-    width: 48px;
     height: 48px;
   }
   
@@ -695,10 +757,6 @@
     width: 32px;
     height: 32px;
   }
-}
-
-.paper-cardpast:hover .paper-iconpast {
-  transform: none;
 }
 
 .paper-coursepast {
@@ -961,6 +1019,22 @@
 }
 
 .paper-cardpast { margin-bottom: 8px; }
+
+.book-pagination-actions {
+  display: flex;
+  width: 80%;
+  margin: 0 auto;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.book-pagination-button {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  padding: 4px 8px !important;
+}
 
 /* small helper for view icon area */
 .view-iconpast {
@@ -2796,6 +2870,32 @@
   }
 }
 
+[data-theme="light"] .gridpast {
+  background: #ffffff;
+}
+
+[data-theme="light"] .paper-cardpast {
+  background: #ffffff !important;
+  border: 0.5px solid #c7d1d6 !important;
+  box-shadow: 0 2px 8px rgba(23, 32, 39, 0.12) !important;
+  color: #172027 !important;
+}
+
+[data-theme="light"] .paper-cardpast .paper-snapshotpast {
+  background: #eef2f4 !important;
+  color: #172027 !important;
+}
+
+[data-theme="light"] .paper-cardpast .paper-titlepast,
+[data-theme="light"] .paper-cardpast h3 {
+  color: #172027 !important;
+}
+
+[data-theme="light"] .paper-cardpast .card-contentpast > div,
+[data-theme="light"] .paper-cardpast .card-contentpast p {
+  color: #52616b !important;
+}
+
 /* BookPanel button styling for past papers */
 .btn-readBKP {
   display: inline-flex; 
@@ -2870,61 +2970,4 @@
   display: flex;
   width: 100%;
   margin-bottom: 20px;
-}
-
-.university-search-containerpast {
-  flex: 0 1 360px;
-  width: 100%;
-  min-width: 150px;
-  padding: 0.25rem 0.5rem;
-  background: var(--bg-dark);
-  border: 1px solid var(--border-color, #2a3942);
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-}
-
-.university-search-inputpast {
-  flex: 1;
-  min-width: 0;
-  padding: 0.15rem 0.75rem;
-  border: none;
-  background: transparent !important;
-  color: var(--text-dark);
-  font-size: 0.85rem;
-  outline: none;
-  border-radius: 4px;
-}
-
-.university-search-inputpast::placeholder {
-  color: var(--text-light);
-  font-size: 0.85rem;
-}
-
-.university-search-clearpast {
-  padding: 0 8px;
-  background: none;
-  border: none;
-  color: var(--text-light);
-  cursor: pointer;
-}
-
-@media (min-width: 768px) {
-  .university-search-containerpast {
-    max-width: 360px;
-  }
-}
-
-@media (max-width: 520px) {
-  .university-search-containerpast {
-    flex: 1 1 auto;
-    max-width: calc(100% - 60px);
-  }
-}
-
-.university-search-iconpast {
-  display: flex;
-  align-items: center;
-  margin-right: 0.5rem;
-  color: var(--text-light);
 }

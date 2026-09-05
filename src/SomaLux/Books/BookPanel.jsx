@@ -39,8 +39,7 @@ import { booksCache } from './utils/cacheManager';
 import { perfOptimizer } from './utils/performanceOptimizer';
 import { indexedDBCache } from './utils/indexedDBCache';
 import { fetchBooksOptimized } from './utils/optimizedQueries';
- 
-
+import { getBookSignedUrl } from './Admin/api';
 const highlightSearchText = (text, searchText) => {
   const value = String(text || '');
   const query = String(searchText || '').trim();
@@ -64,11 +63,10 @@ export const BookPanel = ({ demoMode = false }) => {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalBooks, setTotalBooks] = useState(0);
   const [pageLoading, setPageLoading] = useState(false);
   const [pageCacheStatus, setPageCacheStatus] = useState({}); // page -> 'cached'|'remote'|'loading'
   const [hasMore, setHasMore] = useState(true);
-  const BOOKS_PER_PAGE = 31;
+  const BOOKS_PER_PAGE = 20;
   const [selectedBook, setSelectedBook] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
@@ -83,6 +81,7 @@ export const BookPanel = ({ demoMode = false }) => {
   const [authAction, setAuthAction] = useState('action');
   const [loadingUser, setLoadingUser] = useState(true);
   const [showReader, setShowReader] = useState(false);
+  const [openingBookId, setOpeningBookId] = useState(null);
   const [pendingAction, setPendingAction] = useState(null);
   const [focusedBookId, setFocusedBookId] = useState(null);
   const [focusedBookLoading, setFocusedBookLoading] = useState(false);
@@ -97,13 +96,6 @@ export const BookPanel = ({ demoMode = false }) => {
   // Sharing modal state
   const [showSharingModal, setShowSharingModal] = useState(false);
   
-  // Book Details dropdown state
-  const [showDetailsDropdown, setShowDetailsDropdown] = useState(false);
-  const detailsRef = useRef(null);
-
-  // Admin notification state
-  const [pendingSubmissions, setPendingSubmissions] = useState(0);
-
   // Bulk download selection state
   const [selectedBooksForDownload, setSelectedBooksForDownload] = useState(new Set());
   const [selectAllBooks, setSelectAllBooks] = useState(false);
@@ -226,31 +218,6 @@ export const BookPanel = ({ demoMode = false }) => {
     } catch {}
   };
 
-  // Prefetch helper: tries link prefetch + background fetch to warm CDN/cache
-  const prefetchResource = (url) => {
-    try {
-      if (!url) return;
-      if (typeof window === 'undefined') return;
-      window.__prefetched = window.__prefetched || new Set();
-      if (window.__prefetched.has(url)) return;
-      window.__prefetched.add(url);
-
-      const link = document.createElement('link');
-      link.rel = 'prefetch';
-      link.href = url;
-      // for PDFs/large docs allow crossOrigin
-      link.crossOrigin = 'anonymous';
-      document.head.appendChild(link);
-
-      // fire-and-forget fetch to prime browser cache (may be CORS-limited)
-      try {
-        fetch(url, { method: 'GET', mode: 'cors', cache: 'force-cache' }).catch(() => {});
-      } catch (e) {}
-    } catch (e) {
-      // noop
-    }
-  };
-
   const clearBookCaches = () => {
     try {
       booksCache.clear();
@@ -322,24 +289,6 @@ export const BookPanel = ({ demoMode = false }) => {
     const rating = row.rating !== null && row.rating !== undefined ? row.rating : 0;
     const filePath = row.file_url || '';
     const ext = filePath.split('.').pop()?.toLowerCase() || 'pdf';
-    // file_url is already a full public URL from the backend
-    // Support both full URLs and storage paths
-    let publicUrl = null;
-    if (filePath) {
-      if (/^https?:\/\//.test(filePath)) {
-        // Already a full HTTP URL
-        publicUrl = filePath;
-      } else if (filePath.includes('supabase') || filePath.includes('storage')) {
-        // Supabase storage path - construct full URL
-        publicUrl = filePath.startsWith('/') ? `https://agirxwnwpxpddaqylucg.supabase.co/storage/v1/object/public${filePath}` : `https://agirxwnwpxpddaqylucg.supabase.co/storage/v1/object/public/${filePath}`;
-      } else if (!filePath.startsWith('/')) {
-        // Path without leading slash - assume it's in elib-books bucket
-        publicUrl = `https://agirxwnwpxpddaqylucg.supabase.co/storage/v1/object/public/elib-books/${filePath}`;
-      } else {
-        // Path with leading slash - use as-is with public URL
-        publicUrl = `https://agirxwnwpxpddaqylucg.supabase.co/storage/v1/object/public${filePath}`;
-      }
-    }
    return {
   id: row.id,
   title: row.title || '',
@@ -352,7 +301,7 @@ export const BookPanel = ({ demoMode = false }) => {
   rating,
   downloads: row.downloads_count || 0,
   newRelease: isNew,
-  downloadUrl: publicUrl || undefined,
+  filePath,
   fileFormat: ext,
   pages: row.pages || 0,
   publisher: row.publisher || 'N/A',
@@ -360,7 +309,7 @@ export const BookPanel = ({ demoMode = false }) => {
 
   };
 
-  const fetchAll = async (forceRefresh = false, page = 1) => {
+  const fetchAll = async (forceRefresh = false, page = 1, updatePage = true) => {
     const requestKey = `${forceRefresh ? 'refresh' : 'cached'}:${page}`;
     if (booksFetchesRef.current.has(requestKey)) {
       return booksFetchesRef.current.get(requestKey);
@@ -375,7 +324,7 @@ export const BookPanel = ({ demoMode = false }) => {
         if (memCached) {
           console.log('🔥 [Layer 1] Memory cache hit!');
           setBooks(page === 1 ? memCached.books : prev => [...prev, ...memCached.books]);
-          setTotalBooks(memCached.total);
+          setHasMore(memCached.hasMore ?? true);
           setLoading(false);
           return;
         }
@@ -385,7 +334,7 @@ export const BookPanel = ({ demoMode = false }) => {
         if (idbBooks && idbBooks.length > 0) {
           console.log('🔥 [Layer 2] IndexedDB cache hit!');
           setBooks(page === 1 ? idbBooks : prev => [...prev, ...idbBooks]);
-          setTotalBooks(idbBooks.length); // Will refetch count in background
+          setHasMore(idbBooks.length >= BOOKS_PER_PAGE);
           setLoading(false);
           return;
         }
@@ -416,7 +365,7 @@ export const BookPanel = ({ demoMode = false }) => {
         'Book list query timed out while loading the library.'
       );
       
-      const { books: rows, totalCount: count, error: fetchError } = result;
+      const { books: rows, hasMore: nextHasMore, error: fetchError } = result;
       if (fetchError) {
         throw new Error(fetchError);
       }
@@ -430,13 +379,11 @@ export const BookPanel = ({ demoMode = false }) => {
         setBooks(prev => [...prev, ...mapped]);
       }
 
-      const loadedSoFar = (page - 1) * BOOKS_PER_PAGE + rows.length;
-      setHasMore((count || 0) > loadedSoFar);
-      setCurrentPage(page);
-      setTotalBooks(count || 0);
+      setHasMore(nextHasMore);
+      if (updatePage) setCurrentPage(page);
 
       // 💾 SAVE TO ALL CACHE LAYERS
-      const cacheData = { books: mapped, total: count };
+      const cacheData = { books: mapped, hasMore: nextHasMore };
       
       // Memory cache (5 min TTL)
       perfOptimizer.setMemoryCache(`books_page_${page}`, cacheData, 5 * 60 * 1000);
@@ -448,7 +395,7 @@ export const BookPanel = ({ demoMode = false }) => {
       setCachedPage(page, mapped);
 
 
-      console.log(`✅ Loaded page ${page}: ${mapped.length} books (Total: ${count})`);
+      console.log(`✅ Loaded page ${page}: ${mapped.length} books`);
       
     } catch (e) {
       console.error('Failed to fetch books:', e);
@@ -700,7 +647,7 @@ export const BookPanel = ({ demoMode = false }) => {
       try {
         // Create a temporary download element
         const link = document.createElement('a');
-        link.href = book.downloadUrl;
+        link.href = await getBookSignedUrl(book.id);
         link.download = `${book.title.replace(/\s+/g, '_')}.pdf`;
         document.body.appendChild(link);
         link.click();
@@ -782,25 +729,6 @@ export const BookPanel = ({ demoMode = false }) => {
       fetchSubscription(user);
     }
   }, [user, loadingUser, fetchSubscription]);
-
-  // Background prefetch: after first page loads, prefetch next pages to make Show More instant
-  useEffect(() => {
-    if (loading) return;
-    if (!hasMore) return;
-    // Prefetch up to first 3 pages total, without spamming network
-    const pagesLoaded = Math.ceil(books.length / BOOKS_PER_PAGE) || 0;
-    const targetPages = Math.min(3, Math.ceil((totalBooks || 0) / BOOKS_PER_PAGE));
-    const fetchNext = async () => {
-      for (let p = pagesLoaded + 1; p <= targetPages; p++) {
-        // Skip if this page is already cached in localStorage
-        if (getCachedPage(p)) continue;
-        await fetchAll(false, p);
-        // If no longer more pages, stop
-        if (!hasMore) break;
-      }
-    };
-    fetchNext();
-  }, [loading, books.length, hasMore, totalBooks]);
 
   // Disable initial animations until after first mount to prevent flicker
   const [isMounted, setIsMounted] = useState(false);
@@ -934,22 +862,13 @@ export const BookPanel = ({ demoMode = false }) => {
       const to = from + BOOKS_PER_PAGE - 1;
       const q = term.trim();
 
-      // Count matching rows
-      const countRes = await supabase
-        .from('books')
-        .select('*', { count: 'exact', head: true })
-        .or(`title.ilike.%${q}%,author.ilike.%${q}%,description.ilike.%${q}%,isbn.ilike.%${q}%`);
-
-      const total = countRes.count || 0;
-      setTotalBooks(total);
-
       const { data: rows } = await supabase
         .from('books')
         .select('id, title, author, description, year, language, isbn, cover_image_url, file_url, created_at, downloads_count, pages, publisher, rating, rating_count')
         .or(`title.ilike.%${q}%,author.ilike.%${q}%,description.ilike.%${q}%,isbn.ilike.%${q}%`)
-        .range(from, to);
+        .range(from, to + 1);
       
-      const mapped = (rows || []).map(r => mapRowToUi(r));
+      const mapped = (rows || []).slice(0, BOOKS_PER_PAGE).map(r => mapRowToUi(r));
 
       // Replace books with search results (only pages loaded)
       if (page === 1) {
@@ -963,7 +882,7 @@ export const BookPanel = ({ demoMode = false }) => {
         });
       }
 
-      setHasMore((total || 0) > (page * BOOKS_PER_PAGE));
+      setHasMore((rows || []).length > BOOKS_PER_PAGE);
       setCurrentPage(page);
       setCachedPage(page, mapped);
 
@@ -1020,9 +939,7 @@ export const BookPanel = ({ demoMode = false }) => {
 
   const handlePageChange = async (page) => {
     if (page < 1) return;
-    const totalCountForPaging = totalBooks || filteredBooks.length;
-    const computedTotalPages = Math.max(1, Math.ceil((totalCountForPaging) / BOOKS_PER_PAGE));
-    if (page > computedTotalPages) return;
+    if (page > currentPage && !hasMore) return;
     setCurrentPage(page);
     // Ensure the page data is loaded (use cache if available) — skip network fetch when paginating filtered results
     try {
@@ -1062,7 +979,17 @@ export const BookPanel = ({ demoMode = false }) => {
     setSelectedBook(book);
     setWelcomeMessage(false);
 
+    // Warm the signed URL while the details modal is open so Read is immediate.
+    getBookSignedUrl(book.id)
+      .then(signedUrl => {
+        setSelectedBook(prev => prev?.id === book.id ? { ...prev, downloadUrl: signedUrl } : prev);
+      })
+      .catch(error => {
+        console.warn('Failed to prewarm signed URL for book:', { bookId: book.id, error: error.message });
+      });
+
   };
+
   const handleSortChange = (sortType) => {
     setSortBy(sortType);
     setCurrentPage(1);
@@ -1083,22 +1010,6 @@ export const BookPanel = ({ demoMode = false }) => {
   const closeDetails = () => {
     setSelectedBook(null);
   };
-
-  // Close details dropdown when clicking outside
-  useEffect(() => {
-    if (!showDetailsDropdown) return;
-
-    const handleClickOutside = (event) => {
-      if (detailsRef.current && !detailsRef.current.contains(event.target)) {
-        setShowDetailsDropdown(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showDetailsDropdown]);
 
   const requireAuth = (action) => {
     // Don't show modal while auth is loading - wait for verification
@@ -1128,7 +1039,17 @@ export const BookPanel = ({ demoMode = false }) => {
 
   const handleReadClick = async () => {
     if (!requireAuth('read')) return;
-    setShowReader(true);
+
+    setOpeningBookId(selectedBook?.id || null);
+    try {
+      const signedUrl = await getBookSignedUrl(selectedBook?.id);
+      setSelectedBook(prev => prev ? { ...prev, downloadUrl: signedUrl } : prev);
+      setShowReader(true);
+    } catch (error) {
+      console.error('Failed to create signed URL for book:', error);
+    } finally {
+      setOpeningBookId(null);
+    }
   };
 
   const handleShare = async (method, book) => {
@@ -1331,38 +1252,6 @@ export const BookPanel = ({ demoMode = false }) => {
             <FiFilter /> {activeFilter !== 'all' && '• '}Filters
           </button>
 
-          {((user?.role === 'admin' || user?.role === 'editor') || ['campuslives254@gmail.com', 'paltechsomalux@gmail.com', 'eliblearning@gmail.com'].includes(user?.email)) && (
-            <div style={{ position: 'relative', display: 'inline-block' }}>
-              <button
-                onClick={() => navigate('/books/admin')}
-                className="filter-buttonBKP"
-                title="Open Admin Dashboard"
-              >
-                {user?.role === 'admin' || ['campuslives254@gmail.com', 'paltechsomalux@gmail.com', 'eliblearning@gmail.com'].includes(user?.email) ? 'Admin' : 'Editor'}
-              </button>
-              {pendingSubmissions > 0 && (
-                <div style={{
-                  position: 'absolute',
-                  top: -6,
-                  right: -6,
-                  background: '#ea4335',
-                  color: '#fff',
-                  borderRadius: '50%',
-                  width: 20,
-                  height: 20,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '11px',
-                  fontWeight: '600',
-                  border: '2px solid #0b1216'
-                }}>
-                  {pendingSubmissions > 99 ? '99+' : pendingSubmissions}
-                </div>
-              )}
-            </div>
-          )}
-
           {showFilters && (
             <div className="filter-dropdownBKP" style={{ display: 'none' }}>
               <div className="filter-sectionBKP">
@@ -1544,8 +1433,6 @@ export const BookPanel = ({ demoMode = false }) => {
                     <div
                       className="book-cardBKP"
                       onClick={() => bulkDownloadMode ? toggleBookSelection(book.id) : viewBookDetails(book)}
-                      onMouseEnter={() => prefetchResource(book.downloadUrl)}
-                      onFocus={() => prefetchResource(book.downloadUrl)}
                       tabIndex={0}
                       style={{ position: 'relative' }}
                     >
@@ -1611,8 +1498,6 @@ export const BookPanel = ({ demoMode = false }) => {
                     <div
                       className="book-cardBKP"
                       onClick={() => viewBookDetails(book)}
-                      onMouseEnter={() => prefetchResource(book.downloadUrl)}
-                      onFocus={() => prefetchResource(book.downloadUrl)}
                       tabIndex={0}
                     >
                       <div className="badge-containerBKP">
@@ -1636,31 +1521,25 @@ export const BookPanel = ({ demoMode = false }) => {
           </div>
 
           {(() => {
-            const totalCountForPaging = totalBooks || filteredBooks.length;
-            const computedTotal = Math.max(1, Math.ceil((totalCountForPaging) / BOOKS_PER_PAGE));
-            if (computedTotal <= 1) return null;
+            if (currentPage <= 1 && !hasMore) return null;
 
             return (
               <div>
-                <div className="actions" style={{ marginTop: 10, justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+                <div className="book-pagination-actions" style={{ marginTop: 10 }}>
                   <button
-                    className="btn"
+                    className="btn book-pagination-button"
                     disabled={currentPage <= 1}
                     onClick={() => handlePageChange(currentPage - 1)}
                   >
-                    ← Prev
+                    <FiChevronLeft size={16} aria-hidden="true" /> Prev
                   </button>
 
-                  <span style={{ color: '#cfd8dc', fontSize: 12 }}>
-                    Page {currentPage} of {computedTotal}
-                  </span>
-
                   <button
-                    className="btn"
-                    disabled={currentPage >= computedTotal}
+                    className="btn book-pagination-button"
+                    disabled={!hasMore}
                     onClick={() => handlePageChange(currentPage + 1)}
                   >
-                    Next →
+                    Next <FiChevronRight size={16} aria-hidden="true" />
                   </button>
                 </div>
 
@@ -1686,79 +1565,12 @@ export const BookPanel = ({ demoMode = false }) => {
               exit={{ scale: 0.98, opacity: 0 }}
               transition={{ type: 'tween', duration: 0.16 }}
               onClick={(e) => {
-                if (showDetailsDropdown && detailsRef.current && !detailsRef.current.contains(e.target)) {
-                  setShowDetailsDropdown(false);
-                } else {
-                  e.stopPropagation();
-                }
+                e.stopPropagation();
               }}
             >
               <button className="close-buttonBKP" onClick={closeDetails}>
                 <FiX size={24} />
               </button>
-
-              <div style={{ position: 'relative' }} ref={detailsRef}>
-                <button
-                  style={{
-                    position: 'absolute',
-                    top: '1rem',
-                    left: '1rem',
-                    background: 'transparent',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '6px 8px',
-                    cursor: 'pointer',
-                    color: '#64748b',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '2px',
-                    zIndex: 1001
-                  }}
-                  onClick={() => setShowDetailsDropdown(!showDetailsDropdown)}
-                  title="View book details"
-                >
-                  <div style={{ width: '3px', height: '3px', borderRadius: '50%', backgroundColor: '#64748b' }}></div>
-                  <div style={{ width: '3px', height: '3px', borderRadius: '50%', backgroundColor: '#64748b' }}></div>
-                  <div style={{ width: '3px', height: '3px', borderRadius: '50%', backgroundColor: '#64748b' }}></div>
-                </button>
-                <AnimatePresence>
-                  {showDetailsDropdown && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      style={{
-                        position: 'absolute',
-                        top: '50px',
-                        left: '1rem',
-                        background: '#0d1621',
-                        border: 'none',
-                        borderRadius: '8px',
-                        padding: '12px 16px',
-                        minWidth: '200px',
-                        zIndex: 1001,
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        <div style={{ borderBottom: '1px solid #1f2c33', paddingBottom: '10px' }}>
-                          <div style={{ color: '#8696a0', fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>Pages</div>
-                          <div style={{ color: '#e9edef', fontSize: '0.8rem', fontWeight: '500' }}>{selectedBook.pages || 'N/A'}</div>
-                        </div>
-                        <div style={{ borderBottom: '1px solid #1f2c33', paddingBottom: '10px' }}>
-                          <div style={{ color: '#8696a0', fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>Language</div>
-                          <div style={{ color: '#e9edef', fontSize: '0.8rem', fontWeight: '500' }}>{selectedBook.language || 'Unknown'}</div>
-                        </div>
-                        <div>
-                          <div style={{ color: '#8696a0', fontSize: '0.65rem', fontWeight: '700', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>Publisher</div>
-                          <div style={{ color: '#e9edef', fontSize: '0.8rem', fontWeight: '500' }}>{selectedBook.publisher || 'N/A'}</div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
 
               <div className="modal-headerBKP">
                 <h2>{selectedBook.title}</h2>
@@ -1766,14 +1578,14 @@ export const BookPanel = ({ demoMode = false }) => {
               </div>
 
               <div className="modal-bodyBKP" style={{ paddingTop: '0', paddingLeft: '0', paddingRight: '0' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '0.2rem' }}>
+                <div className="details-cover-wrapperBKP" style={{ display: 'block', paddingTop: '0.2rem' }}>
                   <img
                     src={selectedBook.bookImage}
                     alt={selectedBook.title}
                     className="book-coverBKP details-book-coverBKP"
                     loading="lazy"
                     decoding="async"
-                    style={{ maxWidth: '600px', width: '100%', height: '500px', objectFit: 'contain', borderRadius: '8px', display: 'block' }}
+                    style={{ maxWidth: '600px', width: '100%', height: '500px', objectFit: 'contain', display: 'block' }}
                   />
                 </div>
                 <p className="book-descBKP" style={{ margin: '0 1.5rem 0 1.5rem' }}>
@@ -1784,7 +1596,7 @@ export const BookPanel = ({ demoMode = false }) => {
 
               <div className="modal-actionsBKP">
                 <div className="actions-primary-rowBKP">
-                  <Download
+                  {false && (<Download
                     book={selectedBook}
                     variant="full"
                     user={user}
@@ -1879,7 +1691,7 @@ export const BookPanel = ({ demoMode = false }) => {
 
                     return true;
                   }}
-                />
+                  />)}
                   <button
                     onClick={() => toggleWishlist(selectedBook.id)}
                     className={`btn-readBKP btn-action-primaryBKP ${wishlist.includes(selectedBook.id) ? 'activeBKP' : ''}`}
@@ -1900,11 +1712,13 @@ export const BookPanel = ({ demoMode = false }) => {
                     <FiShare2 size={16} /> Share
                   </button>
                   <button
-                    className="btn-readBKP btn-action-primaryBKP"
+                    className="btn-readBKP btn-action-primaryBKP read-book-actionBKP"
                     onClick={handleReadClick}
+                    disabled={openingBookId === selectedBook.id}
+                    aria-busy={openingBookId === selectedBook.id}
                     title="Read this book"
                   >
-                    <FiBook size={16} /> Read
+                    <FiBook size={16} /> {openingBookId === selectedBook.id ? 'Opening...' : 'Read'}
                   </button>
                 </div>
               </div>
@@ -1915,6 +1729,7 @@ export const BookPanel = ({ demoMode = false }) => {
       {showReader && selectedBook && (
         <SimpleScrollReader
           src={selectedBook.downloadUrl}
+          cacheKey={`book:${selectedBook.id}`}
           title={selectedBook.title}
           author={selectedBook.author}
           sampleText={selectedBook.sampleText || selectedBook.description}

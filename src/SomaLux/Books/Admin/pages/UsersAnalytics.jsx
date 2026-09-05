@@ -77,19 +77,22 @@ const UsersAnalytics = ({ rows }) => {
   return (
     <div style={{ marginBottom: 8 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
           {['daily', 'week', 'month', 'year'].map((key) => (
             <button
               key={key}
-              className="btn"
+              className={`btn users-range-button users-range-${key}${range === key ? ' is-selected' : ''}`}
               style={{
-                padding: '4px 12px',
-                borderRadius: 999,
+                padding: '4px 13px',
+                borderRadius: 4,
                 background: range === key ? '#005c4b' : '#202c33',
                 color: '#e9edef',
                 border: 'none',
                 fontSize: 12,
                 textTransform: 'capitalize',
+                width: 'fit-content',
+                flex: '0 0 auto',
+                whiteSpace: 'nowrap',
               }}
               onClick={() => setRange(key)}
             >
@@ -97,26 +100,21 @@ const UsersAnalytics = ({ rows }) => {
             </button>
           ))}
         </div>
-        <div style={{ color: '#8696a0', fontSize: 12 }}>{rangeLabel}</div>
+        <div />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 6, marginTop: 8 }}>
-        <div style={{ background: '#111b21', borderRadius: 6, padding: 8, border: '1px solid #202c33' }}>
-          <div style={{ fontSize: 11, color: '#8696a0', marginBottom: 2 }}>Active users ({rangeLabel})</div>
+      <div className="users-analytics-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 6, marginTop: 8 }}>
+        <div className="users-analytics-card" style={{ background: '#111b21', borderRadius: 4, padding: 8, border: '0.5px solid #202c33' }}>
+          <div style={{ fontSize: 11, color: '#8696a0', marginBottom: 2 }}>Active users</div>
           <div style={{ fontSize: 22, fontWeight: 600, color: '#e9edef' }}>{kpiActive}</div>
         </div>
-        <div style={{ background: '#111b21', borderRadius: 6, padding: 8, border: '1px solid #202c33' }}>
-          <div style={{ fontSize: 11, color: '#8696a0', marginBottom: 2 }}>Signed-out users ({rangeLabel})</div>
+        <div className="users-analytics-card" style={{ background: '#111b21', borderRadius: 4, padding: 8, border: '0.5px solid #202c33' }}>
+          <div style={{ fontSize: 11, color: '#8696a0', marginBottom: 2 }}>Signed-out users</div>
           <div style={{ fontSize: 22, fontWeight: 600, color: '#e9edef' }}>{kpiSignedOut}</div>
         </div>
-        <div style={{ background: '#111b21', borderRadius: 12, padding: 12, border: '1px solid #202c33' }}>
+        <div className="users-analytics-card" style={{ background: '#111b21', borderRadius: 4, padding: 12, border: '0.5px solid #202c33' }}>
           <div style={{ fontSize: 12, color: '#8696a0', marginBottom: 4 }}>Total active now</div>
           <div style={{ fontSize: 22, fontWeight: 600, color: '#e9edef' }}>{totalActiveNow}</div>
-          <div style={{ fontSize: 11, color: '#8696a0', marginTop: 2 }}>of {totalUsers} users</div>
-        </div>
-        <div style={{ background: '#111b21', borderRadius: 12, padding: 12, border: '1px solid #202c33' }}>
-          <div style={{ fontSize: 12, color: '#8696a0', marginBottom: 4 }}>Total signed-out</div>
-          <div style={{ fontSize: 22, fontWeight: 600, color: '#e9edef' }}>{totalSignedOut}</div>
         </div>
       </div>
     </div>

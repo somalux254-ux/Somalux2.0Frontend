@@ -49,15 +49,18 @@ export const AuthModal = ({ isOpen, onClose, onSuccess, action = 'action' }) => 
           throw new Error('Google did not return an ID token.');
         }
 
-        const { error: tokenError } = await supabase.auth.signInWithIdToken({
+        void supabase.auth.signInWithIdToken({
           provider: 'google',
           token: result.idToken,
+        }).then(({ error: tokenError }) => {
+          if (tokenError) throw tokenError;
+        }).catch((tokenError) => {
+          console.error('Background sign in error:', tokenError);
         });
-        if (tokenError) throw tokenError;
 
+        setLoading(false);
         if (onSuccess) onSuccess();
         if (onClose) onClose();
-        setLoading(false);
         return;
       }
 

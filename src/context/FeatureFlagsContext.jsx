@@ -38,6 +38,20 @@ const DEFAULT_FEATURES = {
   advanced_search: { enabled: true, config: {}, version: 1 },
 };
 
+const mergeFeatures = (incomingFeatures = {}) => {
+  return Object.keys({ ...DEFAULT_FEATURES, ...incomingFeatures }).reduce((merged, key) => {
+    merged[key] = {
+      ...DEFAULT_FEATURES[key],
+      ...(incomingFeatures[key] || {}),
+      config: {
+        ...(DEFAULT_FEATURES[key]?.config || {}),
+        ...(incomingFeatures[key]?.config || {}),
+      },
+    };
+    return merged;
+  }, {});
+};
+
 export const FeatureFlagsProvider = ({ children }) => {
   const [features, setFeatures] = useState(DEFAULT_FEATURES);
   const [loading, setLoading] = useState(true);
@@ -88,11 +102,12 @@ export const FeatureFlagsProvider = ({ children }) => {
 
       // Update cache only if we got valid features
       if (Object.keys(newFeatures).length > 0) {
-        localStorage.setItem(FEATURES_CACHE_KEY, JSON.stringify(newFeatures));
+        const mergedFeatures = mergeFeatures(newFeatures);
+        localStorage.setItem(FEATURES_CACHE_KEY, JSON.stringify(mergedFeatures));
         localStorage.setItem(FEATURES_TIMESTAMP_KEY, Date.now().toString());
-        setFeatures(newFeatures);
+        setFeatures(mergedFeatures);
         setError(null);
-        console.log('✅ Features loaded from backend:', Object.keys(newFeatures).length);
+        console.log('✅ Features loaded from backend:', Object.keys(mergedFeatures).length);
       } else {
         // Empty response - use cache or defaults
         throw new Error('Backend returned empty features');
@@ -107,10 +122,10 @@ export const FeatureFlagsProvider = ({ children }) => {
       if (cachedFeatures) {
         try {
           const parsed = JSON.parse(cachedFeatures);
-          setFeatures(parsed);
+          setFeatures(mergeFeatures(parsed));
           setError('Using cached features');
           console.log('✅ Using cached features');
-          return parsed;
+          return mergeFeatures(parsed);
         } catch (parseErr) {
           console.warn('Cache parse error:', parseErr);
         }
@@ -208,7 +223,7 @@ export const FeatureFlagsProvider = ({ children }) => {
     if (cachedFeatures && timestamp && (now - parseInt(timestamp)) < CACHE_DURATION) {
       try {
         const parsed = JSON.parse(cachedFeatures);
-        setFeatures(parsed);
+        setFeatures(mergeFeatures(parsed));
         setLoading(false);
         console.log('✅ Loaded features from cache instantly');
       } catch (parseErr) {
@@ -217,7 +232,7 @@ export const FeatureFlagsProvider = ({ children }) => {
     } else if (cachedFeatures) {
       try {
         const parsed = JSON.parse(cachedFeatures);
-        setFeatures(parsed);
+        setFeatures(mergeFeatures(parsed));
         console.log('⚡ Loaded stale features from cache');
       } catch (parseErr) {
         console.warn('Cache parse error:', parseErr);

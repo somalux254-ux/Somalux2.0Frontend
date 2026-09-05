@@ -13,7 +13,7 @@ const config = {
     : {}),
   plugins: {
     SplashScreen: {
-      launchAutoHide: false,
+      launchAutoHide: true,
     },
   },
 };

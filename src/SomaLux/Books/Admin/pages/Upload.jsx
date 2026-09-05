@@ -570,11 +570,11 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
   );
 
   return (
-    <div className="panel">
-      <div className="panel-title">Upload Content</div>
+    <div className="panel upload-page">
+      <div className="panel-title upload-page-title">Upload Content</div>
       
       {/* Tabs */}
-      <div className="upload-tabs">
+      <div className="upload-tabs upload-page-tabs">
         <button 
           className={`upload-tab ${activeTab === 'books' ? 'active' : ''}`}
           onClick={() => setActiveTab('books')}

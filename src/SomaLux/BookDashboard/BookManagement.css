@@ -26,6 +26,43 @@
   font-family: "Inter", "Segoe UI", sans-serif;
   transition: background 0.3s ease;
   position: relative;
+  overflow-x: hidden;
+}
+
+html:has(.book-management),
+body:has(.book-management),
+.book-management,
+.file-converter-content-convert {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+html:has(.book-management)::-webkit-scrollbar,
+body:has(.book-management)::-webkit-scrollbar,
+.book-management::-webkit-scrollbar,
+.file-converter-content-convert::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+html:has(.book-management),
+body:has(.book-management) {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  overflow-x: hidden !important;
+}
+
+html:has(.book-management)::-webkit-scrollbar,
+body:has(.book-management)::-webkit-scrollbar,
+html:has(.book-management)::-webkit-scrollbar-track,
+body:has(.book-management)::-webkit-scrollbar-track,
+html:has(.book-management)::-webkit-scrollbar-thumb,
+body:has(.book-management)::-webkit-scrollbar-thumb {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+  background: transparent !important;
 }
 
 .book-management,
@@ -33,7 +70,43 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+html,
+body,
+.book-management,
+.book-management * {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+  scrollbar-color: transparent transparent !important;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.book-management::-webkit-scrollbar,
+.book-management *::-webkit-scrollbar,
+html.book-page-no-scrollbar::-webkit-scrollbar,
+body.book-page-no-scrollbar::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  background: transparent !important;
+}
+
 @media (max-width: 768px) {
+  .book-management,
+  .book-management * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  .book-management::-webkit-scrollbar,
+  .book-management *::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+
   html,
   body,
   .book-management,
@@ -132,18 +205,21 @@
   gap: 10px;
   padding: 0 16px;
   overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
+  scrollbar-width: none !important;
+  scrollbar-color: transparent transparent !important;
+  -ms-overflow-style: none !important;
   /* Enable smooth scrolling on tap */
   -webkit-overflow-scrolling: touch;
 }
 
 .tool-group-convert::-webkit-scrollbar {
-  height: 6px;
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
 }
 .tool-group-convert::-webkit-scrollbar-thumb {
   background: transparent;
-  border-radius: 10px;
+  display: none !important;
 }
 
 /* Buttons */
@@ -345,8 +421,8 @@ html:has(.book-management) body {
   }
 
   .file-converter-content-convert {
-    padding: 18px;
-    margin-top: 86px;
+    padding: 10px 0;
+    margin-top: 100px;
     min-height: auto;
     overflow: visible;
   }
@@ -390,6 +466,19 @@ html:has(.book-management) body {
 
 /* Further optimization for small phones */
 @media (max-width: 480px) {
+  .book-management,
+  .book-management * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  .book-management::-webkit-scrollbar,
+  .book-management *::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+
   .tool-button-convert {
     padding: 9px 14px;
     font-size: 13px;
@@ -406,9 +495,8 @@ html:has(.book-management) body {
     padding: 0 12px;
     gap: 8px;
   }
-
   .file-converter-content-convert {
-    padding: 16px;
+    padding: 10px 0;
   }
 
   /* Ensure swipe is the primary interaction method */

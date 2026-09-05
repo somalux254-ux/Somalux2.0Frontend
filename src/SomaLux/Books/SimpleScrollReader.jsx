@@ -1,5 +1,7 @@
 ﻿// SimpleScrollReader.jsx - Like Microsoft Edge PDF viewer - just scroll to read
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { TextToSpeech } from '@capacitor-community/text-to-speech';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -13,12 +15,14 @@ import TextSelectionPanel from './TextSelectionPanel';
 import useWPSPrecisionSelectionPerfect from './useWPSPrecisionSelectionPerfect';
 import { generateSummaryDocument } from './utils/generateWordDoc';
 import useMobileZoomGestures from './hooks/useMobileZoomGestures';
-import usePanGesture from './hooks/usePanGesture';
+import ZoomClarity from './ZoomClarity';
+import { getPersistentPdfSource } from './utils/persistentPdfCache';
 import loadingSvg from './loading.svg';
 import './SimpleScrollReader.css';
 
 // Verify worker is configured (set in pdfConfig.js at startup)
 let simpleReaderWorkerReady = false;
+
 if (pdfjs.GlobalWorkerOptions.workerSrc) {
   console.log('✅ SimpleScrollReader: Worker ready:', pdfjs.GlobalWorkerOptions.workerSrc);
   simpleReaderWorkerReady = true;
@@ -35,22 +39,97 @@ if (pdfjs.GlobalWorkerOptions.workerSrc) {
   }
 }
 
-const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
+const SimpleScrollReader = ({ src, title, author, onClose, sampleText, cacheKey }) => {
+  const MIN_ZOOM = 0.25;
+  const MAX_ZOOM = 1;
+  const DEFAULT_ZOOM = MIN_ZOOM;
+  const useNativeTextToSpeech = Capacitor.isNativePlatform?.() === true;
+  const nativeTtsLanguageRef = useRef(null);
+  const nativeTtsInitPromiseRef = useRef(null);
+
+  const prepareBrowserTextToSpeech = useCallback(async () => {
+    if (useNativeTextToSpeech) return true;
+    if (typeof window === 'undefined' || !window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') {
+      console.error('[tts] Browser speech synthesis is unavailable');
+      return false;
+    }
+
+    window.speechSynthesis.resume();
+    let voices = window.speechSynthesis.getVoices();
+    if (voices.length === 0) {
+      await new Promise(resolve => {
+        const timeout = setTimeout(resolve, 1000);
+        const handleVoicesChanged = () => {
+          clearTimeout(timeout);
+          window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
+          resolve();
+        };
+        window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged, { once: true });
+      });
+      voices = window.speechSynthesis.getVoices();
+    }
+    console.log('[tts] Browser speech engine ready', {
+      voiceCount: voices.length,
+      paused: window.speechSynthesis.paused,
+      speaking: window.speechSynthesis.speaking,
+      pending: window.speechSynthesis.pending,
+      defaultVoice: voices.find(voice => voice.default)?.name || null
+    });
+    // Chrome can speak with its default voice even when getVoices() is still empty.
+    return true;
+  }, [useNativeTextToSpeech]);
+
+  const prepareNativeTextToSpeech = useCallback(async () => {
+    if (!useNativeTextToSpeech) return true;
+    if (nativeTtsLanguageRef.current) return true;
+    if (!nativeTtsInitPromiseRef.current) {
+      nativeTtsInitPromiseRef.current = (async () => {
+        for (let attempt = 0; attempt < 10; attempt += 1) {
+          try {
+            const { languages = [] } = await TextToSpeech.getSupportedLanguages();
+            const language = languages.find(value => /^en(-|$)/i.test(value)) || languages[0];
+            if (language) {
+              nativeTtsLanguageRef.current = language;
+              console.log('[tts] Native engine ready', { language, languageCount: languages.length });
+              return true;
+            }
+          } catch (error) {
+            console.warn('[tts] Native engine not ready', { attempt: attempt + 1, error: error.message });
+          }
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+        console.error('[tts] No Android text-to-speech language is installed');
+        return false;
+      })().finally(() => {
+        nativeTtsInitPromiseRef.current = null;
+      });
+    }
+    return nativeTtsInitPromiseRef.current;
+  }, [useNativeTextToSpeech]);
+  const getZoomPercent = (value) => Math.max(0, Math.min(100, Math.round((Math.log(Math.max(MIN_ZOOM, value) / MIN_ZOOM) / Math.log(MAX_ZOOM / MIN_ZOOM)) * 100)));
   // Debug: Log the PDF source
   useEffect(() => {
-    console.log('🔍 SimpleScrollReader received src:', src);
+    console.log('🔍 SimpleScrollReader received PDF source', {
+      sourceType: src?.startsWith('blob:') ? 'persistent-cache' : 'signed-url',
+      hasSource: Boolean(src),
+      cacheKey
+    });
+    loadingStartedAtRef.current = Date.now();
     if (!src) {
       console.warn('⚠️ No PDF source provided!');
     }
   }, [src]);
 
   const [numPages, setNumPages] = useState(null);
-  const [scale, setScale] = useState(1.0);
-  const [mobileScale, setMobileScale] = useState(1.0); // Separate mobile zoom state
+  const [documentSource, setDocumentSource] = useState(null);
+  const [scale, setScale] = useState(DEFAULT_ZOOM);
+  const [mobileScale, setMobileScale] = useState(DEFAULT_ZOOM); // Separate mobile zoom state
+  const mobileScaleRef = useRef(DEFAULT_ZOOM);
   const loadingMessages = ['Loading book', 'Rendering pages', 'Opening book'];
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const zoomTimeoutRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [firstPageReady, setFirstPageReady] = useState(false);
   const hasRenderedFirstPageRef = useRef(false);
   const loadingStartedAtRef = useRef(Date.now());
   const [pdfError, setPdfError] = useState(!simpleReaderWorkerReady);
@@ -62,7 +141,14 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
   const [extractedText, setExtractedText] = useState('');
   const [pageTextMap, setPageTextMap] = useState({});
   const [sentenceMap, setSentenceMap] = useState([]);
-  const [audioSpeed, setAudioSpeed] = useState(1);
+  const pageTextMapRef = useRef({});
+  const pdfDocumentRef = useRef(null);
+  const textLoadPromiseRef = useRef(null);
+  const isReaderMountedRef = useRef(true);
+
+  useEffect(() => () => {
+    isReaderMountedRef.current = false;
+  }, []);
   const [isPaused, setIsPaused] = useState(false);
   const [audioPageIndex, setAudioPageIndex] = useState(1);
   const [bookmarks, setBookmarks] = useState(new Set());
@@ -76,17 +162,39 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
   const [totalReadingTime, setTotalReadingTime] = useState(0);
   const [mobileButtonsVisible, setMobileButtonsVisible] = useState(window.innerWidth > 768 ? true : false); // Show on desktop, hide on mobile by default
 
+  useEffect(() => {
+    if (useNativeTextToSpeech || !isAudioPlaying || !window.speechSynthesis) return undefined;
+
+    const keepSpeechAlive = window.setInterval(() => {
+      if (!isPlayingRef.current) return;
+      if (window.speechSynthesis.paused) {
+        console.log('[tts] Resuming paused browser speech');
+        window.speechSynthesis.resume();
+      } else if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending && Date.now() - lastSpeechActivityRef.current > 1800) {
+        console.warn('[tts] Speech engine stalled; restarting current page');
+        window.speechSynthesis.cancel();
+        lastSpeechActivityRef.current = Date.now();
+        playPageAudioRef.current?.();
+      }
+    }, 4000);
+
+    return () => window.clearInterval(keepSpeechAlive);
+  }, [isAudioPlaying, useNativeTextToSpeech]);
+
   // Use perfect WPS-grade selection with uniform styling support (all colors/styles)
-  console.log('🔧 SimpleScrollReader: About to call useWPSPrecisionSelectionPerfect hook');
   const { selection, position, clearSelection, isSelecting, lensData, bounds } = useWPSPrecisionSelectionPerfect('.simple-scroll-reader');
-  console.log('🔧 SimpleScrollReader: useWPSPrecisionSelectionPerfect hook returned', { selection, position, isSelecting });
   const containerRef = useRef(null);
   const scrollAreaRef = useRef(null);
   const contentAreaRef = useRef(null);
+  const [pageWidth, setPageWidth] = useState(null);
   const pageRefsMap = useRef({});
+  const zoomIndicatorRef = useRef(null);
   const scaleRef = useRef(1.0);
   const audioRef = useRef(null);
   const isPlayingRef = useRef(false);
+  const playPageAudioRef = useRef(null);
+  const lastSpeechActivityRef = useRef(0);
+  const speechRetryCountRef = useRef(0);
   const currentPageAudioRef = useRef(1);
   const pausedPageRef = useRef(null);
   const pausedSentenceIndexRef = useRef(0);
@@ -103,16 +211,44 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
   // Check if PDF source is available
   const hasPdfSource = !!src;
 
+  useEffect(() => {
+    let active = true;
+    setDocumentSource(null);
+    pdfDocumentRef.current = null;
+    getPersistentPdfSource(cacheKey, src).then(cachedSource => {
+      if (active) setDocumentSource(cachedSource);
+    });
+    return () => {
+      active = false;
+    };
+  }, [cacheKey, src]);
+
+  useEffect(() => {
+    const scrollArea = scrollAreaRef.current;
+    if (!scrollArea) return undefined;
+
+    const updatePageWidth = () => {
+      setPageWidth(Math.max(1, scrollArea.clientWidth - 24));
+    };
+
+    updatePageWidth();
+    const resizeObserver = new ResizeObserver(updatePageWidth);
+    resizeObserver.observe(scrollArea);
+    return () => resizeObserver.disconnect();
+  }, []);
+
   // Debug: Monitor selection state
   useEffect(() => {
     if (selection) {
       console.log('📲 SimpleScrollReader - Selection state updated:', { selection, position });
     }
   }, [selection, position]);
-  const handleDocumentLoad = ({ numPages: nextNumPages }) => {
+  const handleDocumentLoad = (pdfDocument) => {
+    const nextNumPages = pdfDocument?.numPages || 0;
+    pdfDocumentRef.current = pdfDocument;
     setNumPages(nextNumPages);
     setLoadingMessageIndex(1);
-    // Prioritize the first page so the reader can become interactive quickly.
+    // Prioritize the first page; adjacent pages are added after it is visible.
     const initialVisiblePages = new Set();
     initialVisiblePages.add(1);
     setVisiblePages(initialVisiblePages);
@@ -122,17 +258,31 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
     if (hasRenderedFirstPageRef.current) return;
 
     hasRenderedFirstPageRef.current = true;
-    setLoadingMessageIndex(2);
-    setVisiblePages((currentPages) => {
-      const nextPages = new Set(currentPages);
-      for (let page = 2; page <= Math.min(3, numPages); page++) {
-        nextPages.add(page);
-      }
-      return nextPages;
+    console.log('[pdf-load] First page rendered', {
+      durationMs: Date.now() - loadingStartedAtRef.current,
+      title
     });
-    requestAnimationFrame(() => setShouldRenderTextLayer(true));
-    const elapsedTime = Date.now() - loadingStartedAtRef.current;
-    setTimeout(() => setIsLoading(false), Math.max(350, 500 - elapsedTime));
+    setFirstPageReady(true);
+    setLoadingMessageIndex(2);
+    setIsLoading(false);
+
+    const revealAdjacentPages = () => {
+      setVisiblePages((currentPages) => {
+        const nextPages = new Set(currentPages);
+        for (let page = 2; page <= Math.min(3, numPages); page++) {
+          nextPages.add(page);
+        }
+        return nextPages;
+      });
+      setShouldRenderTextLayer(true);
+    };
+
+    const isMobileViewport = isMobileDevice || window.innerWidth <= 768;
+    if (isMobileViewport) {
+      setTimeout(revealAdjacentPages, 250);
+    } else {
+      requestAnimationFrame(revealAdjacentPages);
+    }
   };
 
   // Track reading time - reduced to 5s interval to prevent excessive re-renders (88% reduction)
@@ -168,7 +318,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
 
   const zoomIn = useCallback(() => {
     requestAnimationFrame(() => {
-      setScale(s => Math.min(5.0, s + 0.1));
+      setScale(s => Math.min(MAX_ZOOM, s * 1.1));
     });
   }, []);
 
@@ -186,7 +336,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
 
   // Mobile-specific zoom functions
   const mobileZoomIn = useCallback(() => {
-    setMobileScale(s => Math.min(5.0, s + 0.1));
+    setMobileScale(s => Math.min(MAX_ZOOM, s * 1.1));
   }, []);
 
   const mobileZoomOut = useCallback(() => {
@@ -199,7 +349,30 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
 
   // Direct zoom function for smooth pinch gestures
   const mobileSetZoom = useCallback((scale) => {
-    setMobileScale(Math.max(0.25, Math.min(5.0, scale)));
+    setMobileScale(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, scale)));
+  }, []);
+
+  useEffect(() => {
+    mobileScaleRef.current = mobileScale;
+  }, [mobileScale]);
+
+  const previewMobileZoom = useCallback((nextScale, finalScale) => {
+    const scrollArea = scrollAreaRef.current;
+    if (!scrollArea) return;
+    if (nextScale === null) {
+      scrollArea.style.removeProperty('--pinch-ratio');
+      scrollArea.classList.remove('pinch-preview');
+      if (zoomIndicatorRef.current) {
+        zoomIndicatorRef.current.textContent = `${getZoomPercent(finalScale || mobileScaleRef.current || DEFAULT_ZOOM)}%`;
+      }
+      return;
+    }
+    const baseScale = mobileScaleRef.current || DEFAULT_ZOOM;
+    scrollArea.style.setProperty('--pinch-ratio', String(nextScale / baseScale));
+    scrollArea.classList.add('pinch-preview');
+    if (zoomIndicatorRef.current) {
+      zoomIndicatorRef.current.textContent = `${getZoomPercent(nextScale)}%`;
+    }
   }, []);
 
   // Initialize mobile zoom gestures hook - defined after zoom functions
@@ -209,12 +382,16 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
     mobileZoomOut,
     mobileResetZoom,
     mobileSetZoom,
-    mobileScale
+    mobileScale,
+    previewMobileZoom
+  );
+  const effectiveScale = isMobileDevice ? mobileScale : scale;
+  const pdfDevicePixelRatio = Math.min(
+    Math.max(window.devicePixelRatio * (effectiveScale / MIN_ZOOM), 1),
+    isMobileDevice ? 4 : 3
   );
 
   // Pan gesture hook for zoomed content - allows swiping to see full content when zoomed
-  usePanGesture(contentAreaRef, isMobileDevice && mobileScale > 1.2);
-
   // Ultra-optimized scroll handler with virtual rendering - tracks current page and visible pages
   useEffect(() => {
     const handleScroll = () => {
@@ -248,7 +425,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
           
           // Update current page only if in viewport center
           if (!currentPageFound && elementTop <= scrollTop + containerHeight / 2 && elementBottom >= scrollTop + containerHeight / 2) {
-            setCurrentPage(page);
+            setCurrentPage(previousPage => previousPage === page ? previousPage : page);
             currentPageFound = true;
           }
           
@@ -259,12 +436,14 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
           }
         }
         
-        // Update visible pages only if changed
+        // Keep pages mounted after first render to prevent flashing while scrolling.
         setVisiblePages(prev => {
-          if (prev.size === newVisiblePages.size && [...prev].every(p => newVisiblePages.has(p))) {
+          const nextPages = new Set(prev);
+          newVisiblePages.forEach(page => nextPages.add(page));
+          if (nextPages.size === prev.size) {
             return prev;
           }
-          return newVisiblePages;
+          return nextPages;
         });
       });
     };
@@ -419,7 +598,28 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
   }, [bookmarks, src, title]);
 
   // Play audio for current page - page by page reading
+  const loadTextPage = useCallback(async (pageNum) => {
+    const pdfDoc = pdfDocumentRef.current;
+    if (!pdfDoc || pageTextMapRef.current[pageNum]) return pageTextMapRef.current[pageNum];
+
+    const page = await pdfDoc.getPage(pageNum);
+    const textContent = await page.getTextContent();
+    const pageData = {
+      text: textContent.items.map(item => item.str).join(' '),
+      pageNum
+    };
+    pageTextMapRef.current[pageNum] = pageData;
+    setPageTextMap(current => ({ ...current, [pageNum]: pageData }));
+    return pageData;
+  }, []);
+
   const playPageAudio = useCallback(() => {
+    if (!useNativeTextToSpeech && (typeof window === 'undefined' || !window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined')) {
+      setIsAudioPlaying(false);
+      setIsPaused(false);
+      return;
+    }
+
     // Check if we've reached the end
     if (currentPageAudioRef.current > numPages) {
       setIsAudioPlaying(false);
@@ -433,15 +633,21 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
     setAudioPageIndex(pageNum);
 
     // Get text for current page
-    const pageData = pageTextMap[pageNum];
+    const pageData = pageTextMapRef.current[pageNum];
     if (!pageData || !pageData.text) {
-      // Skip empty pages, move to next
-      currentPageAudioRef.current += 1;
-      setTimeout(() => {
-        if (isPlayingRef.current) {
+      loadTextPage(pageNum).then(loadedPage => {
+        if (!isPlayingRef.current) return;
+        if (loadedPage?.text?.trim()) {
+          playPageAudio();
+        } else {
+          currentPageAudioRef.current += 1;
           playPageAudio();
         }
-      }, 300);
+      }).catch(error => {
+        console.error('[tts] Page text extraction failed', { page: pageNum, error: error.message });
+        currentPageAudioRef.current += 1;
+        if (isPlayingRef.current) playPageAudio();
+      });
       return;
     }
 
@@ -492,37 +698,156 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
 
       const sentence = sentences[sentenceIndex];
       const utterance = new SpeechSynthesisUtterance(sentence);
+      lastSpeechActivityRef.current = Date.now();
 
-      // Apply user's speed preference
-      const baseRate = 0.85;
-      utterance.rate = baseRate * audioSpeed;
+      const voices = window.speechSynthesis.getVoices();
+      const preferredVoice = voices.find(voice => /^en(-|_)/i.test(voice.lang)) || voices[0];
+      if (preferredVoice) utterance.voice = preferredVoice;
+      utterance.lang = preferredVoice?.lang || 'en-US';
       utterance.pitch = 1;
       utterance.volume = 1;
+      console.log('[tts] Browser sentence starting', {
+        page: pageNum,
+        sentenceLength: sentence.length,
+        voice: preferredVoice?.name || null,
+        language: preferredVoice?.lang || null,
+        volume: utterance.volume
+      });
 
       utterance.onend = () => {
+        console.log('[tts] Browser sentence completed', { page: pageNum });
+        lastSpeechActivityRef.current = Date.now();
+        speechRetryCountRef.current = 0;
         sentenceIndex += 1;
         if (isPlayingRef.current) {
           // Natural pause between sentences
-          const pauseTime = Math.max(200, 350 / audioSpeed);
-          setTimeout(readNextSentence, pauseTime);
+          setTimeout(readNextSentence, 350);
         }
       };
 
       utterance.onerror = () => {
-        console.error('Speech synthesis error');
+        console.error('[tts] Browser speech synthesis error', {
+          page: pageNum,
+          speaking: window.speechSynthesis.speaking,
+          paused: window.speechSynthesis.paused,
+          pending: window.speechSynthesis.pending
+        });
+        if (isPlayingRef.current && speechRetryCountRef.current < 2) {
+          speechRetryCountRef.current += 1;
+          setTimeout(readNextSentence, 500);
+          return;
+        }
         setIsAudioPlaying(false);
+        setIsPaused(false);
         isPlayingRef.current = false;
       };
 
+      window.speechSynthesis.resume();
       window.speechSynthesis.speak(utterance);
     };
 
+    if (useNativeTextToSpeech) {
+      let sentenceIndex = 0;
+      const speakNextNativeSentence = () => {
+        if (!isPlayingRef.current || sentenceIndex >= sentences.length) {
+          if (isPlayingRef.current) {
+            currentPageAudioRef.current += 1;
+            playPageAudio();
+          }
+          return;
+        }
+
+        TextToSpeech.speak({
+          text: sentences[sentenceIndex],
+          lang: nativeTtsLanguageRef.current || 'en-US',
+          rate: 1.0,
+          pitch: 1.0,
+          volume: 1.0,
+          queueStrategy: 0
+        }).then(() => {
+          console.log('[tts] Native sentence completed', { page: pageNum, sentenceLength: sentences[sentenceIndex].length });
+          sentenceIndex += 1;
+          setTimeout(speakNextNativeSentence, 150);
+        }).catch(error => {
+          console.error('[tts] Native sentence failed', {
+            page: pageNum,
+            sentenceLength: sentences[sentenceIndex].length,
+            error: error.message || String(error)
+          });
+          setIsAudioPlaying(false);
+          isPlayingRef.current = false;
+        });
+      };
+
+      speakNextNativeSentence();
+      return;
+    }
+
     // Start reading sentences on this page
     readNextSentence();
-  }, [pageTextMap, numPages, audioSpeed]);
+  }, [loadTextPage, pageTextMap, numPages, useNativeTextToSpeech]);
+
+  playPageAudioRef.current = playPageAudio;
+
+  const ensureTextLoaded = useCallback(async () => {
+    if (extractedText === 'PDF loaded' && Object.keys(pageTextMapRef.current).length > 0) return;
+    if (!textLoadPromiseRef.current) {
+      textLoadPromiseRef.current = (async () => {
+        try {
+          const textSource = documentSource || src;
+          if (!isReaderMountedRef.current || (!textSource && !pdfDocumentRef.current)) return;
+
+          const pdfDoc = pdfDocumentRef.current || await pdfjs.getDocument(textSource).promise;
+          pdfDocumentRef.current = pdfDoc;
+          const pageMapData = {};
+
+          if (!isReaderMountedRef.current) return;
+          const page = await pdfDoc.getPage(1);
+          const textContent = await page.getTextContent();
+          pageMapData[1] = {
+            text: textContent.items.map(item => item.str).join(' '),
+            pageNum: 1
+          };
+
+          if (!isReaderMountedRef.current) return;
+          pageTextMapRef.current = pageMapData;
+          setPageTextMap(pageMapData);
+          setExtractedText('PDF loaded');
+        } catch (error) {
+          if (!isReaderMountedRef.current) return;
+          console.error('Error extracting text from PDF:', error);
+          setPageTextMap({});
+          pageTextMapRef.current = {};
+          setExtractedText('');
+          textLoadPromiseRef.current = null;
+        }
+      })();
+    }
+    await textLoadPromiseRef.current;
+  }, [documentSource, extractedText, src]);
 
   // Toggle audio playback (play/pause)
-  const toggleAudio = useCallback(() => {
+  const toggleAudio = useCallback(async () => {
+    console.log('[tts] Toggle requested', {
+      native: useNativeTextToSpeech,
+      isAudioPlaying,
+      isPaused,
+      hasExtractedText: Boolean(extractedText)
+    });
+    if (useNativeTextToSpeech) {
+      const ready = await prepareNativeTextToSpeech();
+      if (!ready) return;
+      if (isAudioPlaying) {
+        await TextToSpeech.stop();
+        setIsAudioPlaying(false);
+        isPlayingRef.current = false;
+        return;
+      }
+    } else if (typeof window === 'undefined' || !window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') {
+      console.warn('Text-to-speech is not available on this device');
+      return;
+    }
+
     if (isAudioPlaying) {
       // Pause audio - save position for resume
       window.speechSynthesis.pause();
@@ -537,8 +862,22 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
       setIsPaused(false);
       isPlayingRef.current = true;
     } else {
+      const ready = await prepareBrowserTextToSpeech();
+      if (!ready) return;
+      await ensureTextLoaded();
+      const firstPageText = pageTextMapRef.current[1]?.text?.trim() || '';
+      console.log('[tts] Text extraction ready', {
+        pageCount: Object.keys(pageTextMapRef.current).length,
+        firstPageCharacters: firstPageText.length
+      });
+      if (!firstPageText) {
+        console.error('[tts] PDF contains no extractable text');
+        setIsAudioPlaying(false);
+        isPlayingRef.current = false;
+        return;
+      }
       // Start fresh from page 1
-      window.speechSynthesis.cancel();
+      if (!useNativeTextToSpeech) window.speechSynthesis.cancel();
       currentPageAudioRef.current = 1;
       pausedPageRef.current = null;
       pausedSentenceIndexRef.current = 0;
@@ -554,11 +893,14 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
       setAudioProgress(0);
       playPageAudio();
     }
-  }, [isAudioPlaying, isPaused, playPageAudio]);
+  }, [ensureTextLoaded, isAudioPlaying, isPaused, playPageAudio, prepareBrowserTextToSpeech, prepareNativeTextToSpeech, useNativeTextToSpeech]);
 
   // Stop audio completely and reset
   const stopAudio = useCallback(() => {
-    window.speechSynthesis.cancel();
+    if (useNativeTextToSpeech) {
+      TextToSpeech.stop().catch(() => {});
+    }
+    window.speechSynthesis?.cancel?.();
     setIsAudioPlaying(false);
     setIsPaused(false);
     setAudioProgress(0);
@@ -567,40 +909,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
     pausedPageRef.current = null;
     pausedSentenceIndexRef.current = 0;
     isPlayingRef.current = false;
-  }, []);
-
-  // Extract text from PDF with page-based organization
-  useEffect(() => {
-    const extractTextFromPDF = async () => {
-      try {
-        const pdfDoc = await pdfjs.getDocument(src).promise;
-        const pageMapData = {};
-
-        for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
-          const page = await pdfDoc.getPage(pageNum);
-          const textContent = await page.getTextContent();
-          const pageText = textContent.items.map(item => item.str).join(' ');
-          
-          pageMapData[pageNum] = {
-            text: pageText,
-            pageNum: pageNum
-          };
-        }
-
-        setPageTextMap(pageMapData);
-        setExtractedText('PDF loaded'); // Simple flag
-      } catch (error) {
-        console.error('Error extracting text from PDF:', error);
-        // Set a fallback state - PDF may be corrupted but still displayable via react-pdf
-        setPageTextMap({});
-        setExtractedText('PDF loaded (text extraction unavailable)');
-      }
-    };
-
-    if (src && !extractedText) {
-      extractTextFromPDF();
-    }
-  }, [src, extractedText]);
+  }, [useNativeTextToSpeech]);
 
   // Copy selected text
   const copyText = async () => {
@@ -776,6 +1085,10 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
               </div>
             )}
 
+            <div ref={zoomIndicatorRef} className="ssr-zoom-indicator" aria-live="polite" title="Current zoom">
+              {getZoomPercent(isMobileDevice ? mobileScale : scale)}%
+            </div>
+
             {/* Container for buttons that can be hidden/shown on mobile */}
             <div className={`ssr-mobile-controls-wrapper ${mobileButtonsVisible ? 'visible' : 'hidden'}`}>
             
@@ -787,7 +1100,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
                 <span className="ssr-page-total">{numPages}</span>
               </div>
             )}
-            
+
             {/* Icon buttons only - no containers */}
             <button onClick={() => setShowTOC(!showTOC)} className="ssr-icon-btn ssr-toc-toggle" title="Toggle table of contents">
               <FiList size={18} />
@@ -811,83 +1124,30 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
               <FiBookmark size={18} fill={bookmarks.has(currentPage) ? 'currentColor' : 'none'} />
             </button>
 
-            {/* Audio controls - always visible when loading or during audio */}
-            {(isAudioPlaying || isPaused || extractedText) && (
-              <div className="ssr-audio-controls-group">
-                {/* Play button */}
-                {!isAudioPlaying && !isPaused && (
-                  <button onClick={toggleAudio} className="ssr-icon-btn" title="Play audio">
-                    ▶️
-                  </button>
-                )}
-                
-                {/* Pause button - only when playing */}
-                {isAudioPlaying && (
-                  <button onClick={toggleAudio} className="ssr-icon-btn active" title="Pause audio">
-                    ⏸️
-                  </button>
-                )}
-                
-                {/* Resume button - only when paused */}
-                {isPaused && (
-                  <button onClick={toggleAudio} className="ssr-icon-btn" title="Resume audio">
-                    ▶️
-                  </button>
-                )}
-                
-                {/* Stop button - always when audio controls visible */}
-                {(isAudioPlaying || isPaused) && (
-                  <button onClick={stopAudio} className="ssr-icon-btn" title="Stop audio">
-                    ⏹️
-                  </button>
-                )}
-                
-                {/* Speed control - always visible */}
-                <div className="ssr-speed-control">
-                  <select value={audioSpeed} onChange={(e) => setAudioSpeed(parseFloat(e.target.value))} title="Reading speed">
-                    <option value={0.75}>0.75x</option>
-                    <option value={1}>1x</option>
-                    <option value={1.25}>1.25x</option>
-                    <option value={1.5}>1.5x</option>
-                  </select>
-                </div>
+            </div>
 
-                {/* Mobile Zoom Controls - After speed control */}
-                {isMobileDevice && (
-                  <>
-                    <button 
-                      onClick={() => mobileZoomOut?.()} 
-                      className={`ssr-icon-btn ${mobileScale <= 0.25 ? 'disabled' : ''}`}
-                      disabled={mobileScale <= 0.25}
-                      title="Zoom Out"
-                    >
-                      −
-                    </button>
-
-                    <span className="ssr-zoom-display">{Math.round(mobileScale * 100)}%</span>
-
-                    <button 
-                      onClick={() => mobileZoomIn?.()} 
-                      className={`ssr-icon-btn ${mobileScale >= 5.0 ? 'disabled' : ''}`}
-                      disabled={mobileScale >= 5.0}
-                      title="Zoom In"
-                    >
-                      +
-                    </button>
-
-                    {Math.round(mobileScale * 100) !== 100 && (
-                      <button
-                        onClick={() => mobileResetZoom?.()}
-                        className="ssr-icon-btn"
-                        title="Reset Zoom"
-                      >
-                        ↺
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
+            {/* Voice control stays visible when the other toolbar controls are collapsed. */}
+            <div className="ssr-audio-controls-group">
+              {!isAudioPlaying && !isPaused && (
+                <button type="button" onClick={(event) => { event.stopPropagation(); toggleAudio(); }} className="ssr-icon-btn" title="Play audio" aria-label="Play audio">
+                  ▶️
+                </button>
+              )}
+              {isAudioPlaying && (
+                <button type="button" onClick={(event) => { event.stopPropagation(); toggleAudio(); }} className="ssr-icon-btn active" title="Pause audio" aria-label="Pause audio">
+                  ⏸️
+                </button>
+              )}
+              {isPaused && (
+                <button type="button" onClick={(event) => { event.stopPropagation(); toggleAudio(); }} className="ssr-icon-btn" title="Resume audio" aria-label="Resume audio">
+                  ▶️
+                </button>
+              )}
+              {(isAudioPlaying || isPaused) && (
+                <button type="button" onClick={(event) => { event.stopPropagation(); stopAudio(); }} className="ssr-icon-btn" title="Stop audio" aria-label="Stop audio">
+                  ⏹️
+                </button>
+              )}
             </div>
           </div>
 
@@ -980,7 +1240,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
           )}
 
           {/* Scroll area - continuous pages */}
-          <div className="ssr-scroll-area simple-scroll-reader" ref={(el) => {
+          <div className={`ssr-scroll-area simple-scroll-reader ${isMobileDevice && mobileScale > DEFAULT_ZOOM ? 'mobile-zoom-active' : ''}`} ref={(el) => {
             scrollAreaRef.current = el;
             contentAreaRef.current = el;
           }}>
@@ -1020,24 +1280,20 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
               </div>
             ) : null}
 
-            {hasPdfSource && (
+            {hasPdfSource && documentSource && (
               <div
                 style={isMobileDevice ? {
-                  transform: `scale(${mobileScale})`,
-                  transformOrigin: 'top left',
-                  transition: 'transform 0.08s linear',
-                  willChange: 'transform',
                   width: '100%',
+                  willChange: 'contents',
                   height: 'auto',
-                  display: 'inline-block',
-                  transformBox: 'fill-box',
+                  display: 'block',
                   pointerEvents: 'auto',
                   backfaceVisibility: 'hidden',
-                  perspective: '1000px'
+                  overflow: 'visible'
                 } : {}}
               >
                 <Document
-                  file={src}
+                  file={documentSource}
                   onLoadSuccess={handleDocumentLoad}
                   onError={(error) => {
                     console.error('PDF loading error in SimpleScrollReader:', error?.message || error);
@@ -1052,54 +1308,60 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText }) => {
                     </div>
                   }
                 >
-                  {/* Virtual Rendering - Only render visible pages + buffer to prevent system hang */}
-                  {numPages && Array.from({ length: numPages }, (_, idx) => {
-                    const pageNum = idx + 1;
-                    const isVisible = visiblePages.has(pageNum);
-                    const isCurrentPage = pageNum === currentPage;
-                    // CRITICAL: Only enable text layer for current + adjacent pages (90%+ perf boost)
-                    const enableTextLayer = shouldRenderTextLayer && (isCurrentPage || Math.abs(pageNum - currentPage) === 1);
-                    
-                    // Only render pages that are visible or in buffer
-                    if (!isVisible) {
-                      // Render placeholder for non-visible pages to maintain scroll position
+                  {/* Keep a bounded render window so large PDFs do not exhaust Android memory. */}
+                  <ZoomClarity
+                    scale={effectiveScale}
+                    defaultScale={DEFAULT_ZOOM}
+                  >
+``                    <div className="ssr-document">
+                    {numPages && Array.from({ length: numPages }, (_, idx) => {
+                      const pageNum = idx + 1;
+                      const isVisible = visiblePages.has(pageNum);
+                      const isCurrentPage = pageNum === currentPage;
+                      const enableTextLayer = shouldRenderTextLayer && (isCurrentPage || Math.abs(pageNum - currentPage) === 1);
+
+                      if (!isVisible) {
+                        return (
+                          <div
+                            key={pageNum}
+                            className="ssr-page ssr-page-placeholder"
+                            ref={(el) => {
+                              if (el) pageRefsMap.current[pageNum] = el;
+                            }}
+                            style={{ minHeight: '800px' }}
+                            aria-hidden="true"
+                          />
+                        );
+                      }
+
                       return (
-                        <div 
-                          key={pageNum} 
-                        className="ssr-page ssr-page-placeholder"
-                        ref={(el) => {
-                          if (el) pageRefsMap.current[pageNum] = el;
-                        }}
-                        style={{ minHeight: '800px' }} // Approximate page height
-                        aria-hidden="true"
-                      />
-                    );
-                  }
-                  
-                  return (
-                    <div 
-                      key={pageNum} 
-                      className="ssr-page"
-                      ref={(el) => {
-                        if (el) pageRefsMap.current[pageNum] = el;
-                      }}
-                    >
-                      <Page
-                        pageNumber={pageNum}
-                        scale={isMobileDevice ? 1 : scale}
-                        renderTextLayer={enableTextLayer}
-                        renderAnnotationLayer={false}
-                        loading=""
-                        onRenderError={(error) => {
-                          console.warn('PDF page render error:', error?.message || error);
-                          setPdfError(true);
-                        }}
-                        onRenderSuccess={pageNum === 1 ? handleFirstPageRender : undefined}
-                      />
+                        <div
+                          key={pageNum}
+                          className="ssr-page"
+                          ref={(el) => {
+                            if (el) pageRefsMap.current[pageNum] = el;
+                          }}
+                        >
+                          <Page
+                              key={`${pageNum}-${effectiveScale.toFixed(3)}-${pdfDevicePixelRatio.toFixed(2)}`}
+                              pageNumber={pageNum}
+                              width={pageWidth ? pageWidth * (effectiveScale / MIN_ZOOM) : undefined}
+                              devicePixelRatio={pdfDevicePixelRatio}
+                              renderTextLayer={enableTextLayer}
+                              renderAnnotationLayer={false}
+                              loading=""
+                              onRenderError={(error) => {
+                                console.warn('PDF page render error:', error?.message || error);
+                                setPdfError(true);
+                              }}
+                              onRenderSuccess={pageNum === 1 ? handleFirstPageRender : undefined}
+                            />
+                        </div>
+                      );
+                    })}
                     </div>
-                  );
-                })}
-              </Document>
+                  </ZoomClarity>
+                </Document>
               </div>
             )}
             {!hasPdfSource && (

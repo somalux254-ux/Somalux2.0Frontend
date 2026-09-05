@@ -3,26 +3,21 @@
  */
 export async function fetchBooksOptimized(supabase, page = 1, booksPerPage = 20) {
   const from = (page - 1) * booksPerPage;
-  const to = from + booksPerPage - 1;
+  const to = from + booksPerPage;
 
-  const [countResult, booksResult] = await Promise.all([
-    supabase.from('books').select('*', { count: 'exact', head: true }),
-    supabase
-      .from('books')
-      .select('id, title, author, description, cover_image_url, file_url, downloads_count, pages, rating, rating_count, created_at')
-      .order('created_at', { ascending: false })
-      .range(from, to),
-  ]);
+  const booksResult = await supabase
+    .from('books')
+    .select('id, title, author, description, cover_image_url, file_url, downloads_count, pages, rating, rating_count, created_at')
+    .order('created_at', { ascending: false })
+    .range(from, to);
 
-  if (countResult.error) throw countResult.error;
   if (booksResult.error) throw booksResult.error;
 
-  const totalCount = countResult.count || 0;
+  const books = booksResult.data || [];
   return {
-    books: booksResult.data || [],
-    totalCount,
+    books: books.slice(0, booksPerPage),
     page,
-    hasMore: totalCount > to + 1,
+    hasMore: books.length > booksPerPage,
   };
 }
 

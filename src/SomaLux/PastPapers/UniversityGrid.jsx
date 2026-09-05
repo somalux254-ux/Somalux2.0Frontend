@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiMapPin } from 'react-icons/fi';
+import { FiMapPin, FiX } from 'react-icons/fi';
 import { FaSearch } from 'react-icons/fa';
 import { formatNumber } from './formatNumber';
 import './PaperPanel.css';
@@ -26,7 +26,7 @@ const UniversityCard = React.memo(({
 }) => (
   <motion.div
     key={uni.id}
-    className="paper-cardpast"
+    className="paper-cardpast university-cardpast"
     style={{ 
       cursor: 'pointer',
       display: 'flex',
@@ -47,9 +47,9 @@ const UniversityCard = React.memo(({
         src={uni.cover_image_url}
         alt={uni.name}
         loading="lazy"
+        className="university-coverpast"
         style={{ 
           width: '100%', 
-          height: '140px', 
           objectFit: 'cover',
           borderBottom: '1px solid #2a3942'
         }}
@@ -107,9 +107,9 @@ export const UniversityGrid = React.memo(({ universities, universitySearchTerm, 
 
   return (
     <>
-      <div className="university-search-rowpast">
-        <div className="university-search-containerpast">
-          <span className="university-search-iconpast" aria-hidden="true">
+      <div className="controlspast university-search-rowpast">
+        <div className="search-containerpast">
+          <span className="search-iconpast" aria-hidden="true">
             <FaSearch size={14} />
           </span>
           <input
@@ -125,16 +125,16 @@ export const UniversityGrid = React.memo(({ universities, universitySearchTerm, 
                 e.currentTarget.blur();
               }
             }}
-            className="university-search-inputpast"
+            className="search-inputpast"
             autoComplete="off"
           />
           {universitySearchTerm && (
             <button
               onClick={() => setUniversitySearchTerm('')}
-              className="university-search-clearpast"
+              className="clear-buttonpast"
               aria-label="Clear university search"
             >
-              ✕
+              <FiX size={16} />
             </button>
           )}
         </div>

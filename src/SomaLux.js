@@ -8,6 +8,7 @@ import { BooksAdmin } from "./SomaLux/Books/Admin/BooksAdmin";
 import SettingsPage from './SomaLux/Settings/SettingsPage';
 import { NotificationProvider } from './SomaLux/contexts/NotificationContext';
 import { supabase } from './SomaLux/Books/supabaseClient';
+import { signOutCompletely } from './utils/sessionManager';
 import { EmailSender } from "./SomaLux/Admin/EmailSender";
 import NativeInstallPrompt from "./components/NativeInstallPrompt";
 
@@ -46,7 +47,7 @@ export function SomaLux() {
                             <NotificationProvider>
                                 <SettingsPage
                                     onBack={() => window.history.back()}
-                                    onLogout={() => supabase.auth.signOut()}
+                                    onLogout={() => signOutCompletely(supabase)}
                                 />
                             </NotificationProvider>
                         } />
