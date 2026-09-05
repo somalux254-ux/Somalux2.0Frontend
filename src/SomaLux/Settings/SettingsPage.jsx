@@ -1,13 +1,12 @@
 import './SettingsPage.css';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { pushBackAction, popBackAction, runBackAction } from '../services/backNavigation';
 import { FiChevronLeft, FiBell, FiSliders, FiUser, FiHelpCircle, FiChevronRight, FiMessageSquare, FiFileText, FiPackage, FiUpload } from 'react-icons/fi';
 import { PadlockIcon } from './PadlockIcon';
 
 // Import tab components
 import { NotificationsTab } from './tabs/NotificationsTab';
-import { PrivacyTab } from './tabs/PrivacyTab';
 import { PreferencesTab } from './tabs/PreferencesTab';
 import { AccountTab } from './tabs/AccountTab';
 import { HelpTab } from './tabs/HelpTab';
@@ -15,6 +14,7 @@ import { FaqTab } from './tabs/FaqTab';
 import { FeedbackTab } from './tabs/FeedbackTab';
 import { AgreementTab } from './tabs/UserAgreement';
 import { UsagePolicy } from './tabs/UsagePolicy';
+import PrivacyPolicyPage from './PrivacyPolicyPage';
 import { AppsTab } from './tabs/AppsTab';
 import { AboutUsTab } from './tabs/AboutUsTab';
 import PremiumPanel from '../Subscriptions/PremiumPanel';
@@ -26,8 +26,18 @@ import { applyAppTheme, getInitialTheme } from '../../theme';
 import { UsageRulesIcon } from './icons/UsageRulesIcon';
 
 function SettingsPage({ onBack, onLogout }) {
+  const location = useLocation();
   const navigate = useNavigate();
-  const [currentPage, setCurrentPage] = useState('main');
+  useEffect(() => {
+    document.documentElement.style.backgroundColor = 'var(--bg-primary, #f5f8f7)';
+    document.body.style.backgroundColor = 'var(--bg-primary, #f5f8f7)';
+
+    return () => {
+      document.documentElement.style.removeProperty('background-color');
+      document.body.style.removeProperty('background-color');
+    };
+  }, []);
+  const [currentPage, setCurrentPage] = useState(() => location.state?.settingsPage || 'main');
   const [headerOverride, setHeaderOverride] = useState(null);
   const [settings, setSettings] = useState({
     notifications: {
@@ -54,6 +64,19 @@ function SettingsPage({ onBack, onLogout }) {
   const [selectedSubscriptionPlan, setSelectedSubscriptionPlan] = useState(null);
   const [, setSavedMessage] = useState(false); // eslint-disable-next-line no-unused-vars
 
+  const handleLogout = useCallback(() => {
+    setShowLogoutConfirm(false);
+    document.documentElement.style.backgroundColor = 'var(--bg-primary, #f5f8f7)';
+    document.body.style.backgroundColor = 'var(--bg-primary, #f5f8f7)';
+    void Promise.resolve(onLogout?.()).catch((error) => {
+      console.warn('Background sign out failed:', error?.message || error);
+    });
+    navigate('/BookManagement', {
+      replace: true,
+      state: { reopenAuth: true, authAction: 'action' },
+    });
+  }, [navigate, onLogout]);
+
   const currentPageRef = useRef(currentPage);
   useEffect(() => {
     currentPageRef.current = currentPage;
@@ -61,6 +84,15 @@ function SettingsPage({ onBack, onLogout }) {
 
   const handleSettingsBack = useCallback(async () => {
     if (currentPageRef.current !== 'main') {
+      const returnPath = location.state?.returnPath;
+      const documentPage = currentPageRef.current === 'agreement' || currentPageRef.current === 'privacy';
+      if (documentPage && returnPath) {
+        navigate(returnPath, {
+          replace: true,
+          state: { reopenAuth: true, authAction: location.state?.authAction || 'action' },
+        });
+        return;
+      }
       setCurrentPage('main');
       return;
     }
@@ -68,7 +100,7 @@ function SettingsPage({ onBack, onLogout }) {
     if (typeof onBack === 'function') {
       onBack();
     }
-  }, [onBack]);
+  }, [location.state, navigate, onBack]);
 
   useEffect(() => {
     if (typeof onBack !== 'function') return undefined;
@@ -169,7 +201,7 @@ function SettingsPage({ onBack, onLogout }) {
 
   const tabConfig = [
     { id: 'notifications', label: 'Notifications', icon: FiBell, description: 'Manage alerts' },
-    { id: 'privacy', label: 'Privacy Policy', icon: PadlockIcon, description: 'Control visibility' },
+    { id: 'privacy', label: 'Privacy Policy', icon: PadlockIcon, description: 'Control your data' },
     { id: 'preferences', label: 'Preferences', icon: FiSliders, description: 'Customize experience' },
     { id: 'account', label: 'Account', icon: FiUser, description: 'Manage account' },
     { id: 'help', label: 'Help & Support', icon: FiHelpCircle, description: 'Get assistance' },
@@ -294,8 +326,7 @@ function SettingsPage({ onBack, onLogout }) {
                 <button
                   className="modal-btn modal-confirm-btn"
                   onClick={() => {
-                    setShowLogoutConfirm(false);
-                    onLogout();
+                    handleLogout();
                   }}
                 >
                   Logout
@@ -333,7 +364,7 @@ function SettingsPage({ onBack, onLogout }) {
 
   // Individual Settings Page Views
   return (
-    <div className="settings-stp-page-container">
+    <div className={`settings-stp-page-container ${location.state?.returnPath || ['agreement', 'privacy', 'usage'].includes(currentPage) ? 'settings-direct-document' : ''}`}>
       {/* Full-page policy views render their own header. */}
       {!['agreement', 'usage'].includes(currentPage) && (
         <div className="settings-stp-page-header">
@@ -350,7 +381,7 @@ function SettingsPage({ onBack, onLogout }) {
         <div className={`settings-stp-page-body ${currentPage === 'about' ? 'about-page-body' : ''}`}>
           
           {currentPage === 'notifications' && <NotificationsTab settings={settings} handleToggle={handleToggle} showSavedMessage={showSavedMessage} />}
-          {currentPage === 'privacy' && <PrivacyTab settings={settings} handleToggle={handleToggle} showSavedMessage={showSavedMessage} />}
+          {currentPage === 'privacy' && <PrivacyPolicyPage onBack={() => setCurrentPage('main')} />}
           {currentPage === 'preferences' && <PreferencesTab settings={settings} handleSelectChange={handleSelectChange} />}
           {currentPage === 'account' && <AccountTab showConfirmDelete={showConfirmDelete} setShowConfirmDelete={setShowConfirmDelete} handleDeleteAccount={handleDeleteAccount} />}
           {currentPage === 'help' && <HelpTab onViewFaq={() => setCurrentPage('faq')} />}
@@ -389,8 +420,7 @@ function SettingsPage({ onBack, onLogout }) {
               <button
                 className="modal-btn modal-confirm-btn"
                 onClick={() => {
-                  setShowLogoutConfirm(false);
-                  onLogout();
+                  handleLogout();
                 }}
               >
                 Logout

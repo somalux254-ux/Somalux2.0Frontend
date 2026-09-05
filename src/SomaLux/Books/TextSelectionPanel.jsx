@@ -18,7 +18,6 @@ import {
   FiFileText,
   FiMic,
   FiSearch,
-  FiShare2,
   FiChevronLeft,
   FiDownload,
   FiUnderline,
@@ -462,7 +461,6 @@ const TextSelectionPanel = ({
       options: [
         { icon: FiEdit, label: 'Define', action: 'define' },
         { icon: FiFileText, label: 'Generate Example', action: 'generate' },
-        { icon: FiShare2, label: 'Share', action: 'share' },
         { icon: FiSearch, label: 'Find Related', action: 'related' },
       ]
     });
@@ -2221,13 +2219,6 @@ const TextSelectionPanel = ({
                       aria-label="Search"
                     >
                       <FiSearch size={16} />
-                    </button>
-                    <button
-                      className="icon-btn share-btn"
-                      title="Share"
-                      aria-label="Share"
-                    >
-                      <FiShare2 size={16} />
                     </button>
                     <button
                       className="icon-btn close-btn"

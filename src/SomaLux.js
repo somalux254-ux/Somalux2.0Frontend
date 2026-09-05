@@ -1,6 +1,6 @@
 // SomaLux.js
-import React from 'react';
-import { HashRouter as Router, Route, Routes, Navigate } from "react-router-dom";
+import React, { useLayoutEffect, useRef, useState } from 'react';
+import { HashRouter as Router, Route, Routes, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { FeatureFlagsProvider } from "./context/FeatureFlagsContext";
 import UserUploadPage from "./SomaLux/User/UserProfile/UserUploadPage";
 import { BookManagement } from "./SomaLux/BookDashboard/BookManagement";
@@ -14,6 +14,33 @@ import NativeInstallPrompt from "./components/NativeInstallPrompt";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+
+function StartupRouteGuard({ children }) {
+    const location = useLocation();
+    const navigate = useNavigate();
+    const hasCheckedRoute = useRef(false);
+    const [ready, setReady] = useState(false);
+
+    useLayoutEffect(() => {
+        if (hasCheckedRoute.current) return;
+        hasCheckedRoute.current = true;
+
+        if (location.pathname === '/BookManagement/pastpapers') {
+            navigate('/BookManagement', { replace: true });
+            return;
+        }
+
+        setReady(true);
+    }, [location.pathname, navigate]);
+
+    useLayoutEffect(() => {
+        if (hasCheckedRoute.current && location.pathname !== '/BookManagement/pastpapers') {
+            setReady(true);
+        }
+    }, [location.pathname]);
+
+    return ready ? children : null;
+}
 
 export function SomaLux() {
     return (
@@ -30,7 +57,8 @@ export function SomaLux() {
                 />
 
                 <Router>
-                    <Routes>
+                    <StartupRouteGuard>
+                        <Routes>
 
                         {/* Default redirect */}
                         <Route path="/" element={<Navigate to="/BookManagement" replace />} />
@@ -56,7 +84,8 @@ export function SomaLux() {
 
                         {/* Email */}
                         <Route path="/admin/email" element={<EmailSender />} />
-                    </Routes>
+                        </Routes>
+                    </StartupRouteGuard>
                 </Router>
             </div>
         </FeatureFlagsProvider>

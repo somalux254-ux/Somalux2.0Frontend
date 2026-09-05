@@ -161,12 +161,12 @@ export const BookManagement = () => {
 
   // Check if chat is selected to hide header and tabs
   return (
-    <div className={`book-management ${isScrolled ? 'scrolled' : ''}`}>
+    <div className={`book-management ${isScrolled ? 'scrolled' : ''} ${location.state?.reopenAuth ? 'auth-returning' : ''}`}>
       {/* Header */}
       <div className="book-management-header">
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', paddingTop: '2px' }}>
+          <div className="book-management-brand">
             <h2 className="header-title">Somalux</h2>
-            <div style={{ marginTop: '8px' }}>
+            <div className="book-management-premium-badge">
               <VerificationBadge tier={currentUserTier} size="sm" showLabel={false} showTooltip={true} />
             </div>
           </div>

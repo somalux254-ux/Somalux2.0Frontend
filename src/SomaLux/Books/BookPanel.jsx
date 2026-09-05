@@ -1,5 +1,6 @@
 // src/BookPanel.jsx
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { Directory, Filesystem } from '@capacitor/filesystem';
 import { supabase } from './supabaseClient';
 import { initializeSession, setupAuthListener } from '../../utils/sessionManager';
 import { Download } from './Download';
@@ -13,25 +14,14 @@ import {
   FiChevronRight,
   FiX,
   FiClock,
-  FiShare2,
-  FiCopy,
   FiBookmark,
   FiThumbsUp,
   FiMail,
   FiInfo,
-  FiLink,
 } from 'react-icons/fi';
 
-import {
-  SiX,
-  SiFacebook,
-  SiLinkedin,
-  SiWhatsapp,
-  SiGoogledrive,
-} from 'react-icons/si';
 import { motion, AnimatePresence } from 'framer-motion';
 import SimpleScrollReader from './SimpleScrollReader';
-import { API_URL } from '../../config';
 import './BookPanel.css';
 import './Admin/admin.css';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -77,8 +67,8 @@ export const BookPanel = ({ demoMode = false }) => {
   const [subscription, setSubscription] = useState(null);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [checkingSubscription, setCheckingSubscription] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authAction, setAuthAction] = useState('action');
+  const [showAuthModal, setShowAuthModal] = useState(() => Boolean(location.state?.reopenAuth));
+  const [authAction, setAuthAction] = useState(() => location.state?.authAction || 'action');
   const [loadingUser, setLoadingUser] = useState(true);
   const [showReader, setShowReader] = useState(false);
   const [openingBookId, setOpeningBookId] = useState(null);
@@ -93,9 +83,6 @@ export const BookPanel = ({ demoMode = false }) => {
   const [showNetworkModal, setShowNetworkModal] = useState(false);
   const [networkRetryPage, setNetworkRetryPage] = useState(1);
 
-  // Sharing modal state
-  const [showSharingModal, setShowSharingModal] = useState(false);
-  
   // Bulk download selection state
   const [selectedBooksForDownload, setSelectedBooksForDownload] = useState(new Set());
   const [selectAllBooks, setSelectAllBooks] = useState(false);
@@ -132,50 +119,6 @@ export const BookPanel = ({ demoMode = false }) => {
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
-
-  // Update Open Graph meta tags for sharing
-  useEffect(() => {
-    if (selectedBook) {
-      const bookCover = selectedBook.bookImage || selectedBook.cover_image_url;
-      const bookUrl = `${window.location.origin}${window.location.pathname}?id=${selectedBook.id}`;
-      
-      // Update og:image
-      let ogImage = document.querySelector('meta[property="og:image"]');
-      if (!ogImage) {
-        ogImage = document.createElement('meta');
-        ogImage.setAttribute('property', 'og:image');
-        document.head.appendChild(ogImage);
-      }
-      ogImage.setAttribute('content', bookCover);
-      
-      // Update og:title
-      let ogTitle = document.querySelector('meta[property="og:title"]');
-      if (!ogTitle) {
-        ogTitle = document.createElement('meta');
-        ogTitle.setAttribute('property', 'og:title');
-        document.head.appendChild(ogTitle);
-      }
-      ogTitle.setAttribute('content', selectedBook.title);
-      
-      // Update og:description
-      let ogDesc = document.querySelector('meta[property="og:description"]');
-      if (!ogDesc) {
-        ogDesc = document.createElement('meta');
-        ogDesc.setAttribute('property', 'og:description');
-        document.head.appendChild(ogDesc);
-      }
-      ogDesc.setAttribute('content', `Check out "${selectedBook.title}" by ${selectedBook.author || 'Unknown Author'}`);
-      
-      // Update og:url
-      let ogUrl = document.querySelector('meta[property="og:url"]');
-      if (!ogUrl) {
-        ogUrl = document.createElement('meta');
-        ogUrl.setAttribute('property', 'og:url');
-        document.head.appendChild(ogUrl);
-      }
-      ogUrl.setAttribute('content', bookUrl);
-    }
-  }, [selectedBook]);
 
 /*************  ✨ Windsurf Command ⭐  *************/
 /**
@@ -671,14 +614,16 @@ export const BookPanel = ({ demoMode = false }) => {
 
   // The book catalogue is public, so load it independently of authentication.
   useEffect(() => {
+    if (showAuthModal) return;
     if (initialBooksLoadRef.current) return;
     initialBooksLoadRef.current = true;
     console.log('📚 Starting initial books load');
     fetchAll();
-  }, []);
+  }, [showAuthModal]);
 
   // Initial load + realtime subscription with polling fallback
   useEffect(() => {
+    if (showAuthModal) return undefined;
     let poller = null;
     let channel = null;
     try {
@@ -710,7 +655,7 @@ export const BookPanel = ({ demoMode = false }) => {
       if (channel) supabase.removeChannel(channel);
       if (poller) clearInterval(poller);
     };
-  }, [user?.id, loadingUser]);
+  }, [user?.id, loadingUser, showAuthModal]);
 
   useEffect(() => {
     try {
@@ -939,6 +884,7 @@ export const BookPanel = ({ demoMode = false }) => {
 
   const handlePageChange = async (page) => {
     if (page < 1) return;
+    if (page > currentPage && !requireAuth('next page')) return;
     if (page > currentPage && !hasMore) return;
     setCurrentPage(page);
     // Ensure the page data is loaded (use cache if available) — skip network fetch when paginating filtered results
@@ -1052,76 +998,6 @@ export const BookPanel = ({ demoMode = false }) => {
     }
   };
 
-  const handleShare = async (method, book) => {
-    if (!book) return;
-    
-    // Ensure cover image URL is absolute
-    let coverImageUrl = book.bookImage || book.cover_image_url || '';
-    if (coverImageUrl && !coverImageUrl.startsWith('http')) {
-      // If it's relative, make it absolute
-      coverImageUrl = `${window.location.origin}${coverImageUrl.startsWith('/') ? '' : '/'}${coverImageUrl}`;
-    }
-    if (!coverImageUrl.startsWith('http')) {
-      // Fallback to a default
-          coverImageUrl = `${window.location.origin}/somalux-logo.svg`;
-    }
-    
-    // Use OG endpoint for proper meta tag serving to social platforms
-    const ogUrl = `${window.location.origin}/api/og?type=book&id=${book.id}&title=${encodeURIComponent(book.title)}&image=${encodeURIComponent(coverImageUrl)}&description=${encodeURIComponent(`Check out "${book.title}" by ${book.author || 'Unknown Author'}`)}`;
-    
-    // Fallback URL for direct sharing
-    const baseUrl = `${window.location.origin}${window.location.pathname}`;
-    const directUrl = `${baseUrl}?id=${book.id}`;
-    const text = `Check out "${book.title}" by ${book.author}`;
-    
-    try {
-      switch (method) {
-        case 'copy': {
-          if (navigator.clipboard) {
-            await navigator.clipboard.writeText(`${text}\n${directUrl}`);
-            alert('Link copied to clipboard');
-          } else {
-            const input = document.createElement('input');
-            input.value = `${text}\n${directUrl}`;
-            document.body.appendChild(input);
-            input.select();
-            document.execCommand('copy');
-            document.body.removeChild(input);
-            alert('Link copied to clipboard');
-          }
-          break;
-        }
-        case 'twitter':
-          window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(ogUrl)}&hashtags=books,reading`,`_blank`,`noopener,noreferrer`);
-          break;
-        case 'facebook':
-          window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(ogUrl)}`,`_blank`,`noopener,noreferrer`);
-          break;
-        case 'linkedin':
-          window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(ogUrl)}`,`_blank`,`noopener,noreferrer`);
-          break;
-        case 'email':
-          window.open(`mailto:?subject=${encodeURIComponent(text)}&body=${encodeURIComponent(`${text}\n\n${ogUrl}\n\n`)}`);
-          break;
-        case 'whatsapp':
-          // Send only URL - WhatsApp will show preview with image automatically
-          window.open(`https://wa.me/?text=${encodeURIComponent(ogUrl)}`,`_blank`,`noopener,noreferrer`);
-          break;
-        case 'googledrive':
-          // Open Google Drive in new window
-          window.open(`https://drive.google.com/`,`_blank`,`noopener,noreferrer`);
-          // Copy link to clipboard for user to save manually
-          if (navigator.clipboard) {
-            await navigator.clipboard.writeText(`${text}\n${ogUrl}`);
-          }
-          break;
-        default:
-          break;
-      }
-    } catch (err) {
-      console.error('Share failed', err);
-    }
-  };
 
   const wishlistBooks = useMemo(() => {
     return books.filter(book => wishlist.includes(book.id));
@@ -1705,13 +1581,6 @@ export const BookPanel = ({ demoMode = false }) => {
                     Mark
                   </button>
                   <button
-                    className="btn-readBKP btn-action-primaryBKP"
-                    onClick={() => setShowSharingModal(true)}
-                    title="Share this book"
-                  >
-                    <FiShare2 size={16} /> Share
-                  </button>
-                  <button
                     className="btn-readBKP btn-action-primaryBKP read-book-actionBKP"
                     onClick={handleReadClick}
                     disabled={openingBookId === selectedBook.id}
@@ -1753,366 +1622,6 @@ export const BookPanel = ({ demoMode = false }) => {
           setShowSubscriptionModal(false);
         }}
       />
-
-      {/* Sharing Modal */}
-      <AnimatePresence>
-        {showSharingModal && selectedBook && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowSharingModal(false)}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'rgba(0,0,0,0.6)',
-              zIndex: 1100,
-            }}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                background: '#0b1220',
-                color: '#e6eef7',
-                padding: 48,
-                borderRadius: 20,
-                boxShadow: '0 8px 30px rgba(0,0,0,0.6)',
-                textAlign: 'center',
-                maxWidth: '600px',
-                width: '85%',
-                maxHeight: '90vh',
-                position: 'relative',
-              }}
-            >
-              <button
-                className="share-modal-btn"
-                title="Close"
-                onClick={() => setShowSharingModal(false)}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  right: 12,
-                  background: 'transparent',
-                  color: '#9ca3af',
-                  border: 'none',
-                  padding: '0',
-                  borderRadius: 8,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '0.8';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                }}
-              >
-                <FiX size={20} color="#9ca3af" />
-              </button>
-              <div style={{ marginBottom: 24 }}>
-                <h3 style={{ margin: 0, marginBottom: 8, fontSize: 28, fontWeight: 700, color: '#e6eef7' }}>
-                  Share "{selectedBook.title}"
-                </h3>
-              </div>
-
-              {/* Book Cover Image as Clickable Link */}
-              <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
-                <a 
-                  href={`${window.location.origin}${window.location.pathname}?id=${selectedBook.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'block',
-                    borderRadius: 12,
-                    overflow: 'hidden',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-                    transition: 'all 0.3s ease',
-                    cursor: 'pointer',
-                    textDecoration: 'none',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.6)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.4)';
-                  }}
-                >
-                  <img 
-                    src={selectedBook.bookImage || selectedBook.cover_image_url} 
-                    alt={selectedBook.title}
-                    style={{
-                      width: 140,
-                      height: 200,
-                      objectFit: 'cover',
-                      display: 'block',
-                    }}
-                  />
-                </a>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 0 }}>
-                <button
-                  className="share-modal-btn"
-                  title="Share on WhatsApp"
-                  onClick={() => {
-                    handleShare('whatsapp', selectedBook);
-                    setShowSharingModal(false);
-                  }}
-                  style={{
-                    background: 'transparent',
-                    color: '#e6eef7',
-                    border: 'none',
-                    padding: '8px 0',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    fontSize: 9,
-                    fontWeight: 400,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '0.8';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                >
-                  <div style={{ background: '#34C759', borderRadius: '8px', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <SiWhatsapp size={30} color="#ffffff" />
-                  </div>
-                  WhatsApp
-                </button>
-
-                <button
-                  className="share-modal-btn"
-                  title="Share on X"
-                  onClick={() => {
-                    handleShare('twitter', selectedBook);
-                    setShowSharingModal(false);
-                  }}
-                  style={{
-                    background: 'transparent',
-                    color: '#e6eef7',
-                    border: 'none',
-                    padding: '8px 0',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    fontSize: 9,
-                    fontWeight: 400,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '0.8';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                >
-                  <div style={{ background: '#000000', borderRadius: '8px', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <SiX size={26} color="#ffffff" />
-                  </div>
-                  X
-                </button>
-
-                <button
-                  className="share-modal-btn"
-                  title="Copy Link"
-                  onClick={() => {
-                    handleShare('copy', selectedBook);
-                    setShowSharingModal(false);
-                  }}
-                  style={{
-                    background: 'transparent',
-                    color: '#e6eef7',
-                    border: 'none',
-                    padding: '8px 0',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    fontSize: 9,
-                    fontWeight: 400,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '0.8';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                >
-                  <div style={{ background: '#8B5CF6', borderRadius: '8px', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <FiLink size={26} color="#ffffff" />
-                  </div>
-                  Copy Link
-                </button>
-
-                <button
-                  className="share-modal-btn"
-                  title="Share on Facebook"
-                  onClick={() => {
-                    handleShare('facebook', selectedBook);
-                    setShowSharingModal(false);
-                  }}
-                  style={{
-                    background: 'transparent',
-                    color: '#e6eef7',
-                    border: 'none',
-                    padding: '8px 0',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    fontSize: 9,
-                    fontWeight: 400,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '0.8';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                >
-                  <div style={{ background: '#1877F2', borderRadius: '8px', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <SiFacebook size={26} color="#ffffff" />
-                  </div>
-                  Facebook
-                </button>
-
-                <button
-                  className="share-modal-btn"
-                  title="Share on LinkedIn"
-                  onClick={() => {
-                    handleShare('linkedin', selectedBook);
-                    setShowSharingModal(false);
-                  }}
-                  style={{
-                    background: 'transparent',
-                    color: '#e6eef7',
-                    border: 'none',
-                    padding: '8px 0',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    fontSize: 9,
-                    fontWeight: 400,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '0.8';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                >
-                  <div style={{ background: '#0A66C2', borderRadius: '8px', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <SiLinkedin size={26} color="#ffffff" />
-                  </div>
-                  LinkedIn
-                </button>
-
-                <button
-                  className="share-modal-btn"
-                  title="Share via Email"
-                  onClick={() => {
-                    handleShare('email', selectedBook);
-                    setShowSharingModal(false);
-                  }}
-                  style={{
-                    background: 'transparent',
-                    color: '#e6eef7',
-                    border: 'none',
-                    padding: '8px 0',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    fontSize: 9,
-                    fontWeight: 400,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '0.8';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                >
-                  <div style={{ background: '#D44638', borderRadius: '8px', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="#ffffff">
-                      <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-                    </svg>
-                  </div>
-                  Email
-                </button>
-
-                <button
-                  className="share-modal-btn"
-                  title="Save to Google Drive"
-                  onClick={() => {
-                    handleShare('googledrive', selectedBook);
-                    setShowSharingModal(false);
-                  }}
-                  style={{
-                    background: 'transparent',
-                    color: '#e6eef7',
-                    border: 'none',
-                    padding: '8px 0',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    fontSize: 9,
-                    fontWeight: 400,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '0.8';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                >
-                  <div style={{ background: '#1F2937', borderRadius: '8px', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <SiGoogledrive size={26} color="#ffffff" />
-                  </div>
-                  Google Drive
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 };

@@ -22,7 +22,6 @@ const DEFAULT_FEATURES = {
   // Book features
   secure_reader: { enabled: true, config: {}, version: 1 },
   pdf_download: { enabled: true, config: {}, version: 1 },
-  book_sharing: { enabled: true, config: {}, version: 1 },
   
   // Past papers features
   past_papers: { enabled: true, config: {}, version: 1 },

@@ -446,7 +446,7 @@ const SendEmails = () => {
         // Refresh history
         fetchNotifications();
       } else {
-        setMessageNotification(`❌ Error: ${data.error}`);
+        setMessageNotification(`❌ ${data.error || data.message || 'Email delivery failed'}`);
         setNotificationTypeUI('error');
       }
     } catch (error) {
@@ -962,7 +962,16 @@ const SendEmails = () => {
       )}
 
       {/* Preview Dialog */}
-      <Dialog open={previewOpen} onClose={() => setPreviewOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={previewOpen}
+        onClose={() => {
+          document.activeElement?.blur();
+          setPreviewOpen(false);
+        }}
+        disableRestoreFocus
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Email Preview</DialogTitle>
         <DialogContent>
           <Box style={{ marginTop: '15px' }}>
@@ -986,7 +995,14 @@ const SendEmails = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setPreviewOpen(false)}>Close</Button>
+          <Button
+            onClick={() => {
+              document.activeElement?.blur();
+              setPreviewOpen(false);
+            }}
+          >
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

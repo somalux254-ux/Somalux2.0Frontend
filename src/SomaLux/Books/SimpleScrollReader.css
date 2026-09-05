@@ -2480,6 +2480,131 @@
   background: rgba(12, 109, 88, 0.5);
 }
 
+/* Light theme overrides for the reading workspace. */
+[data-theme="light"] .ssr-overlay,
+[data-theme="light"] .ssr-container {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary);
+}
+
+[data-theme="light"] .ssr-header,
+[data-theme="light"] .ssr-footer {
+  background: var(--bg-secondary) !important;
+  border-color: var(--border-muted) !important;
+  color: var(--text-secondary);
+}
+
+[data-theme="light"] .ssr-title,
+[data-theme="light"] .ssr-page-indicator,
+[data-theme="light"] .ssr-close-corner-btn,
+[data-theme="light"] .ssr-icon-btn,
+[data-theme="light"] .ssr-audio-status,
+[data-theme="light"] .ssr-loading p,
+[data-theme="light"] .ssr-bookmarks-page-header h2 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .ssr-author,
+[data-theme="light"] .ssr-page-sep,
+[data-theme="light"] .ssr-page-total,
+[data-theme="light"] .ssr-zoom-indicator,
+[data-theme="light"] .ssr-audio-total,
+[data-theme="light"] .ssr-footer,
+[data-theme="light"] .ssr-bookmark-item,
+[data-theme="light"] .ssr-bookmarks-page-count {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="light"] .ssr-main-content,
+[data-theme="light"] .ssr-scroll-area,
+[data-theme="light"] .ssr-loading,
+[data-theme="light"] .simple-scroll-reader {
+  background: linear-gradient(135deg, #f4f7f8 0%, #e9eff1 100%) !important;
+}
+
+[data-theme="light"] .ssr-overlay .ssr-main-content,
+[data-theme="light"] .ssr-overlay .ssr-scroll-area {
+  background-color: #f4f7f8 !important;
+}
+
+html[data-theme="light"] .ssr-header {
+  background: #ffffff !important;
+  border-bottom-color: rgba(23, 32, 39, 0.14) !important;
+}
+
+html[data-theme="light"] .ssr-main-content,
+html[data-theme="light"] .ssr-scroll-area {
+  background: #f4f7f8 !important;
+}
+
+html[data-theme="light"] .ssr-page {
+  background: #ffffff !important;
+  box-shadow: 0 6px 24px rgba(23, 32, 39, 0.16), 0 0 1px rgba(0, 109, 88, 0.2) !important;
+}
+
+[data-theme="light"] .ssr-toc-sidebar,
+[data-theme="light"] .ssr-toc-panel {
+  background: linear-gradient(180deg, #ffffff, #f4f7f8) !important;
+  border-color: var(--border-muted) !important;
+  box-shadow: 2px 0 12px rgba(23, 32, 39, 0.08) !important;
+}
+
+[data-theme="light"] .ssr-toc-header,
+[data-theme="light"] .ssr-bookmarks-section {
+  background: rgba(0, 109, 88, 0.07) !important;
+  border-color: rgba(0, 109, 88, 0.2) !important;
+}
+
+[data-theme="light"] .ssr-toc-header h3,
+[data-theme="light"] .ssr-toc-item.active,
+[data-theme="light"] .ssr-bookmarks-title,
+[data-theme="light"] .ssr-bookmark-item.active {
+  color: #006d58 !important;
+}
+
+[data-theme="light"] .ssr-toc-item:hover,
+[data-theme="light"] .ssr-toc-item.active,
+[data-theme="light"] .ssr-bookmark-item:hover,
+[data-theme="light"] .ssr-bookmark-item.active {
+  background: rgba(0, 109, 88, 0.12) !important;
+}
+
+[data-theme="light"] .ssr-btn {
+  background: rgba(0, 109, 88, 0.1) !important;
+  border-color: rgba(0, 109, 88, 0.25) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .ssr-btn:hover,
+[data-theme="light"] .ssr-icon-btn:hover,
+[data-theme="light"] .ssr-close-corner-btn:hover {
+  color: #006d58 !important;
+}
+
+[data-theme="light"] .ssr-page-loading,
+[data-theme="light"] .ssr-page-placeholder {
+  background: linear-gradient(90deg, #e4eaec 0%, #f5f8f9 50%, #e4eaec 100%) !important;
+}
+
+[data-theme="light"] .ssr-bookmarks-page {
+  background: var(--bg-primary) !important;
+}
+
+[data-theme="light"] .ssr-bookmarks-page-item {
+  background: rgba(23, 32, 39, 0.04) !important;
+  box-shadow: 0 0 0 1px rgba(23, 32, 39, 0.08) !important;
+}
+
+[data-theme="light"] .ssr-bookmarks-page-item-number,
+[data-theme="light"] .ssr-bookmarks-page-item-title {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="light"] .ssr-bookmarks-page-item-note-preview,
+[data-theme="light"] .ssr-error p {
+  color: var(--text-secondary) !important;
+}
+
 /* ============================================
    GALAXY LOADER - COSMIC ANIMATION STYLES
    ============================================ */

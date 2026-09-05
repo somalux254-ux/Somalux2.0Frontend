@@ -1865,154 +1865,6 @@
   }
 }
 
-/* ===== Share & Read Styles ===== */
-.share-rowBKP { 
-  display: flex; 
-  gap: 6px; 
-  flex-wrap: wrap; 
-  margin-top: 0;
-  width: 100%;
-}
-
-.share-btnBKP {
-  display: inline-flex; 
-  align-items: center; 
-  justify-content: center;
-  gap: 4px;
-  padding: 6px 10px; 
-  border-radius: 6px; 
-  border: none;
-  background: transparent; 
-  color: #d1d5db; 
-  cursor: pointer; 
-  transition: all .15s ease;
-  font-size: 0.8rem;
-  flex: 1;
-  min-width: 50px;
-}
-
-.share-btnBKP:hover { 
-  background: rgba(99, 102, 241, 0.08); 
-  border-color: #6366f1; 
-  color: #e5e7eb; 
-}
-
-/* Colored social buttons */
-.share-btn-copyBKP {
-  color: #64748b;
-}
-
-.share-btn-copyBKP:hover {
-  color: #e5e7eb;
-  border-color: #64748b;
-}
-
-.x-text-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: bold;
-  width: 14px;
-  height: 14px;
-}
-
-.share-btn-xBKP {
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.share-btn-xBKP:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: #ffffff;
-  color: #ffffff;
-}
-
-.share-btn-facebookBKP {
-  color: #1877f2;
-  border-color: rgba(24, 119, 242, 0.3);
-}
-
-.share-btn-facebookBKP:hover {
-  background: rgba(24, 119, 242, 0.1);
-  border-color: #1877f2;
-  color: #1877f2;
-}
-
-.share-btn-linkedinBKP {
-  color: #0a66c2;
-  border-color: rgba(10, 102, 194, 0.3);
-}
-
-.share-btn-linkedinBKP:hover {
-  background: rgba(10, 102, 194, 0.1);
-  border-color: #0a66c2;
-  color: #0a66c2;
-}
-
-.share-btn-emailBKP {
-  color: #ea4335;
-  border-color: rgba(234, 67, 53, 0.3);
-}
-
-.share-btn-emailBKP:hover {
-  background: rgba(234, 67, 53, 0.1);
-  border-color: #ea4335;
-  color: #ea4335;
-}
-
-.share-btnBKP svg {
-  flex-shrink: 0;
-  width: 14px;
-  height: 14px;
-}
-
-/* Show text labels for share buttons on larger screens */
-@media (min-width: 640px) {
-  .btn-label-mobileBKP {
-    display: inline;
-  }
-}
-
-@media (max-width: 420px) {
-  .share-rowBKP {
-    gap: 4px;
-  }
-  
-  .share-btnBKP {
-    padding: 5px 8px;
-    font-size: 0.7rem;
-    min-width: 44px;
-  }
-  
-  .share-btnBKP svg {
-    width: 12px;
-    height: 12px;
-  }
-}
-
-@media (max-width: 280px) {
-  .share-rowBKP {
-    gap: 2px;
-  }
-  
-  .share-btnBKP {
-    padding: 4px 4px;
-    font-size: 0.6rem;
-    min-width: 32px;
-    flex: 1;
-  }
-  
-  .share-btnBKP svg {
-    width: 10px;
-    height: 10px;
-  }
-  
-  .btn-label-mobileBKP {
-    display: none !important;
-  }
-}
-
 .btn-readBKP {
   display: inline-flex; 
   align-items: center; 
@@ -2071,7 +1923,7 @@
 }
 
 /* Colored primary action buttons */
-/* New order: Save(1)/Cyan, Rate(2)/Blue, Share(3)/Gray, Read(4)/Green */
+/* Action button colors */
 
 /* Save button (Download component - first child) */
 .actions-primary-rowBKP > button:nth-child(1),
@@ -2097,24 +1949,13 @@
   color: #ec4899 !important;
 }
 
-/* Share button (third child) */
+/* Read button (third child) */
 .actions-primary-rowBKP > button.btn-readBKP.btn-action-primaryBKP:nth-child(3) {
-  border: none !important;
-  color: #f97316 !important;
-}
-
-.actions-primary-rowBKP > button.btn-readBKP.btn-action-primaryBKP:nth-child(3):hover {
-  border: none !important;
-  color: #f97316 !important;
-}
-
-/* Read button (fourth child) */
-.actions-primary-rowBKP > button.btn-readBKP.btn-action-primaryBKP:nth-child(4) {
   border: none !important;
   color: #00FF41 !important;
 }
 
-.actions-primary-rowBKP > button.btn-readBKP.btn-action-primaryBKP:nth-child(4):hover {
+.actions-primary-rowBKP > button.btn-readBKP.btn-action-primaryBKP:nth-child(3):hover {
   border: none !important;
   color: #00FF41 !important;
 }

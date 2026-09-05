@@ -26,7 +26,14 @@ $env:REACT_APP_API_URL = $backendUrl
 Set-Location $projectRoot
 
 Write-Host "Connecting to device $deviceIp..."
-$connectOutput = & $adb connect $deviceIp 2>&1
+$connectErrorAction = $ErrorActionPreference
+try {
+    $ErrorActionPreference = 'Continue'
+    $connectOutput = & $adb connect $deviceIp 2>&1
+}
+finally {
+    $ErrorActionPreference = $connectErrorAction
+}
 if ($LASTEXITCODE -ne 0) {
     throw "ADB could not connect to $deviceIp. $($connectOutput -join ' ')"
 }
@@ -71,7 +78,8 @@ if ($serverAlreadyRunning) {
     Write-Host "Using existing dev server on port 3000."
 }
 
-$deadline = (Get-Date).AddSeconds(45)
+$serverStartupTimeoutSeconds = 120
+$deadline = (Get-Date).AddSeconds($serverStartupTimeoutSeconds)
 $serverReady = $false
 while ((Get-Date) -lt $deadline) {
     if ($serverProcess -and $serverProcess.HasExited) {
@@ -108,7 +116,6 @@ if (-not (Test-Path $apkPath)) {
 }
 
 Write-Host "Installing APK: $apkPath"
-& $adb -s $deviceIp uninstall com.somalux.app 2>$null | Out-Null
 & $adb -s $deviceIp install -r $apkPath
 if ($LASTEXITCODE -ne 0) {
     throw "APK installation failed on device $deviceIp"

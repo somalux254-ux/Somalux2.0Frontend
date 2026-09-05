@@ -85,7 +85,7 @@ const UniversityCard = React.memo(({
   );
 });
 
-export const UniversityGrid = React.memo(({ universities, universitySearchTerm, setUniversitySearchTerm, onUniversitySelect }) => {
+export const UniversityGrid = React.memo(({ universities, universitySearchTerm, setUniversitySearchTerm, onUniversitySelect, onAuthRequired, user }) => {
   const filteredUniversities = universities.filter(uni =>
     !universitySearchTerm ||
     uni.name?.toLowerCase().includes(universitySearchTerm.toLowerCase()) ||
@@ -116,7 +116,15 @@ export const UniversityGrid = React.memo(({ universities, universitySearchTerm, 
             type="text"
             placeholder="Search universities..."
             value={universitySearchTerm}
-            onChange={(e) => setUniversitySearchTerm(e.target.value)}
+            onFocus={(e) => {
+              if (!user) {
+                e.currentTarget.blur();
+                onAuthRequired?.('search');
+              }
+            }}
+            onChange={(e) => {
+              if (user) setUniversitySearchTerm(e.target.value);
+            }}
             inputMode="search"
             enterKeyHint="search"
             onKeyDown={(e) => {

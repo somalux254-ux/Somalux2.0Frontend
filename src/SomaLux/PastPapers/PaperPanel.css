@@ -2169,35 +2169,6 @@
   color: var(--wishlist-active);
 }
 
-.share-buttonpast {
-  padding: 10px 15px;
-  background: transparent; /* Changed from var(--primary) to match theme */
-  color: var(--text-dark); /* Changed from white */
-  border: 1px solid var(--bg-darker); /* Added for consistency */
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px; /* Increased for larger icon */
-  font-size: 0.9rem;
-  transition: all 0.2s ease;
-}
-
-@media (max-width: 768px) {
-  .share-buttonpast {
-    padding: 10px 8px;
-    font-size: 0.7rem;
-    border: none;
-    border-radius: 0;
-    flex-direction: column;
-    gap: 4px;
-  }
-}
-
-.share-buttonpast:hover {
-  background: rgba(134, 150, 160, 0.1); /* Matches other buttons */
-}
-
 /* ===== Wishlist Sidebar ===== */
 .floating-wishlist-btnpast {
   position: fixed;
@@ -2942,26 +2913,14 @@
   color: #f59e0b;
 }
 
-/* 2nd button: Share (cyan) */
+/* 2nd button: Read (green) */
 .btn-readBKP.btn-action-primaryBKP:nth-child(2) {
-  border: none;
-  border-color: #06b6d4;
-  color: #06b6d4;
-}
-
-.btn-readBKP.btn-action-primaryBKP:nth-child(2):hover {
-  border-color: #06b6d4;
-  color: #06b6d4;
-}
-
-/* 3rd button: Read (green) */
-.btn-readBKP.btn-action-primaryBKP:nth-child(3) {
   border: none;
   border-color: #00FF41;
   color: #00FF41;
 }
 
-.btn-readBKP.btn-action-primaryBKP:nth-child(3):hover {
+.btn-readBKP.btn-action-primaryBKP:nth-child(2):hover {
   border-color: #00FF41;
   color: #00FF41;
 }

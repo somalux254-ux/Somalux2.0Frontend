@@ -15,16 +15,14 @@ import {
   fetchUniversities,
   toggleUniversityLike
 } from '../Books/Admin/campusApi';
-import { ShareButton } from './PastpaperShare';
 import { AuthModal } from '../Books/AuthModal';
 import SubscriptionModal from '../Subscriptions/SubscriptionModal';
 import SecureReader from '../Books/SecureReader';
 import SimpleScrollReader from '../Books/SimpleScrollReader';
-import { FaSearch, FaFacebook, FaLinkedin, FaWhatsapp } from 'react-icons/fa';
-import { SiX, SiGoogledrive } from 'react-icons/si';
+import { FaSearch } from 'react-icons/fa';
 import { 
   FiSearch, FiFileText, FiFilter, FiChevronRight, FiChevronLeft, FiX, 
-  FiTrendingUp, FiArrowLeft, FiEye, FiStar, FiMapPin, FiUpload, FiBook, FiBookmark, FiShare2, FiCopy, FiLink
+  FiTrendingUp, FiArrowLeft, FiEye, FiStar, FiMapPin, FiUpload, FiBook, FiBookmark
 } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UniversityGrid } from './UniversityGrid';
@@ -155,7 +153,7 @@ export const PaperPanel = ({ demoMode = false }) => {
 
   const [showReader, setShowReader] = useState(false);
   const [readerUrl, setReaderUrl] = useState(null);
-  const [showSharingModal, setShowSharingModal] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const hasActiveSubscription = useMemo(() => {
     if (!subscription || !subscription.end_at) return false;
@@ -311,7 +309,7 @@ export const PaperPanel = ({ demoMode = false }) => {
 
   const fetchAndUpdateUniversities = async () => {
     try {
-      const { data } = await fetchUniversities({ page: 1, pageSize: 5 });
+      const { data } = await fetchUniversities({ page: 1, pageSize: 5, includeCount: false });
       // Cache universities IMMEDIATELY - don't wait for stats
       if (data && data.length > 0) {
         localStorage.setItem('cachedUniversities', JSON.stringify({ data, timestamp: Date.now() }));
@@ -530,49 +528,6 @@ export const PaperPanel = ({ demoMode = false }) => {
     
     return () => clearTimeout(timer);
   }, [searchTerm]);
-
-  // Update Open Graph meta tags for sharing
-  useEffect(() => {
-    if (selectedPaper) {
-      const paperUrl = `${window.location.origin}${window.location.pathname}?paper=${selectedPaper.id}`;
-      
-      // Update og:image
-      let ogImage = document.querySelector('meta[property="og:image"]');
-      if (!ogImage) {
-        ogImage = document.createElement('meta');
-        ogImage.setAttribute('property', 'og:image');
-        document.head.appendChild(ogImage);
-      }
-      ogImage.setAttribute('content', selectedPaper.thumbnail_url || `${window.location.origin}/paper-icon.png`);
-      
-      // Update og:title
-      let ogTitle = document.querySelector('meta[property="og:title"]');
-      if (!ogTitle) {
-        ogTitle = document.createElement('meta');
-        ogTitle.setAttribute('property', 'og:title');
-        document.head.appendChild(ogTitle);
-      }
-      ogTitle.setAttribute('content', selectedPaper.title);
-      
-      // Update og:description
-      let ogDesc = document.querySelector('meta[property="og:description"]');
-      if (!ogDesc) {
-        ogDesc = document.createElement('meta');
-        ogDesc.setAttribute('property', 'og:description');
-        document.head.appendChild(ogDesc);
-      }
-      ogDesc.setAttribute('content', `Check out "${selectedPaper.title}" from ${selectedPaper.university || 'Unknown'}`);
-      
-      // Update og:url
-      let ogUrl = document.querySelector('meta[property="og:url"]');
-      if (!ogUrl) {
-        ogUrl = document.createElement('meta');
-        ogUrl.setAttribute('property', 'og:url');
-        document.head.appendChild(ogUrl);
-      }
-      ogUrl.setAttribute('content', paperUrl);
-    }
-  }, [selectedPaper]);
 
   // Real-time subscription for past papers - start FIRST before loading
   useEffect(() => {
@@ -902,7 +857,7 @@ export const PaperPanel = ({ demoMode = false }) => {
     setDisplayedPapers(displayedPapersMemo);
   }, [displayedPapersMemo]);
 
-  const handlePaperClick = async (paper) => {
+  const handlePaperClick = (paper) => {
     // Don't show modal while auth is loading - wait for verification
     if (isAuthLoading) {
       return;
@@ -913,9 +868,22 @@ export const PaperPanel = ({ demoMode = false }) => {
       return;
     }
 
-    // Now show the paper details
-    setSelectedPaper(paper);
+    // Show the modal immediately and use the existing URL without another request.
+    const initialPreviewUrl = paper.file_url && /^https?:\/\//i.test(paper.file_url)
+      ? paper.file_url
+      : null;
+    setPreviewLoading(!initialPreviewUrl);
+    setSelectedPaper({ ...paper, downloadUrl: initialPreviewUrl });
     setWelcomeMessage(false);
+
+    if (initialPreviewUrl) return;
+
+    void getPastPaperSignedUrl(paper.id)
+      .then(signedUrl => {
+        setSelectedPaper(prev => prev?.id === paper.id ? { ...prev, downloadUrl: signedUrl } : prev);
+      })
+      .catch(error => console.warn('Failed to load past paper preview:', { paperId: paper.id, error: error.message }))
+      .finally(() => setPreviewLoading(false));
   };
 
   const viewPaperDetails = async (paper) => {
@@ -929,15 +897,39 @@ export const PaperPanel = ({ demoMode = false }) => {
       return;
     }
 
-    setSelectedPaper(paper);
+    const existingUrl = paper.downloadUrl || (paper.file_url && /^https?:\/\//i.test(paper.file_url) ? paper.file_url : null);
+    setSelectedPaper({ ...paper, downloadUrl: existingUrl });
     setWelcomeMessage(false);
 
-    getPastPaperSignedUrl(paper.id)
-      .then(signedUrl => {
-        setSelectedPaper(prev => prev?.id === paper.id ? { ...prev, downloadUrl: signedUrl } : prev);
-      })
-      .catch(error => console.warn('Failed to prewarm past paper URL:', { paperId: paper.id, error: error.message }));
+    if (!existingUrl) {
+      void getPastPaperSignedUrl(paper.id)
+        .then(signedUrl => {
+          setSelectedPaper(prev => prev?.id === paper.id ? { ...prev, downloadUrl: signedUrl } : prev);
+        })
+        .catch(error => console.warn('Failed to prewarm past paper URL:', { paperId: paper.id, error: error.message }));
+    }
     
+  };
+
+  const handleNextPage = () => {
+    if (isAuthLoading) return;
+    if (!user) {
+      setAuthAction('next page');
+      setAuthModalOpen(true);
+      return;
+    }
+
+    setCurrentPage(p => Math.min(Math.max(1, Math.ceil(filteredPapers.length / pageSize)), p + 1));
+  };
+
+  const handleAuthRequired = (action) => {
+    if (isAuthLoading) return false;
+    if (!user) {
+      setAuthAction(action);
+      setAuthModalOpen(true);
+      return false;
+    }
+    return true;
   };
 
   const openReader = async (paper) => {
@@ -949,7 +941,7 @@ export const PaperPanel = ({ demoMode = false }) => {
     }
 
     try {
-      const url = await getPastPaperSignedUrl(paper.id);
+      const url = paper.downloadUrl || paper.file_url || await getPastPaperSignedUrl(paper.id);
 
       if (!url) {
         console.warn('Unable to resolve reader URL for past paper', paper.id);
@@ -968,6 +960,7 @@ export const PaperPanel = ({ demoMode = false }) => {
 
   const closeDetails = () => {
     setSelectedPaper(null);
+    setPreviewLoading(false);
   };
 
   const toggleFilters = useCallback(() => {
@@ -1008,11 +1001,6 @@ export const PaperPanel = ({ demoMode = false }) => {
   }, []);
 
   const handleNativeBack = useCallback(() => {
-    if (showSharingModal) {
-      setShowSharingModal(false);
-      return;
-    }
-
     if (showReader) {
       setShowReader(false);
       setReaderUrl(null);
@@ -1033,11 +1021,10 @@ export const PaperPanel = ({ demoMode = false }) => {
     setFacultyFilter(null);
     setSearchTerm('');
     setUniversitySearchTerm('');
-  }, [selectedPaper, showFacultyGrid, showReader, showSharingModal]);
+  }, [selectedPaper, showFacultyGrid, showReader]);
 
   useEffect(() => {
     const hasNestedView = Boolean(
-      showSharingModal ||
       showReader ||
       selectedPaper ||
       showFacultyGrid ||
@@ -1048,7 +1035,7 @@ export const PaperPanel = ({ demoMode = false }) => {
 
     pushBackAction(handleNativeBack);
     return () => popBackAction(handleNativeBack);
-  }, [handleNativeBack, selectedPaper, showFacultyGrid, showReader, showSharingModal, universityFilter]);
+  }, [handleNativeBack, selectedPaper, showFacultyGrid, showReader, universityFilter]);
 
   const handleFacultySelect = useCallback((faculty) => {
     // Record view for this faculty in database
@@ -1198,98 +1185,6 @@ export const PaperPanel = ({ demoMode = false }) => {
     }
   };
 
-  const handleShare = async (method) => {
-    if (!selectedPaper) return;
-
-    // Use OG endpoint for proper meta tag serving to social platforms
-    const ogUrl = `${window.location.origin}/api/og?type=paper&id=${selectedPaper.id}&title=${encodeURIComponent(selectedPaper.title)}&description=${encodeURIComponent(`Check out "${selectedPaper.title}" from ${selectedPaper.university}`)}`;
-    
-    const baseUrl = `${window.location.origin}${window.location.pathname}`;
-    const shareUrl = `${baseUrl}?paper=${selectedPaper.id}`;
-    const shareText = `Check out "${selectedPaper.title}" from ${selectedPaper.university}`;
-    const hashtags = 'pastpapers,study,learning';
-
-    try {
-      switch (method) {
-        case 'copy':
-          if (navigator.clipboard) {
-            await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-          } else {
-            const textarea = document.createElement('textarea');
-            textarea.value = `${shareText}\n${shareUrl}`;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-          }
-          break;
-
-        case 'twitter':
-          window.open(
-            `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(ogUrl)}&hashtags=${encodeURIComponent(hashtags)}`,
-            '_blank',
-            'noopener,noreferrer'
-          );
-          break;
-
-        case 'facebook':
-          window.open(
-            `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(ogUrl)}`,
-            '_blank',
-            'noopener,noreferrer'
-          );
-          break;
-
-        case 'linkedin':
-          window.open(
-            `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(ogUrl)}`,
-            '_blank',
-            'noopener,noreferrer'
-          );
-          break;
-
-        case 'email':
-          window.open(
-            `mailto:?subject=${encodeURIComponent(shareText)}&body=${encodeURIComponent(`${shareText}%0A%0A${ogUrl}%0A%0A`)}`,
-            '_blank',
-            'noopener,noreferrer'
-          );
-          break;
-
-        case 'whatsapp':
-          // Send only URL - WhatsApp will show preview with image automatically
-          window.open(`https://wa.me/?text=${encodeURIComponent(ogUrl)}`,`_blank`,`noopener,noreferrer`);
-          break;
-
-        case 'googledrive':
-          // Open Google Drive in new window
-          window.open(`https://drive.google.com/`,`_blank`,`noopener,noreferrer`);
-          // Copy link to clipboard for user to save manually
-          if (navigator.clipboard) {
-            await navigator.clipboard.writeText(`${shareText}\n${ogUrl}`);
-          }
-          break;
-
-        case 'native':
-          if (navigator.share) {
-            await navigator.share({
-              title: shareText,
-              text: selectedPaper.description || shareText,
-              url: ogUrl,
-            });
-          }
-          break;
-
-        default:
-          break;
-      }
-    } catch (error) {
-      console.error('Error sharing:', error);
-    } finally {
-      setShowSharingModal(false);
-    }
-  };
-
   const scrollCarousel = (direction) => {
     const carousel = carouselRef.current;
     if (carousel) {
@@ -1317,6 +1212,7 @@ export const PaperPanel = ({ demoMode = false }) => {
           universities={universities}
           universitySearchTerm={universitySearchTerm}
           setUniversitySearchTerm={setUniversitySearchTerm}
+          onAuthRequired={handleAuthRequired}
           papers={papers}
           onUniversitySelect={(uni) => {
             setUniversities(prevUnis => 
@@ -1355,6 +1251,7 @@ export const PaperPanel = ({ demoMode = false }) => {
             displayedPapers={displayedPapers}
             currentPage={currentPage}
             setCurrentPage={setCurrentPage}
+            onNextPage={handleNextPage}
             pageSize={pageSize}
             filteredPapers={filteredPapers}
             showFilters={showFilters}
@@ -1365,6 +1262,7 @@ export const PaperPanel = ({ demoMode = false }) => {
             handleFilterChange={handleFilterChange}
             handleSortChange={handleSortChange}
             setSearchTerm={setSearchTerm}
+            onAuthRequired={handleAuthRequired}
             user={user}
             onPaperSelect={handlePaperClick}
             onBack={() => {
@@ -1405,12 +1303,17 @@ export const PaperPanel = ({ demoMode = false }) => {
               <div className="modal-bodyBKP" style={{ paddingTop: '0', paddingLeft: '0', paddingRight: '0' }}>
                 <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '0.2rem' }}>
                   {selectedPaper.downloadUrl ? (
-                    <div style={{ width: '100%', maxWidth: '400px', display: 'flex', justifyContent: 'center', borderRadius: '8px', overflow: 'hidden', background: '#121a1f', padding: '0.2rem' }}>
+                    <div style={{ width: '100%', maxWidth: '400px', minHeight: '500px', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', borderRadius: '8px', overflow: 'hidden', background: '#121a1f', padding: '0.2rem' }}>
                       <Suspense fallback={<div style={{ width: '100%', minHeight: '600px' }} />}>
                         <Document file={selectedPaper.downloadUrl} loading="">
                           <Page pageNumber={1} width={380} renderTextLayer={false} renderAnnotationLayer={false} loading="" />
                         </Document>
                       </Suspense>
+                      {previewLoading && (
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8696a0', background: 'rgba(18, 26, 31, 0.82)' }}>
+                          Loading first-page preview...
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div
@@ -1451,349 +1354,11 @@ export const PaperPanel = ({ demoMode = false }) => {
                 <div className="actions-primary-rowpast">
                   <button
                     className="btn-readBKP btn-action-primaryBKP"
-                    onClick={() => setShowSharingModal(true)}
-                    title="Share this paper"
-                  >
-                    <FiShare2 size={16} /> Share
-                  </button>
-                  <button
-                    className="btn-readBKP btn-action-primaryBKP"
                     onClick={() => openReader(selectedPaper)}
                   >
                     <FiBook size={16} /> Read
                   </button>
                 </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Sharing Modal */}
-      <AnimatePresence>
-        {showSharingModal && selectedPaper && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowSharingModal(false)}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'rgba(0,0,0,0.6)',
-              zIndex: 1100,
-            }}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                background: '#0b1220',
-                color: '#e6eef7',
-                padding: 48,
-                borderRadius: 20,
-                boxShadow: '0 8px 30px rgba(0,0,0,0.6)',
-                textAlign: 'center',
-                maxWidth: '600px',
-                width: '85%',
-                maxHeight: '90vh',
-                position: 'relative',
-              }}
-            >
-              <button
-                title="Close"
-                onClick={() => setShowSharingModal(false)}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  right: 12,
-                  background: 'transparent',
-                  color: '#9ca3af',
-                  border: 'none',
-                  padding: 0,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '0.8';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                }}
-              >
-                <FiX size={20} color="#9ca3af" />
-              </button>
-              <div style={{ marginBottom: 24 }}>
-                <h3 style={{ margin: 0, marginBottom: 8, fontSize: 28, fontWeight: 700, color: '#e6eef7' }}>
-                  Share "{selectedPaper.title}"
-                </h3>
-              </div>
-
-              {/* Paper PDF/Thumbnail as Clickable Link */}
-              <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
-                <a 
-                  href={`${window.location.origin}${window.location.pathname}?paper=${selectedPaper.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 12,
-                    overflow: 'hidden',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-                    transition: 'all 0.3s ease',
-                    cursor: 'pointer',
-                    textDecoration: 'none',
-                    width: 140,
-                    height: 200,
-                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.1))',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.6)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.4)';
-                  }}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                    <FiFileText size={48} style={{ color: '#6366f1', opacity: 0.8 }} />
-                    <span style={{ fontSize: 11, color: '#e6eef7', fontWeight: 600, textAlign: 'center', paddingX: 8 }}>
-                      View Paper
-                    </span>
-                  </div>
-                </a>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 24 }}>
-                <button
-                  title="Share on WhatsApp"
-                  onClick={() => handleShare('whatsapp')}
-                  style={{
-                    background: 'transparent',
-                    color: '#e6eef7',
-                    border: 'none',
-                    padding: '8px 0',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    fontSize: 9,
-                    fontWeight: 400,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.opacity = '0.8';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.opacity = '1';
-                  }}
-                >
-                  <div style={{ background: '#34C759', borderRadius: '8px', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <FaWhatsapp size={30} color="#ffffff" />
-                  </div>
-                  WhatsApp
-                </button>
-
-                <button
-                  title="Share on X"
-                  onClick={() => handleShare('twitter')}
-                  style={{
-                    background: 'transparent',
-                    color: '#e6eef7',
-                    border: 'none',
-                    padding: '8px 0',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    fontSize: 9,
-                    fontWeight: 400,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.opacity = '0.8';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.opacity = '1';
-                  }}
-                >
-                  <div style={{ background: '#000000', borderRadius: '8px', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <SiX size={26} color="#ffffff" />
-                  </div>
-                  X
-                </button>
-
-                <button
-                  title="Copy Link"
-                  onClick={() => handleShare('copy')}
-                  style={{
-                    background: 'transparent',
-                    color: '#e6eef7',
-                    border: 'none',
-                    padding: '8px 0',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    fontSize: 9,
-                    fontWeight: 400,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.opacity = '0.8';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.opacity = '1';
-                  }}
-                >
-                  <div style={{ background: '#8B5CF6', borderRadius: '8px', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <FiLink size={26} color="#ffffff" />
-                  </div>
-                  Copy Link
-                </button>
-
-                <button
-                  title="Share on Facebook"
-                  onClick={() => handleShare('facebook')}
-                  style={{
-                    background: 'transparent',
-                    color: '#e6eef7',
-                    border: 'none',
-                    padding: '8px 0',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    fontSize: 9,
-                    fontWeight: 400,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.opacity = '0.8';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.opacity = '1';
-                  }}
-                >
-                  <div style={{ background: '#1877F2', borderRadius: '8px', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <FaFacebook size={26} color="#ffffff" />
-                  </div>
-                  Facebook
-                </button>
-
-                <button
-                  title="Share on LinkedIn"
-                  onClick={() => handleShare('linkedin')}
-                  style={{
-                    background: 'transparent',
-                    color: '#e6eef7',
-                    border: 'none',
-                    padding: '8px 0',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    fontSize: 9,
-                    fontWeight: 400,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.opacity = '0.8';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.opacity = '1';
-                  }}
-                >
-                  <div style={{ background: '#0A66C2', borderRadius: '8px', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <FaLinkedin size={26} color="#ffffff" />
-                  </div>
-                  LinkedIn
-                </button>
-
-                <button
-                  title="Share via Email"
-                  onClick={() => handleShare('email')}
-                  style={{
-                    background: 'transparent',
-                    color: '#e6eef7',
-                    border: 'none',
-                    padding: '8px 0',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    fontSize: 9,
-                    fontWeight: 400,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.opacity = '0.8';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.opacity = '1';
-                  }}
-                >
-                  <div style={{ background: '#D44638', borderRadius: '8px', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="#ffffff">
-                      <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-                    </svg>
-                  </div>
-                  Email
-                </button>
-
-                <button
-                  title="Save to Google Drive"
-                  onClick={() => handleShare('googledrive')}
-                  style={{
-                    background: 'transparent',
-                    color: '#e6eef7',
-                    border: 'none',
-                    padding: '8px 0',
-                    borderRadius: 8,
-                    cursor: 'pointer',
-                    fontSize: 9,
-                    fontWeight: 400,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 6,
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.opacity = '0.8';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.opacity = '1';
-                  }}
-                >
-                  <div style={{ background: '#1F2937', borderRadius: '8px', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <SiGoogledrive size={26} color="#ffffff" />
-                  </div>
-                  Google Drive
-                </button>
               </div>
             </motion.div>
           </motion.div>

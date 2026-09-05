@@ -3,7 +3,7 @@ export const PrivacyTab = ({ settings, handleToggle, showSavedMessage }) => (
     <div className="section-header">
       <div>
         <h2 className="settings-stp-page-section-title">Privacy Settings</h2>
-        <p className="settings-stp-page-section-description">Control your privacy and visibility</p>
+        <p className="settings-stp-page-section-description">Control your data</p>
       </div>
     </div>
     

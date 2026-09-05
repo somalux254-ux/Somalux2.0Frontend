@@ -283,7 +283,7 @@ function SettingsPage({ onBack, onLogout }) {
 
   const tabConfig = [
     { id: 'notifications', label: 'Notifications', icon: FiBell, description: 'Manage alerts' },
-    { id: 'privacy', label: 'Privacy Policy', icon: PadlockIcon, description: 'Control visibility' },
+    { id: 'privacy', label: 'Privacy Policy', icon: PadlockIcon, description: 'Control your data' },
     { id: 'preferences', label: 'Preferences', icon: FiSliders, description: 'Customize experience' },
     { id: 'account', label: 'Account', icon: FiUser, description: 'Manage account' },
     { id: 'help', label: 'Help & Support', icon: FiHelpCircle, description: 'Get assistance' },

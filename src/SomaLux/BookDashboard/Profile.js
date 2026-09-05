@@ -8,17 +8,40 @@ import { AuthModals } from "./AuthModals";
 import { getCurrentUserProfile } from "../Books/Admin/api";
 import "./Profile.css";
 
+const readCachedProfile = () => {
+  try {
+    const cachedSession = JSON.parse(localStorage.getItem('somalux_session_cache') || 'null');
+    const userId = cachedSession?.session?.user?.id;
+    const storedKey = userId ? `userProfile_${userId}` : 'userProfile';
+    const profile = JSON.parse(localStorage.getItem(storedKey) || localStorage.getItem('userProfile') || '{}');
+    return profile && Object.keys(profile).length > 0 ? profile : null;
+  } catch (error) {
+    return null;
+  }
+};
+
+const readCachedSessionUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem('somalux_session_cache') || 'null')?.session?.user || null;
+  } catch (error) {
+    return null;
+  }
+};
+
 export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [profileImage, setProfileImage] = useState(null);
+  const [profileImage, setProfileImage] = useState(() => {
+    const cachedProfile = readCachedProfile();
+    return cachedProfile?.avatar_url || cachedProfile?.avatar || null;
+  });
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
-  const [authUser, setAuthUser] = useState(null);
+  const [authUser, setAuthUser] = useState(readCachedSessionUser);
   const [currentUserTier, setCurrentUserTier] = useState('basic');
   const [showActionsGrid, setShowActionsGrid] = useState(false);
 
   // Local state
-  const [localUser, setLocalUser] = useState(null);
+  const [localUser, setLocalUser] = useState(readCachedProfile);
   const [notificationsCount, setNotificationsCount] = useState(0);
 
   // Auth modals
@@ -546,8 +569,8 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
                   aria-label="Settings"
                   title="Settings"
                   onClick={() => {
-                    setShowActionsGrid(false);
-                    setIsOpen(false);
+                    document.documentElement.style.backgroundColor = 'var(--bg-primary, #f5f8f7)';
+                    document.body.style.backgroundColor = 'var(--bg-primary, #f5f8f7)';
                     navigate('/settings');
                   }}
                   style={{

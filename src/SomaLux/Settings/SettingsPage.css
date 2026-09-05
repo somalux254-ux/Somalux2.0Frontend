@@ -17,6 +17,22 @@
   overflow: visible;
 }
 
+/* Settings navigation should remain visually stable while views change. */
+.settings-stp-page-container,
+.settings-stp-page-container *,
+.settings-stp-page-container *::before,
+.settings-stp-page-container *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
+.settings-stp-page-container.settings-direct-document,
+.settings-stp-page-container.settings-direct-document * {
+  animation: none !important;
+  transition: none !important;
+}
+
 /* Header */
 .settings-stp-page-header {
   display: flex;

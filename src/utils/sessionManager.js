@@ -129,23 +129,22 @@ export const clearSessionCache = () => {
 export const signOutCompletely = async (supabase) => {
   let signOutError = null;
 
+  // Clear local auth state before the network request so the UI can redirect immediately.
+  clearSessionCache();
+  try {
+    localStorage.removeItem('somalux_oauth_session');
+    localStorage.removeItem('userProfile');
+    sessionStorage.removeItem('oauth_tokens_from_url');
+  } catch (error) {
+    console.error('Failed to clear local auth data:', error);
+  }
+  window.dispatchEvent(new CustomEvent('authChanged', { detail: { user: null } }));
+
   try {
     const { error } = await supabase.auth.signOut();
     signOutError = error;
   } catch (error) {
     signOutError = error;
-  } finally {
-    clearSessionCache();
-
-    try {
-      localStorage.removeItem('somalux_oauth_session');
-      localStorage.removeItem('userProfile');
-      sessionStorage.removeItem('oauth_tokens_from_url');
-    } catch (error) {
-      console.error('Failed to clear local auth data:', error);
-    }
-
-    window.dispatchEvent(new CustomEvent('authChanged', { detail: { user: null } }));
   }
 
   if (signOutError) {

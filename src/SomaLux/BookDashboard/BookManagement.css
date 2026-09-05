@@ -29,6 +29,13 @@
   overflow-x: hidden;
 }
 
+.book-management.auth-returning,
+.book-management.auth-returning * {
+  animation: none !important;
+  transition: none !important;
+}
+
+
 html:has(.book-management),
 body:has(.book-management),
 .book-management,
@@ -183,6 +190,29 @@ body.book-page-no-scrollbar::-webkit-scrollbar {
   font-weight: 800;
   color: #b3bcc5;
   letter-spacing: -0.6px;
+}
+
+.book-management-brand {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.book-management-premium-badge {
+  margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+  .book-management-brand {
+    align-items: center;
+    padding-top: 0;
+  }
+
+  .book-management-premium-badge {
+    margin-top: 0;
+    transform: none;
+  }
 }
 
 /* ================= TAB BAR ================= */

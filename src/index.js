@@ -9,6 +9,7 @@ import './pdfConfig.js';
 
 import { SomaLux } from './SomaLux';
 import SpeedTracker from './SpeedTracker';
+import { prewarmGoogleSignIn } from './SomaLux/Books/AuthModal';
 import { supabase } from './SomaLux/Books/supabaseClient';
 import { handleOAuthCallback } from './utils/oauthHandler';
 import { handleSubscriptionBack } from './SomaLux/Subscriptions/backNavigation';
@@ -24,6 +25,8 @@ if ('serviceWorker' in navigator) {
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
+
+prewarmGoogleSignIn();
 
 const hydrateAuthSession = async () => {
   try {

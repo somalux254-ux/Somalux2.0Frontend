@@ -340,9 +340,6 @@ const Dashboard = () => {
           </Grid>
         </Grid>
 
-        {/* Sharing Features Section */}
-
-
         {/* Activity Trend Section - Tabbed with Uploads Chart */}
         <Grid size={{ xs: 12 }}>
           <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../Books/supabaseClient";
 import { signOutCompletely } from "../../utils/sessionManager";
 import { AuthModal } from "../Books/AuthModal";
@@ -14,6 +15,7 @@ export const AuthModals = ({
   setAuthUser,
   markProfileSignedOut,
 }) => {
+  const navigate = useNavigate();
   const [signOutReason, setSignOutReason] = useState("");
   const [showReasonInput, setShowReasonInput] = useState(false);
 
@@ -33,13 +35,16 @@ export const AuthModals = ({
   const handleSignOut = async () => {
     try {
       setShowSignOutModal(false);
-      
-      await signOutCompletely(supabase);
-      
-      // Clear local state immediately - no delays
       setAuthUser(null);
       setSignOutReason("");
       setShowReasonInput(false);
+      document.documentElement.style.backgroundColor = 'var(--bg-primary, #f5f8f7)';
+      document.body.style.backgroundColor = 'var(--bg-primary, #f5f8f7)';
+      navigate('/BookManagement', { replace: true, state: { reopenAuth: true, authAction: 'action' } });
+      void signOutCompletely(supabase).catch((error) => {
+        console.warn('Background sign out failed:', error?.message || error);
+      });
+
       // Send feedback asynchronously (non-blocking) with timeout
       if (signOutReason.trim() && authUser?.email) {
         // Fire and forget - don't await
@@ -79,7 +84,6 @@ export const AuthModals = ({
         })();
       }
 
-      toast.success("Signed out successfully", { autoClose: 2000 });
     } catch (err) {
       console.error("Sign out error:", err);
       toast.error("Sign out failed: " + (err.message || "Try again"));

@@ -25,6 +25,7 @@ export const PaperGrid = React.memo(({
   filteredPapers,
   currentPage,
   setCurrentPage,
+  onNextPage,
   pageSize,
   showFilters,
   activeFilter,
@@ -34,6 +35,7 @@ export const PaperGrid = React.memo(({
   handleFilterChange,
   handleSortChange,
   setSearchTerm,
+  onAuthRequired,
   user,
   onPaperSelect,
   onBack,
@@ -54,6 +56,7 @@ export const PaperGrid = React.memo(({
   const [bubbles, setBubbles] = useState({});
   
   const handleSearchChange = useCallback((e) => {
+    if (!user) return;
     const value = e.target.value;
     setLocalSearchValue(value);
     
@@ -66,7 +69,7 @@ export const PaperGrid = React.memo(({
     searchDebounceRef.current = setTimeout(() => {
       setSearchTerm(value);
     }, 300);
-  }, [setSearchTerm]);
+  }, [setSearchTerm, user]);
 
   const createBubbles = useCallback((paperId) => {
     const newBubbles = [];
@@ -118,6 +121,12 @@ export const PaperGrid = React.memo(({
             type="text"
             placeholder="Search papers by course, code or faculty..."
             value={localSearchValue}
+            onFocus={(e) => {
+              if (!user) {
+                e.currentTarget.blur();
+                onAuthRequired?.('search');
+              }
+            }}
             onChange={handleSearchChange}
             inputMode="search"
             enterKeyHint="search"
@@ -502,7 +511,7 @@ export const PaperGrid = React.memo(({
             <button
               className="btn book-pagination-button"
               disabled={currentPage >= Math.max(1, Math.ceil(filteredPapers.length / pageSize))}
-              onClick={() => setCurrentPage(p => Math.min(Math.max(1, Math.ceil(filteredPapers.length / pageSize)), p + 1))}
+              onClick={onNextPage}
             >
               Next <FiChevronRight size={16} aria-hidden="true" />
             </button>

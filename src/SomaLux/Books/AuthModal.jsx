@@ -1,5 +1,6 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { FiX } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
 import { Capacitor } from '@capacitor/core';
@@ -7,21 +8,57 @@ import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
 import { supabase } from './supabaseClient';
 import './AuthModal.css';
 
+let googleSignInInitialization = null;
+
+export const prewarmGoogleSignIn = () => {
+  if (Capacitor.getPlatform() !== 'android' || googleSignInInitialization) return;
+
+  const clientId = process.env.REACT_APP_GOOGLE_WEB_CLIENT_ID;
+  if (!clientId) return;
+
+  googleSignInInitialization = GoogleSignIn.initialize({ clientId });
+  void googleSignInInitialization.catch((error) => {
+    googleSignInInitialization = null;
+    console.warn('Google sign-in initialization failed:', error);
+  });
+};
+
 export const AuthModal = ({ isOpen, onClose, onSuccess, action = 'action' }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
+
+  React.useEffect(() => {
+    if (isOpen) prewarmGoogleSignIn();
+
+    return () => {
+      document.documentElement.style.removeProperty('background-color');
+      document.body.style.removeProperty('background-color');
+    };
+  }, [isOpen]);
 
   const getActionMessage = () => {
     const messages = {
       'view': 'view book details',
       'like': 'like this book',
-      'share': 'share a book',
       'download': 'download this book',
       'search': 'search and discover books',
-      'share': 'share this book',
       'action': 'continue with this action'
     };
     return messages[action] || messages['action'];
+  };
+
+  const isUserCancellation = (err) => {
+    const code = String(err?.code || '').toLowerCase();
+    const message = String(err?.message || '').toLowerCase();
+    return (
+      code === '12501' ||
+      code.includes('cancel') ||
+      message.includes('cancel') ||
+      message.includes('canceled') ||
+      message.includes('cancelled')
+    );
   };
 
   const handleGoogleSignIn = async () => {
@@ -29,12 +66,14 @@ export const AuthModal = ({ isOpen, onClose, onSuccess, action = 'action' }) => 
     setError('');
 
     try {
-      const { data: existingSessionData } = await supabase.auth.getSession();
-      if (existingSessionData?.session?.user) {
-        if (onSuccess) onSuccess();
-        if (onClose) onClose();
-        setLoading(false);
-        return;
+      if (Capacitor.getPlatform() !== 'android') {
+        const { data: existingSessionData } = await supabase.auth.getSession();
+        if (existingSessionData?.session?.user) {
+          if (onSuccess) onSuccess();
+          if (onClose) onClose();
+          setLoading(false);
+          return;
+        }
       }
 
       if (Capacitor.getPlatform() === 'android') {
@@ -43,19 +82,22 @@ export const AuthModal = ({ isOpen, onClose, onSuccess, action = 'action' }) => 
           throw new Error('Native Google sign-in is not configured. Add REACT_APP_GOOGLE_WEB_CLIENT_ID.');
         }
 
-        await GoogleSignIn.initialize({ clientId });
+        prewarmGoogleSignIn();
+        await googleSignInInitialization;
         const result = await GoogleSignIn.signIn();
         if (!result?.idToken) {
           throw new Error('Google did not return an ID token.');
         }
 
-        void supabase.auth.signInWithIdToken({
+        const tokenExchange = supabase.auth.signInWithIdToken({
           provider: 'google',
           token: result.idToken,
-        }).then(({ error: tokenError }) => {
-          if (tokenError) throw tokenError;
-        }).catch((tokenError) => {
-          console.error('Background sign in error:', tokenError);
+        });
+
+        void tokenExchange.then(({ error: tokenError }) => {
+          if (tokenError) {
+            console.error('Background sign in error:', tokenError);
+          }
         });
 
         setLoading(false);
@@ -63,9 +105,6 @@ export const AuthModal = ({ isOpen, onClose, onSuccess, action = 'action' }) => 
         if (onClose) onClose();
         return;
       }
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15sec timeout
 
       const redirectTo = typeof window !== 'undefined'
         ? window.location.origin
@@ -75,14 +114,8 @@ export const AuthModal = ({ isOpen, onClose, onSuccess, action = 'action' }) => 
         provider: 'google',
         options: {
           redirectTo,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
         },
       });
-
-      clearTimeout(timeoutId);
 
       if (signInError) throw signInError;
 
@@ -93,60 +126,67 @@ export const AuthModal = ({ isOpen, onClose, onSuccess, action = 'action' }) => 
       // Redirect explicitly so OAuth does not remain stuck in the modal.
       window.location.assign(data.url);
     } catch (err) {
-      console.error('Sign in error:', err);
-      if (err?.name === 'AbortError') {
+      if (isUserCancellation(err)) {
+        setError('');
+      } else if (err?.name === 'AbortError') {
         setError('Sign in took too long. Please try again.');
       } else {
+        console.error('Sign in error:', err);
         setError(err.message || 'Failed to sign in. Please try again.');
       }
       setLoading(false);
     }
   };
 
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          className="auth-modal-overlay"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-        >
-          <motion.div
-            className="auth-modal-content"
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.8, opacity: 0 }}
-            onClick={(e) => e.stopPropagation()}
-          >
+  const openSettingsDocument = (event, page) => {
+    event.preventDefault();
+    navigate('/settings', {
+      state: {
+        settingsPage: page,
+        returnPath: location.pathname,
+        authAction: action,
+      },
+    });
+    onClose?.();
+  };
+
+  return isOpen ? createPortal(
+    (
+      <div className="auth-modal-overlay" onClick={onClose}>
+        <div className="auth-modal-content" onClick={(e) => e.stopPropagation()}>
             <button className="auth-modal-close" onClick={onClose}>
               <FiX size={18} />
             </button>
 
             <div className="auth-container">
-              <h3>Sign in to:</h3>
-              <ul className="auth-features">
-                <li>Search and discover books</li>
-                <li>Download and read books</li>
-                <li>Share and discuss books</li>
-                <li>Save your favorites and reading history</li>
-              </ul>
+              <div className="auth-branding">
+                <img className="auth-logo" src="/Som152.png" alt="Somalux reader" />
+                <p className="auth-brand-name">Somalux</p>
+                <p className="auth-tagline">Realize your dreams.</p>
+              </div>
 
-              {error && <div className="auth-error">{error}</div>}
+              <div className="auth-actions">
+                {error && <div className="auth-error">{error}</div>}
 
-              <button
-                className="google-sign-in-btn"
-                onClick={handleGoogleSignIn}
-                disabled={loading}
-              >
-                <FcGoogle size={24} />
-                <span>{loading ? 'Signing in...' : 'Continue with Google'}</span>
-              </button>
+                <button
+                  className="google-sign-in-btn"
+                  onClick={handleGoogleSignIn}
+                  disabled={loading}
+                >
+                  <FcGoogle size={24} />
+                  <span>{loading ? 'Signing in...' : 'Continue with Google'}</span>
+                </button>
+                <p className="auth-legal">
+                  By continuing, you agree to our{' '}
+                  <a href="#agreement" onClick={(event) => openSettingsDocument(event, 'agreement')}>User Agreement</a>{' '}
+                  and acknowledge that you understand the{' '}
+                  <a href="#privacy" onClick={(event) => openSettingsDocument(event, 'privacy')}>Privacy Policy</a>.
+                </p>
+              </div>
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
+        </div>
+      </div>
+    ),
+    document.body
+  ) : null;
 };
