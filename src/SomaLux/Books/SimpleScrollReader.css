@@ -73,20 +73,11 @@
   padding: 0;
   /* Prevent text spillage between pages */
   line-height: 1.5;
-  backface-visibility: hidden;
-  perspective: 1000px;
 }
 
-/* Pages zoom together as a unit */
+/* Keep PDF text and canvas sharp while React-PDF rerenders at the new scale. */
 .ssr-page {
-  backface-visibility: hidden;
-  transition: transform 0.08s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform;
-}
-
-.simple-scroll-reader .react-pdf__Page {
-  transition: transform 0.08s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: contents;
+  transition: none;
 }
 
 /* PRECISION: Prevent adjacent element selection */
@@ -112,6 +103,7 @@
 .ssr-overlay {
   position: fixed;
   inset: 0;
+  min-height: 100dvh;
   background: var(--bg-dark);
   z-index: 1400;
   display: flex;
@@ -132,7 +124,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 4px 20px;
-  background: #0c1317 !important;
+  background: var(--bg-dark) !important;
   border-bottom: 0.5px solid var(--border-color);
   flex-shrink: 0;
   box-shadow: none !important;
@@ -552,7 +544,7 @@
 /* TOC Sidebar - Toggleable like Edge */
 .ssr-toc-sidebar {
   width: 220px;
-  background: linear-gradient(180deg, #0f1a1e, #0b1216);
+  background: var(--bg-dark);
   border-right: 2px solid rgba(12, 109, 88, 0.3);
   display: flex;
   flex-direction: column;
@@ -640,7 +632,7 @@
   flex: 1 1 auto;
   overflow-y: scroll;
   overflow-x: auto;
-  background: linear-gradient(135deg, #0b1216 0%, #0f1a1e 100%);
+  background: var(--bg-dark);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -655,8 +647,6 @@
   -moz-osx-font-smoothing: grayscale;
   backface-visibility: hidden;
   perspective: 1000px;
-  transform: translateZ(0);
-  -webkit-transform: translate3d(0, 0, 0);
   contain: content;
   height: 100%;
   will-change: scroll-position;
@@ -700,8 +690,6 @@
   width: max-content;
   max-width: none;
   height: auto;
-  will-change: transform;
-  transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   position: relative;
 }
@@ -773,10 +761,23 @@
 }
 
 .zoom-clarity--active .ssr-page {
-  backface-visibility: hidden;
   transform: none;
   transition: none;
   will-change: auto;
+}
+
+/* Bridges the gap between a live zoom change and the debounced PDF canvas
+   re-render (see SimpleScrollReader.jsx `committedScale`/`effectiveScale`)
+   with a cheap CSS transform, so ending a pinch/zoom (or tapping the +/-
+   buttons) never produces a visible "snap" while the sharper canvas is
+   still being drawn. Applies at any viewport size - not just mobile -
+   since desktop zoom buttons go through the same debounce. Resolves to a
+   1x, no-op transform (and removes itself) once the canvas has caught up. */
+.ssr-scroll-area.zoom-correcting .ssr-document {
+  transform: scale(var(--zoom-correction, 1));
+  transform-origin: top left;
+  transition: none;
+  will-change: transform;
 }
 
 @media (max-width: 768px) {
@@ -792,22 +793,34 @@
     will-change: transform;
   }
 
+  /* Consolidated: this used to be duplicated (with a slightly different,
+     less-!important-guarded version) further down in this file. Two
+     competing declarations for the same selector is exactly the kind of
+     specificity fight that produces inconsistent rendering across
+     browsers/engines - keeping a single, fully !important-guarded version
+     here avoids that. */
   .ssr-scroll-area.mobile-zoom-active {
-    overflow-x: auto;
-    align-items: flex-start;
-    touch-action: pan-x pan-y;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    align-items: flex-start !important;
+    touch-action: pan-x pan-y !important;
   }
 
-  .ssr-scroll-area.mobile-zoom-active .ssr-page {
+  .ssr-scroll-area.mobile-zoom-active .ssr-page,
+  .ssr-scroll-area.mobile-zoom-active .react-pdf__Page {
     width: max-content !important;
     max-width: none !important;
+    display: block !important;
     margin-left: 0;
     margin-right: 0;
   }
 
   .ssr-scroll-area.mobile-zoom-active .ssr-page canvas,
   .ssr-scroll-area.mobile-zoom-active .react-pdf__Page__canvas {
+    width: auto !important;
     max-width: none !important;
+    height: auto !important;
+    image-rendering: auto;
   }
 
   .ssr-scroll-area.mobile-zoom-active .react-pdf__Page__textContent {
@@ -843,7 +856,7 @@
   height: 100%;
   min-height: 60vh;
   width: 100%;
-  background: linear-gradient(135deg, #0b1216 0%, #0f1a1e 100%);
+  background: var(--bg-dark);
   padding: 40px 20px;
 }
 
@@ -1380,6 +1393,23 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  .ssr-overlay {
+    inset: 0;
+  }
+
+  .ssr-container {
+    padding-top: 40px;
+    box-sizing: border-box;
+  }
+
+  .ssr-close-corner-btn {
+    top: 40px;
+  }
+
+  .ssr-mobile-toggle {
+    top: 38px;
+  }
+
   /* Make header position relative for absolute positioning */
   .ssr-header {
     padding: 12px 0px 12px 20px;
@@ -1777,7 +1807,7 @@
 
   /* Optimize PDF page rendering for small screens */
   .ssr-scroll-area {
-    padding: 6px 0;
+    padding: 6px 0 5vh;
     overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -3179,31 +3209,3 @@ html[data-theme="light"] .ssr-page {
     var(--cosmic-bg-1) 100%
   );
 }
-
-@media (max-width: 768px) {
-  .ssr-scroll-area.mobile-zoom-active {
-    overflow-x: auto !important;
-    overflow-y: auto !important;
-    align-items: flex-start !important;
-    touch-action: pan-x pan-y !important;
-  }
-
-  .ssr-scroll-area.mobile-zoom-active .ssr-page,
-  .ssr-scroll-area.mobile-zoom-active .react-pdf__Page {
-    width: max-content !important;
-    max-width: none !important;
-    display: block !important;
-  }
-
-  .ssr-scroll-area.mobile-zoom-active .ssr-page canvas,
-  .ssr-scroll-area.mobile-zoom-active .react-pdf__Page__canvas {
-    max-width: none !important;
-    height: auto !important;
-  }
-
-  .ssr-scroll-area.mobile-zoom-active .react-pdf__Page__textContent {
-    width: auto !important;
-    max-width: none !important;
-  }
-}
-

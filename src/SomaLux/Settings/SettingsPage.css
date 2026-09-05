@@ -1161,10 +1161,25 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .settings-stp-page-container {
+    top: 30px;
+    bottom: 20px;
+    height: auto;
+  }
+
+  .settings-privacy-policy-page,
+  .settings-user-agreement-page,
+  .settings-usage-policy-page {
+    top: 30px !important;
+    bottom: 0 !important;
+    height: calc(100% - 30px) !important;
+  }
+
   .settings-stp-page-header {
     padding: 4px 14px !important;
     flex-wrap: wrap !important;
     background: var(--bg-primary) !important;
+    border-bottom: none !important;
   }
 
   .settings-stp-page-title {
@@ -1189,7 +1204,7 @@
   .settings-stp-tabs-cards-grid {
     gap: 12px;
     margin: 0;
-    padding: 16px 16px 20px 16px;
+    padding: 16px 16px 8px 16px;
     width: 100%;
   }
 
@@ -1366,7 +1381,7 @@
   .settings-stp-tabs-cards-grid {
     gap: 10px;
     margin: 0;
-    padding: 12px 12px 20px 12px;
+    padding: 12px 12px 8px 12px;
     width: 100%;
   }
 
@@ -2024,6 +2039,7 @@
   .settings-stp-page-footer {
     flex-direction: column-reverse;
     padding-bottom: 32px;
+    border-top: none;
   }
 
   .settings-stp-page-save-btn {

@@ -181,6 +181,11 @@
 
 /* Medium tablets (768px and below) - Show mobile tabs */
 @media (max-width: 768px) {
+  .upload-page-container {
+    top: 30px;
+    height: calc(100% - 30px);
+  }
+
   .upload-page-header {
     padding: 12px 14px;
   }

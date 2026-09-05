@@ -1300,10 +1300,10 @@ export const PaperPanel = ({ demoMode = false }) => {
                 <FiX size={24} />
               </button>
 
-              <div className="modal-bodyBKP" style={{ paddingTop: '0', paddingLeft: '0', paddingRight: '0' }}>
-                <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '0.2rem' }}>
+              <div className="modal-bodyBKP paper-details-bodypast" style={{ paddingTop: '0', paddingLeft: '0', paddingRight: '0' }}>
+                <div className="paper-preview-stagepast" style={{ display: 'flex', justifyContent: 'center', paddingTop: '0.2rem' }}>
                   {selectedPaper.downloadUrl ? (
-                    <div style={{ width: '100%', maxWidth: '400px', minHeight: '500px', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', borderRadius: '8px', overflow: 'hidden', background: '#121a1f', padding: '0.2rem' }}>
+                    <div className="paper-previewpast" style={{ width: '100%', maxWidth: '400px', minHeight: '500px', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', borderRadius: '8px', overflow: 'hidden', background: '#121a1f', padding: '0.2rem' }}>
                       <Suspense fallback={<div style={{ width: '100%', minHeight: '600px' }} />}>
                         <Document file={selectedPaper.downloadUrl} loading="">
                           <Page pageNumber={1} width={380} renderTextLayer={false} renderAnnotationLayer={false} loading="" />
@@ -1317,6 +1317,7 @@ export const PaperPanel = ({ demoMode = false }) => {
                     </div>
                   ) : (
                     <div
+                      className="paper-previewpast"
                       style={{
                         maxWidth: '400px',
                         width: '100%',

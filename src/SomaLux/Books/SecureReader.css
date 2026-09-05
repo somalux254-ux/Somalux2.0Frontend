@@ -3,7 +3,8 @@
 .secure-reader-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.9);
+  min-height: 100dvh;
+  background: #020617;
   z-index: 1400;
   display: flex;
   align-items: center;
@@ -432,6 +433,15 @@
 }
 
 @media (max-width: 768px) {
+  .secure-reader-overlay {
+    inset: 0;
+  }
+
+  .secure-reader-container {
+    padding-top: 40px;
+    box-sizing: border-box;
+  }
+
   /* Tablet optimization */
   .secure-reader-container {
     width: 90%;
@@ -858,7 +868,7 @@
 
   .pdf-container {
     padding-top: 6px;
-    padding-bottom: 6px;
+    padding-bottom: calc(6px + 5vh);
     padding-left: 6px;
     padding-right: 6px;
   }

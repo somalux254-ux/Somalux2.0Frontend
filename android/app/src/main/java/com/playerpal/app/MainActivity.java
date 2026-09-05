@@ -1,4 +1,4 @@
-package com.somalux.app;
+NOWpackage com.somalux.app;
 
 import android.os.Build;
 import android.view.View;

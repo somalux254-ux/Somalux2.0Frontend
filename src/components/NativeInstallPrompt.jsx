@@ -5,46 +5,61 @@ import { API_URL } from '../config';
 import './NativeInstallPrompt.css';
 
 const APK_DOWNLOAD_URL = `${API_URL}/api/android/apk/download?source=website-prompt`;
-const DISMISSED_KEY = 'somalux-apk-download-prompt-dismissed-v2';
-const LEGACY_DISMISSED_KEYS = [
-  'somalux-native-install-prompt-dismissed',
-  'somalux-apk-download-prompt-dismissed',
-];
+const APK_DOWNLOAD_STARTED_KEY = 'somalux-apk-download-started';
 
 export const NativeInstallPrompt = () => {
   const [isVisible, setIsVisible] = React.useState(() => {
-    let wasDismissed = false;
+    let downloadStarted = false;
     try {
-      wasDismissed = [DISMISSED_KEY, ...LEGACY_DISMISSED_KEYS].some(
-        (key) => window.localStorage.getItem(key) === 'true'
-      );
+      downloadStarted = window.localStorage.getItem(APK_DOWNLOAD_STARTED_KEY) === 'true';
     } catch (error) {}
-    return Capacitor.getPlatform() === 'web' && !wasDismissed;
+    return Capacitor.getPlatform() === 'web' && !downloadStarted;
   });
 
   React.useEffect(() => {
-    if (Capacitor.getPlatform() !== 'web') setIsVisible(false);
+    if (Capacitor.getPlatform() !== 'web') {
+      setIsVisible(false);
+      return undefined;
+    }
+
+    const reminderId = window.setInterval(() => {
+      let downloadStarted = false;
+      try {
+        downloadStarted = window.localStorage.getItem(APK_DOWNLOAD_STARTED_KEY) === 'true';
+      } catch (error) {}
+
+      if (downloadStarted) {
+        setIsVisible(false);
+        return;
+      }
+
+      setIsVisible((visible) => !visible);
+    }, 30000);
+
+    return () => window.clearInterval(reminderId);
   }, []);
 
-  const dismissPrompt = () => {
+  const startDownload = () => {
     try {
-      window.localStorage.setItem(DISMISSED_KEY, 'true');
+      window.localStorage.setItem(APK_DOWNLOAD_STARTED_KEY, 'true');
     } catch (error) {}
     setIsVisible(false);
   };
 
+  const dismissPrompt = () => setIsVisible(false);
+
   if (!isVisible) return null;
 
   return (
-    <aside className="native-install-prompt" role="status" aria-label="Install SomaLux">
+    <aside className="native-install-prompt" role="status" aria-label="Install Somalux">
       <img className="native-install-logo" src="/Som96.png" alt="" />
       <div>
-        <strong>SomaLux</strong>
-        <span>Download the Android app for a better experience.</span>
+        <strong>Somalux</strong>
+        <span>Download and install the mobile app for a better experience.</span>
       </div>
-      <a className="native-install-action" href={APK_DOWNLOAD_URL} onClick={dismissPrompt}>
+      <a className="native-install-action" href={APK_DOWNLOAD_URL} onClick={startDownload}>
         <FiDownload size={24} aria-hidden="true" />
-        <span>Download</span>
+        <span>Download and install</span>
       </a>
       <button
         className="native-install-close"

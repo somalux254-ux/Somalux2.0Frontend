@@ -347,9 +347,8 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText, cacheKey 
     setMobileScale(1.0);
   }, []);
 
-  // Direct zoom function for smooth pinch gestures
-  const mobileSetZoom = useCallback((scale) => {
-    setMobileScale(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, scale)));
+  const mobileSetZoom = useCallback((nextScale) => {
+    setMobileScale(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, nextScale)));
   }, []);
 
   useEffect(() => {
@@ -386,10 +385,65 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText, cacheKey 
     previewMobileZoom
   );
   const effectiveScale = isMobileDevice ? mobileScale : scale;
-  const pdfDevicePixelRatio = Math.min(
-    Math.max(window.devicePixelRatio * (effectiveScale / MIN_ZOOM), 1),
-    isMobileDevice ? 4 : 3
-  );
+
+  // --- Zoom stability & clarity fix ------------------------------------------------
+  // (1) devicePixelRatio must only reflect the SCREEN's real pixel density. It was
+  //     previously multiplied by the zoom factor on top of `width` (below) already
+  //     being scaled by the same factor, so the canvas react-pdf had to draw grew
+  //     with the SQUARE of the zoom level (up to ~16x the base pixel count at max
+  //     zoom on mobile). That runaway pixel count is what caused stutter, flashes,
+  //     and occasional blank/black pages while pinch-zooming on phones. Capping it
+  //     to the device's actual pixel ratio keeps every render well within what the
+  //     device can comfortably rasterize, without any visible loss of sharpness
+  //     (you never see more detail than the screen can show anyway).
+  const baseDevicePixelRatio = window.devicePixelRatio || 1;
+  const pdfDevicePixelRatio = Math.min(baseDevicePixelRatio, isMobileDevice ? 2 : 3);
+
+  // (2) The PDF canvas was being re-rendered (and, via a `key` containing a
+  //     3-decimal scale value, fully REMOUNTED) on every single micro-change of
+  //     the live pinch/zoom value. That's the other half of the instability -
+  //     dozens of expensive canvas teardown/redraw cycles per second during a
+  //     gesture. `committedScale` only updates once zooming has paused briefly,
+  //     and is snapped to 5% steps, so the heavy PDF re-render happens a handful
+  //     of times per zoom instead of on every frame. The live `effectiveScale`
+  //     keeps driving ZoomClarity's instant CSS-based zoom feedback below, so
+  //     the zoom still feels immediate - only the expensive redraw is throttled.
+  //     The final, settled width/resolution is identical to before, so image
+  //     sharpness once you stop zooming is unchanged.
+  const [committedScale, setCommittedScale] = useState(DEFAULT_ZOOM);
+
+  useEffect(() => {
+    const quantized = Math.round(effectiveScale * 20) / 20; // nearest 5%
+    if (zoomTimeoutRef.current) clearTimeout(zoomTimeoutRef.current);
+    zoomTimeoutRef.current = setTimeout(() => {
+      setCommittedScale(quantized);
+    }, isMobileDevice ? 180 : 60);
+    return () => {
+      if (zoomTimeoutRef.current) clearTimeout(zoomTimeoutRef.current);
+    };
+  }, [effectiveScale, isMobileDevice]);
+
+  // Bridge the short gap between a live zoom change (effectiveScale, updated
+  // as soon as a gesture/button commits) and the debounced value that
+  // actually drives the PDF canvas resolution (committedScale, above). The
+  // live pinch preview (previewMobileZoom/--pinch-ratio) already handles the
+  // moment-to-moment finger tracking and clears itself the instant a gesture
+  // ends - at that exact instant this takes over with the same effective
+  // ratio (effectiveScale / committedScale), so there is no visible "snap"
+  // while waiting for the sharper canvas to finish drawing. Once the canvas
+  // catches up this resolves to 1x and removes itself.
+  useEffect(() => {
+    const scrollArea = scrollAreaRef.current;
+    if (!scrollArea) return;
+    const ratio = committedScale > 0 ? effectiveScale / committedScale : 1;
+    if (Math.abs(ratio - 1) < 0.005) {
+      scrollArea.style.removeProperty('--zoom-correction');
+      scrollArea.classList.remove('zoom-correcting');
+    } else {
+      scrollArea.style.setProperty('--zoom-correction', String(ratio));
+      scrollArea.classList.add('zoom-correcting');
+    }
+  }, [effectiveScale, committedScale]);
 
   // Pan gesture hook for zoomed content - allows swiping to see full content when zoomed
   // Ultra-optimized scroll handler with virtual rendering - tracks current page and visible pages
@@ -1313,7 +1367,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText, cacheKey 
                     scale={effectiveScale}
                     defaultScale={DEFAULT_ZOOM}
                   >
-``                    <div className="ssr-document">
+                    <div className="ssr-document">
                     {numPages && Array.from({ length: numPages }, (_, idx) => {
                       const pageNum = idx + 1;
                       const isVisible = visiblePages.has(pageNum);
@@ -1343,9 +1397,12 @@ const SimpleScrollReader = ({ src, title, author, onClose, sampleText, cacheKey 
                           }}
                         >
                           <Page
-                              key={`${pageNum}-${effectiveScale.toFixed(3)}-${pdfDevicePixelRatio.toFixed(2)}`}
+                              // Coarse (5%-step), debounced key: the canvas only remounts a
+                              // handful of times per zoom gesture instead of on every frame,
+                              // which is what made pinch-zooming feel unstable before.
+                              key={`${pageNum}-${committedScale.toFixed(2)}`}
                               pageNumber={pageNum}
-                              width={pageWidth ? pageWidth * (effectiveScale / MIN_ZOOM) : undefined}
+                              width={pageWidth ? pageWidth * (committedScale / MIN_ZOOM) : undefined}
                               devicePixelRatio={pdfDevicePixelRatio}
                               renderTextLayer={enableTextLayer}
                               renderAnnotationLayer={false}

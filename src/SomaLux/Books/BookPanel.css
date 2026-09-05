@@ -140,6 +140,12 @@
   margin-top: -0.75rem;
 }
 
+@media (max-width: 767px) {
+  .headerBKP {
+    margin-top: 0.5rem;
+  }
+}
+
 @media (min-width: 768px) {
   .headerBKP {
     text-align: center;
@@ -1010,15 +1016,51 @@
 @media (max-width: 480px) {
   .modal-contentBKP {
     position: fixed;
-    bottom: 0;
+    bottom: 7vh;
     left: 0;
     right: 0;
-    width: 100%;
+    width: 100vw;
     max-width: none;
     margin: 0 !important;
+    box-sizing: border-box;
     border-radius: 10px 10px 0 0;
     max-height: 90vh;
-    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+    overflow: visible;
+  }
+
+  .modal-contentBKP::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 7vh;
+    background: var(--bg-dark);
+    pointer-events: none;
+  }
+
+  .modal-contentBKP .details-cover-wrapperBKP {
+    width: min(85vw, 600px) !important;
+    height: 500px;
+    max-width: none;
+    margin: 0 auto;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+  }
+
+  .modal-contentBKP .details-book-coverBKP {
+    width: 100% !important;
+    max-width: none !important;
+    height: 100% !important;
+    border-radius: 10px !important;
+    clip-path: inset(0 round 10px) !important;
+  }
+
+  .modal-contentBKP .modal-bodyBKP {
+    width: 100vw;
+    max-width: none;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
   }
 }
 
@@ -1593,6 +1635,25 @@
   .social-label-mobileBKP {
     font-size: 0.7rem;
     padding: 0 2px;
+  }
+}
+
+@media (max-width: 768px) {
+  .modal-contentBKP {
+    width: 100vw !important;
+    min-width: 100vw;
+    max-width: 100vw !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .modal-contentBKP > .modal-headerBKP,
+  .modal-contentBKP > .modal-bodyBKP,
+  .modal-contentBKP > .modal-actionsBKP {
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
   }
 }
 
@@ -2329,12 +2390,10 @@ div[style*="position: relative"] > .btn-readBKP:hover {
   .controlsBKP{padding-left:0 !important;padding-right:0 !important}
   .search-containerBKP{padding-left:0 !important;padding-right:0 !important}
   .filter-wrapperBKP{gap:8px}
-  .modal-contentBKP{margin-left:8px !important;margin-right:8px !important;width:calc(100% - 16px) !important}
   .recommendations-panelBKP,.wishlist-panelBKP{left:8px !important;right:8px !important;width:calc(100% - 16px) !important}
 }
 @media (max-width: 420px){
   .containerBKP{padding-left:6px !important;padding-right:6px !important}
-  .modal-contentBKP{margin-left:6px !important;margin-right:6px !important;width:calc(100% - 12px) !important}
   .recommendations-panelBKP,.wishlist-panelBKP{left:6px !important;right:6px !important;width:calc(100% - 12px) !important}
   .titleBKP{font-size:1.1rem}
   .controlsBKP{padding-left:0 !important;padding-right:0 !important}

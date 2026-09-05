@@ -89,7 +89,7 @@ export default function PrivacyPolicyPage({ onBack }) {
   ];
 
   return (
-    <div style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)', overflowY: 'auto' }}>
+    <div className="settings-privacy-policy-page" style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)', overflowY: 'auto' }}>
       <div className="settings-stp-page-header fullpage" style={{ background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-muted)' }}>
         <button className="settings-stp-back-btn" onClick={() => (onBack ? onBack() : navigate(-1))} style={{ marginRight: 12 }}>
           <FiChevronLeft />

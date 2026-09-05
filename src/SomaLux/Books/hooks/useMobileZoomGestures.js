@@ -13,7 +13,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 
-const useMobileZoomGestures = (containerRef, onZoomIn, onZoomOut, onResetZoom, onSetZoom, currentScale) => {
+const useMobileZoomGestures = (containerRef, onZoomIn, onZoomOut, onResetZoom, onSetZoom, currentScale, onPreviewZoom) => {
   const touchStartScaleRef = useRef(null);
   const lastTapTimeRef = useRef(0);
   const lastTapXRef = useRef(0);
@@ -21,6 +21,8 @@ const useMobileZoomGestures = (containerRef, onZoomIn, onZoomOut, onResetZoom, o
   const doubleTapTimerRef = useRef(null);
   const isZoomingRef = useRef(false);
   const lastProcessedScaleRef = useRef(currentScale);
+  const pendingScaleRef = useRef(null);
+  const zoomFrameRef = useRef(null);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
 
   // Detect if device is mobile based on window size (responsive design)
@@ -101,26 +103,46 @@ const useMobileZoomGestures = (containerRef, onZoomIn, onZoomOut, onResetZoom, o
 
       // Calculate zoom factor (pinch ratio) for smooth continuous scaling
       const zoomFactor = currentDistance / startDistance;
-      const targetScale = Math.max(0.25, Math.min(5.0, startScale * zoomFactor));
+      const targetScale = Math.max(0.25, Math.min(1.0, startScale * zoomFactor));
 
       console.log('🔍 Pinch zoom: factor=', zoomFactor.toFixed(2), 'target=', targetScale.toFixed(2), 'current=', currentScale.toFixed(2));
 
-      // Apply smooth zoom directly without incremental steps
-      if (onSetZoom) {
-        onSetZoom(targetScale);
+      if (onPreviewZoom) {
+        onPreviewZoom(targetScale);
+      }
+
+      pendingScaleRef.current = targetScale;
+      if (!zoomFrameRef.current) {
+        zoomFrameRef.current = requestAnimationFrame(() => {
+          zoomFrameRef.current = null;
+          if (onSetZoom && pendingScaleRef.current !== null) {
+            onSetZoom(pendingScaleRef.current);
+          }
+        });
       }
       lastProcessedScaleRef.current = targetScale;
     }
-  }, [onSetZoom]);
+  }, [onPreviewZoom, onSetZoom]);
 
   // Handle pinch-zoom end
   const handleTouchEnd = useCallback((e) => {
     if (e.touches.length < 2) {
+      if (zoomFrameRef.current) {
+        cancelAnimationFrame(zoomFrameRef.current);
+        zoomFrameRef.current = null;
+      }
+      if (onSetZoom && pendingScaleRef.current !== null) {
+        onSetZoom(pendingScaleRef.current);
+      }
+      if (onPreviewZoom && pendingScaleRef.current !== null) {
+        onPreviewZoom(null, pendingScaleRef.current);
+      }
+      pendingScaleRef.current = null;
       touchStartScaleRef.current = null;
       isZoomingRef.current = false;
       lastProcessedScaleRef.current = currentScale;
     }
-  }, [currentScale]);
+  }, [currentScale, onPreviewZoom, onSetZoom]);
 
   // Setup touch event listeners
   useEffect(() => {
@@ -161,6 +183,7 @@ const useMobileZoomGestures = (containerRef, onZoomIn, onZoomOut, onResetZoom, o
       container.removeEventListener('touchend', handleTouchEnd);
       document.removeEventListener('touchmove', preventPinchZoom);
       clearTimeout(doubleTapTimerRef.current);
+      if (zoomFrameRef.current) cancelAnimationFrame(zoomFrameRef.current);
     };
   }, [checkMobileDevice, containerRef, handleTouchStart, handleTouchMove, handleTouchEnd]);
 

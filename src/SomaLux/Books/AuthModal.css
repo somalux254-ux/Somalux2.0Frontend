@@ -192,17 +192,37 @@
 }
 
 @media (max-width: 600px) {
+  .auth-modal-close {
+    top: 5%;
+    right: 4vw;
+    padding: 2vw;
+  }
+
   .auth-modal-content {
-    padding: 56px 22px 32px;
+    padding: 8vh 5vw 30%;
   }
 
   .auth-container {
-    min-height: calc(100vh - 88px);
+    min-height: 86vh;
+    position: relative;
+  }
+
+  .auth-branding {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    padding-top: 0;
+  }
+
+  .auth-actions {
+    margin-top: auto;
+    transform: translateY(-4vh);
   }
 
   .auth-logo {
-    width: 128px;
-    height: 128px;
+    width: clamp(96px, 28vw, 128px);
+    height: clamp(96px, 28vw, 128px);
   }
 
   .google-sign-in-btn {
