@@ -3,18 +3,28 @@ import { API_URL } from '../../../config';
 
 // API Configuration
 const USE_BACKEND_PROXY = true; // Set to false to use direct API calls
+let prefillDatabaseAvailable = true;
+
+const isMissingPrefillDatabaseObject = (error) =>
+  ['PGRST202', 'PGRST205'].includes(error?.code);
 
 /**
  * Search for university names for autocomplete
  */
 export async function searchUniversityNames(query, limit = 10) {
   try {
-    // Check cache first
-    let { data, error } = await supabase
-      .rpc('search_university_names', { p_query: query, p_limit: limit });
+    // Use the optional database cache when its migration is installed.
+    if (prefillDatabaseAvailable) {
+      const { data, error } = await supabase
+        .rpc('search_university_names', { p_query: query, p_limit: limit });
 
-    if (error) throw error;
-    if (data?.length) return data;
+      if (error) {
+        if (isMissingPrefillDatabaseObject(error)) prefillDatabaseAvailable = false;
+        else console.warn('University prefill cache search failed:', error.message);
+      } else if (data?.length) {
+        return data;
+      }
+    }
 
     // Try Wikipedia/Wikidata search as primary method (more reliable, no API key needed)
     const wikiResults = await searchWikipediaUniversities(query, limit);
@@ -51,7 +61,7 @@ export async function searchUniversityNames(query, limit = 10) {
 
     return [];
   } catch (error) {
-    console.error('Error searching university names:', error);
+    console.warn('Error searching university names:', error?.message || error);
     return [];
   }
 }
@@ -89,6 +99,8 @@ async function searchWikipediaUniversities(query, limit = 10) {
  * Get prefill data for a university by name from cache
  */
 export async function getUniversityPrefillData(universityName) {
+  if (!prefillDatabaseAvailable) return null;
+
   try {
     const { data, error } = await supabase
       .rpc('get_university_prefill_data', {
@@ -98,7 +110,8 @@ export async function getUniversityPrefillData(universityName) {
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error fetching prefill data:', error);
+    if (isMissingPrefillDatabaseObject(error)) prefillDatabaseAvailable = false;
+    else console.warn('Error fetching prefill data:', error?.message || error);
     return null;
   }
 }
@@ -288,6 +301,8 @@ export async function downloadImageAsFile(imageUrl, fileName) {
  * Cache university prefill data
  */
 export async function cacheUniversityPrefillData(universityName, data, source = 'manual') {
+  if (!prefillDatabaseAvailable) return false;
+
   try {
     const { error } = await supabase
       .from('university_prefill_cache')
@@ -301,7 +316,8 @@ export async function cacheUniversityPrefillData(universityName, data, source = 
     if (error) throw error;
     return true;
   } catch (error) {
-    console.error('Error caching prefill data:', error);
+    if (isMissingPrefillDatabaseObject(error)) prefillDatabaseAvailable = false;
+    else console.warn('Error caching prefill data:', error?.message || error);
     return false;
   }
 }

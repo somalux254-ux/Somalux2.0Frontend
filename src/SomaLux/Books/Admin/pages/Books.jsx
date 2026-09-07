@@ -1,8 +1,36 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { FiChevronLeft, FiChevronRight, FiSearch } from 'react-icons/fi';
 import { fetchBooks, deleteBook, updateBook } from '../api';
 import { useAdminUI } from '../AdminUIContext';
 import { supabase } from '../../supabaseClient';
+import '../../BookPanel.css';
 
+const highlightSearchText = (text, searchText) => {
+  const value = String(text || '');
+  const query = String(searchText || '').trim();
+  if (!query) return value;
+
+  const lowerValue = value.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  const parts = [];
+  let start = 0;
+  let matchIndex = lowerValue.indexOf(lowerQuery, start);
+
+  while (matchIndex !== -1) {
+    if (matchIndex > start) parts.push(value.slice(start, matchIndex));
+    parts.push(
+      <span className="admin-search-match" key={`${matchIndex}-${query}`}>
+        {value.slice(matchIndex, matchIndex + query.length)}
+      </span>
+    );
+    start = matchIndex + query.length;
+    matchIndex = lowerValue.indexOf(lowerQuery, start);
+  }
+
+  if (start === 0) return value;
+  if (start < value.length) parts.push(value.slice(start));
+  return parts;
+};
 
 const Books = ({ userProfile }) => {
   const [loading, setLoading] = useState(true);
@@ -15,6 +43,7 @@ const Books = ({ userProfile }) => {
   const [editingId, setEditingId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [editDraft, setEditDraft] = useState({});
+  const [expandedEditFields, setExpandedEditFields] = useState(new Set());
   const [newPdf, setNewPdf] = useState(null);
   const [newCover, setNewCover] = useState(null);
   const [isMultiEditMode, setIsMultiEditMode] = useState(false);
@@ -109,6 +138,7 @@ const Books = ({ userProfile }) => {
       pages: row.pages || '',
       publisher: row.publisher || ''
     });
+    setExpandedEditFields(new Set());
     setNewPdf(null);
     setNewCover(null);
   };
@@ -116,8 +146,15 @@ const Books = ({ userProfile }) => {
   const cancelEdit = () => {
     setEditingId(null);
     setEditDraft({});
+    setExpandedEditFields(new Set());
     setNewPdf(null);
     setNewCover(null);
+  };
+
+  const expandEditFieldOnEnter = (field, event) => {
+    if (event.key === 'Enter') {
+      setExpandedEditFields((fields) => new Set(fields).add(field));
+    }
   };
 
   // Multi-select handlers
@@ -390,43 +427,32 @@ const Books = ({ userProfile }) => {
   return (
     <div>
       <div className="panel">
-        <div className="panel-title">Books Management</div>
-
-        {/* Stats Summary */}
-        {!loading && rows.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px', marginBottom: '12px' }}>
-            <div style={{ background: '#0b1216', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)', borderRadius: '6px', padding: '8px 12px', color: '#8696a0', fontSize: '0.85rem' }}>
-              <div style={{ color: '#00a884', fontSize: '1.2rem', fontWeight: '600' }}>{rows.reduce((sum, r) => sum + (r.downloads || 0), 0)}</div>
-              <div>Total Downloads</div>
-            </div>
-            <div style={{ background: '#0b1216', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)', borderRadius: '6px', padding: '8px 12px', color: '#8696a0', fontSize: '0.85rem' }}>
-              <div style={{ color: '#34B7F1', fontSize: '1.2rem', fontWeight: '600' }}>{rows.reduce((sum, r) => sum + (r.views || 0), 0)}</div>
-              <div>Total Views</div>
-            </div>
-            <div style={{ background: '#0b1216', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)', borderRadius: '6px', padding: '8px 12px', color: '#8696a0', fontSize: '0.85rem' }}>
-              <div style={{ color: '#FFCC00', fontSize: '1.2rem', fontWeight: '600' }}>{rows.length}/{count}</div>
-              <div>Page Books</div>
-            </div>
-          </div>
-        )}
-
-        <div className="grid-2" style={{ marginBottom: 6 }}>
-          <div className="panel" style={{ padding: '6px 8px' }}>
-            <label className="label" style={{ marginBottom: '0.2rem' }}>Search</label>
-            <input className="input" value={search} onChange={(e) => { setPage(1); setSearch(e.target.value); }} placeholder="Search by title..." style={{ fontSize: '0.9rem' }} />
+        <div className="users-controls books-search-controls">
+          <div className="books-search-field">
+            <FiSearch style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#8696a0', fontSize: '14px' }} />
+            <input
+              type="search"
+              enterKeyHint="search"
+              placeholder="Search by title..."
+              value={search}
+              onChange={(e) => { setPage(1); setSearch(e.target.value); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur();
+              }}
+              className="input books-search-input"
+            />
           </div>
         </div>
 
         <div className="actions" style={{ marginBottom: 10, marginLeft: '20px' }}>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button className="btn primary" onClick={() => (window.location.href = '/books/admin/upload')}>Add / Upload New Book</button>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
             {!showCheckboxes && (
               <button 
                 className="btn" 
                 onClick={() => setShowCheckboxes(true)}
-                style={{ background: '#00a884', color: '#e9edef' }}
+                style={{ background: '#006b54', color: '#000', fontWeight: 700, border: 'none', boxShadow: 'none' }}
               >
-                📋 Bulk Edit
+                Bulk Edit
               </button>
             )}
             {showCheckboxes && !isMultiEditMode && (
@@ -566,8 +592,8 @@ const Books = ({ userProfile }) => {
           </div>
         )}
 
-        <div className="panel" style={{ padding: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <table className="table" style={{ minWidth: '1620px', borderCollapse: 'separate', borderSpacing: 0 }}>
+        <div className="panel books-table-panel" style={{ padding: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <table className="table books-management-table" style={{ minWidth: '1100px' }}>
             <thead>
               <tr>
                 {showCheckboxes && (
@@ -581,23 +607,21 @@ const Books = ({ userProfile }) => {
                     />
                   </th>
                 )}
-                <th style={{ width: '60px' }}>Cover</th>
-                <th style={{ width: '300px', cursor: 'pointer' }} onClick={() => toggleSort('title')}>Title {sort.col === 'title' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
-                <th style={{ width: '200px', cursor: 'pointer' }} onClick={() => toggleSort('author')}>Author {sort.col === 'author' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
-                <th style={{ width: '100px', cursor: 'pointer' }} onClick={() => toggleSort('year')}>Year {sort.col === 'year' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
-                <th style={{ width: '100px' }}>Pages</th>
-                <th style={{ width: '180px' }}>Publisher</th>
-                <th style={{ width: '100px', cursor: 'pointer' }} onClick={() => toggleSort('downloads')}>Downloads {sort.col === 'downloads' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
-                <th style={{ width: '80px', cursor: 'pointer', background: 'rgba(52, 183, 241, 0.1)', borderBottom: '2px solid #34B7F1' }} onClick={() => toggleSort('views')}>Views {sort.col === 'views' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
-                <th style={{ width: '100px' }}>Date Added</th>
-                <th style={{ width: '200px' }}>Actions</th>
+                <th style={{ width: '50px' }}>Cover</th>
+                <th className="book-title-column" style={{ width: '220px', cursor: 'pointer' }} onClick={() => toggleSort('title')}>Title {sort.col === 'title' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
+                <th style={{ width: '150px', cursor: 'pointer' }} onClick={() => toggleSort('author')}>Author {sort.col === 'author' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
+                <th style={{ width: '75px', cursor: 'pointer' }} onClick={() => toggleSort('year')}>Year {sort.col === 'year' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
+                <th style={{ width: '70px' }}>Pages</th>
+                <th style={{ width: '140px' }}>Publisher</th>
+                <th style={{ width: '110px' }}>Date Added</th>
+                <th className="books-actions-header" style={{ width: '260px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={showCheckboxes ? 13 : 12} style={{ color: '#8696a0', textAlign: 'center' }}>Loading...</td></tr>
+                <tr><td colSpan={showCheckboxes ? 10 : 9} style={{ color: '#8696a0', textAlign: 'center' }}>Loading...</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={showCheckboxes ? 13 : 12} style={{ color: '#8696a0', textAlign: 'center' }}>No data</td></tr>
+                <tr><td colSpan={showCheckboxes ? 10 : 9} style={{ color: '#8696a0', textAlign: 'center' }}>No data</td></tr>
               ) : rows.map(row => (
                 <tr key={row.id} style={{ background: selectedIds.has(row.id) ? 'rgba(0, 168, 132, 0.1)' : 'transparent' }}>
                   {showCheckboxes && (
@@ -611,20 +635,20 @@ const Books = ({ userProfile }) => {
                       />
                     </td>
                   )}
-                  <td>{row.cover_url ? <img src={row.cover_url} alt="cover" style={{ width: 36, height: 48, objectFit: 'cover', borderRadius: 4 }} /> : <span className="badge">No cover</span>}</td>
-                  <td>
+                  <td>{row.cover_url ? <img src={row.cover_url} alt="cover" style={{ width: 44, height: 58, aspectRatio: '3 / 4', objectFit: 'cover', borderRadius: 4, display: 'block' }} /> : <span className="badge">No cover</span>}</td>
+                  <td className="book-title-column">
                     {editingId === row.id ? (
-                      <input className="input" value={editDraft.title} onChange={(e) => setEditDraft({ ...editDraft, title: e.target.value })} />
-                    ) : row.title}
+                      <textarea className={`input book-edit-textarea${expandedEditFields.has('title') ? ' is-expanded' : ''}`} rows={expandedEditFields.has('title') ? 2 : 1} value={editDraft.title} onKeyDown={(e) => expandEditFieldOnEnter('title', e)} onChange={(e) => setEditDraft({ ...editDraft, title: e.target.value })} />
+                    ) : highlightSearchText(row.title, search)}
+                  </td>
+                  <td className="books-actions-cell">
+                    {editingId === row.id ? (
+                      <textarea className={`input book-edit-textarea${expandedEditFields.has('author') ? ' is-expanded' : ''}`} rows={expandedEditFields.has('author') ? 2 : 1} value={editDraft.author} onKeyDown={(e) => expandEditFieldOnEnter('author', e)} onChange={(e) => setEditDraft({ ...editDraft, author: e.target.value })} />
+                    ) : highlightSearchText(row.author, search)}
                   </td>
                   <td>
                     {editingId === row.id ? (
-                      <input className="input" value={editDraft.author} onChange={(e) => setEditDraft({ ...editDraft, author: e.target.value })} />
-                    ) : row.author}
-                  </td>
-                  <td>
-                    {editingId === row.id ? (
-                      <input className="input" value={editDraft.year} onChange={(e) => setEditDraft({ ...editDraft, year: e.target.value })} />
+                      <input className="input" type="number" inputMode="numeric" value={editDraft.year} onChange={(e) => setEditDraft({ ...editDraft, year: e.target.value })} />
                     ) : (row.year || '—')}
                   </td>
                   <td>
@@ -634,16 +658,15 @@ const Books = ({ userProfile }) => {
                   </td>
                   <td>
                     {editingId === row.id ? (
-                      <input className="input" placeholder="Publisher" value={editDraft.publisher} onChange={(e) => setEditDraft({ ...editDraft, publisher: e.target.value })} />
+                      <textarea className={`input book-edit-textarea${expandedEditFields.has('publisher') ? ' is-expanded' : ''}`} rows={expandedEditFields.has('publisher') ? 2 : 1} placeholder="Publisher" value={editDraft.publisher} onKeyDown={(e) => expandEditFieldOnEnter('publisher', e)} onChange={(e) => setEditDraft({ ...editDraft, publisher: e.target.value })} />
                     ) : (row.publisher || '—')}
                   </td>
-                  <td>{row.downloads || 0}</td>
-                  <td style={{ fontWeight: '500', color: '#00a884' }}>{row.views || 0}</td>
                   <td>{new Date(row.created_at).toLocaleDateString()}</td>
                   <td>
                     {editingId === row.id ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '180px' }}>
-                        <div>
+                      <div className="book-edit-actions">
+                        <div className="book-file-actions">
+                        <div className="book-file-action">
                           <label className="label">Replace PDF</label>
                           <div
                             className="file-upload-btn"
@@ -675,7 +698,7 @@ const Books = ({ userProfile }) => {
                             )}
                           </div>
                         </div>
-                        <div>
+                        <div className="book-file-action">
                           <label className="label">Replace Cover</label>
                           <div
                             className="file-upload-btn"
@@ -707,22 +730,23 @@ const Books = ({ userProfile }) => {
                             )}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                        </div>
+                        <div className="book-edit-save-actions">
                           <button className="btn primary" onClick={() => saveEdit(row)}>Save</button>
                           <button className="btn" onClick={cancelEdit}>Cancel</button>
                         </div>
                       </div>
                     ) : (
-                      <div className="actions">
+                      <div className="actions books-row-actions">
                         <button 
-                          className="btn" 
+                          className="btn books-row-action" 
                           onClick={() => startEdit(row)}
                           disabled={!canEdit(row)}
                         >
                           Edit
                         </button>
                         <button 
-                          className="btn" 
+                          className="btn books-row-action" 
                           onClick={() => handleDelete(row)}
                           disabled={!canEdit(row)}
                         >
@@ -737,10 +761,14 @@ const Books = ({ userProfile }) => {
           </table>
         </div>
 
-        <div className="actions" style={{ marginTop: 10, justifyContent: 'center', gap: '24px' }}>
-          <button className="btn" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>← Prev</button>
+        <div className="book-pagination-actions" style={{ marginTop: 10 }}>
+          <button className="btn book-pagination-button" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
+            <FiChevronLeft size={16} aria-hidden="true" /> Prev
+          </button>
           <span style={{ color: '#cfd8dc' }}>Page {page} of {totalPages}</span>
-          <button className="btn" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next →</button>
+          <button className="btn book-pagination-button" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
+            Next <FiChevronRight size={16} aria-hidden="true" />
+          </button>
         </div>
       </div>
     </div>

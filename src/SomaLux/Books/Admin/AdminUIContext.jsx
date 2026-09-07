@@ -93,7 +93,17 @@ export const AdminUIProvider = ({ children }) => {
                 <p style={{ margin: 0, color: '#cfd8dc', fontSize: 14 }}>{confirmState.message}</p>
               )}
             </div>
-            <div className="actions" style={{ padding: '0 24px 20px', justifyContent: 'flex-end' }}>
+            <div className="actions confirm-actions" style={{ padding: '16px 24px 20px', justifyContent: 'space-between' }}>
+              <button
+                className={`btn ${confirmState.variant === 'danger' ? 'danger' : 'primary'}`}
+                style={{ marginLeft: 0 }}
+                onClick={() => {
+                  confirmState.resolve(true);
+                  closeConfirm();
+                }}
+              >
+                {confirmState.confirmLabel || 'Confirm'}
+              </button>
               <button
                 className="btn"
                 onClick={() => {
@@ -102,16 +112,6 @@ export const AdminUIProvider = ({ children }) => {
                 }}
               >
                 {confirmState.cancelLabel || 'Cancel'}
-              </button>
-              <button
-                className={`btn ${confirmState.variant === 'danger' ? 'danger' : 'primary'}`}
-                style={{ marginLeft: 8 }}
-                onClick={() => {
-                  confirmState.resolve(true);
-                  closeConfirm();
-                }}
-              >
-                {confirmState.confirmLabel || 'Confirm'}
               </button>
             </div>
           </div>

@@ -97,9 +97,7 @@ function SettingsPage({ onBack, onLogout }) {
       return;
     }
 
-    if (typeof onBack === 'function') {
-      onBack();
-    }
+    navigate('/BookManagement', { replace: true, state: {} });
   }, [location.state, navigate, onBack]);
 
   useEffect(() => {

@@ -1,9 +1,37 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { FiSearch } from 'react-icons/fi';
 import { fetchUniversities, createUniversitySubmission, deleteUniversity, updateUniversity } from '../campusApi';
-import { getUniversityImages, deleteUniversityImage } from '../universityPrefillApi';
+import { autoFillUniversityData, getUniversityImages, deleteUniversityImage, searchUniversityNames } from '../universityPrefillApi';
 import { getPastPaperCountByUniversity } from '../pastPapersApi';
 import { useAdminUI } from '../AdminUIContext';
 import { formatNumber } from '../../../PastPapers/formatNumber';
+
+const highlightSearchText = (text, searchText) => {
+  const value = String(text || '');
+  const query = String(searchText || '').trim();
+  if (!query) return value;
+
+  const lowerValue = value.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  const parts = [];
+  let start = 0;
+  let matchIndex = lowerValue.indexOf(lowerQuery, start);
+
+  while (matchIndex !== -1) {
+    if (matchIndex > start) parts.push(value.slice(start, matchIndex));
+    parts.push(
+      <span className="admin-search-match" key={`${matchIndex}-${query}`}>
+        {value.slice(matchIndex, matchIndex + query.length)}
+      </span>
+    );
+    start = matchIndex + query.length;
+    matchIndex = lowerValue.indexOf(lowerQuery, start);
+  }
+
+  if (start === 0) return value;
+  if (start < value.length) parts.push(value.slice(start));
+  return parts;
+};
 
 const UniversitiesManagement = ({ userProfile }) => {
   const [loading, setLoading] = useState(true);
@@ -20,7 +48,11 @@ const UniversitiesManagement = ({ userProfile }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newUniversity, setNewUniversity] = useState({ name: '', description: '', website_url: '', location: '', established: '', student_count: '' });
   const [newUniversityCover, setNewUniversityCover] = useState(null);
+  const [publicCoverImage, setPublicCoverImage] = useState('');
   const [savingNewUniversity, setSavingNewUniversity] = useState(false);
+  const [autoFillingUniversity, setAutoFillingUniversity] = useState(false);
+  const [universitySuggestions, setUniversitySuggestions] = useState([]);
+  const [loadingUniversitySuggestions, setLoadingUniversitySuggestions] = useState(false);
 
   const { confirm, showToast } = useAdminUI();
 
@@ -61,10 +93,82 @@ const UniversitiesManagement = ({ userProfile }) => {
     if (userProfile) load();
   }, [page, search, sort.col, sort.dir, userProfile]);
 
+  useEffect(() => {
+    const query = newUniversity.name.trim();
+    if (!showAddForm || query.length < 2) {
+      setUniversitySuggestions([]);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setLoadingUniversitySuggestions(true);
+      try {
+        const suggestions = await searchUniversityNames(query, 6);
+        if (!cancelled) setUniversitySuggestions(suggestions || []);
+      } catch (error) {
+        if (!cancelled) setUniversitySuggestions([]);
+        console.warn('University autocomplete failed:', error?.message || error);
+      } finally {
+        if (!cancelled) setLoadingUniversitySuggestions(false);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [newUniversity.name, showAddForm]);
+
   const canEdit = (row) => {
     if (isAdmin) return true;
     if (isEditor) return true;
     return false;
+  };
+
+  const handleAutoFillUniversity = async () => {
+    const universityName = newUniversity.name.trim();
+    if (!universityName) {
+      showToast({ type: 'error', message: 'Enter a university name first.' });
+      return;
+    }
+
+    setAutoFillingUniversity(true);
+    try {
+      const data = await autoFillUniversityData(universityName);
+      const hasDetails = data && (data.description || data.website_url || data.location || data.established || data.student_count);
+
+      if (!hasDetails) {
+        showToast({ type: 'info', message: 'No additional public details were found.' });
+        return;
+      }
+
+      setNewUniversity((current) => ({
+        ...current,
+        name: data.name || current.name,
+        description: data.description || current.description,
+        website_url: data.website_url || current.website_url,
+        location: data.location || current.location,
+        established: data.established ?? current.established,
+        student_count: data.student_count ?? current.student_count,
+      }));
+      setPublicCoverImage(data.cover_images?.[0] || '');
+      showToast({ type: 'success', message: 'University details filled from public sources.' });
+    } catch (error) {
+      showToast({ type: 'error', message: error?.message || 'Could not fetch university details.' });
+    } finally {
+      setAutoFillingUniversity(false);
+    }
+  };
+
+  const selectUniversitySuggestion = (suggestion) => {
+    setNewUniversity((current) => ({
+      ...current,
+      name: suggestion.name || current.name,
+      description: suggestion.description || current.description,
+      website_url: suggestion.website_url || current.website_url,
+    }));
+    setUniversitySuggestions([]);
   };
 
   const startEdit = (row) => {
@@ -164,10 +268,12 @@ const UniversitiesManagement = ({ userProfile }) => {
           established: newUniversity.established ? Number(newUniversity.established) : null,
           student_count: newUniversity.student_count ? Number(newUniversity.student_count) : 0
         },
-        coverFile: newUniversityCover
+        coverFile: newUniversityCover,
+        coverImageUrl: publicCoverImage
       });
       setNewUniversity({ name: '', description: '', website_url: '', location: '', established: '', student_count: '' });
       setNewUniversityCover(null);
+      setPublicCoverImage('');
       setShowAddForm(false);
       await load();
       showToast({ type: 'success', message: 'University added successfully.' });
@@ -181,38 +287,54 @@ const UniversitiesManagement = ({ userProfile }) => {
   return (
     <div>
       <div className="panel">
-        <div className="panel-title">Universities Management</div>
-
-        {/* Stats Summary */}
-        {!loading && rows.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px', marginBottom: '12px' }}>
-            <div style={{ background: '#1a2332', border: '1px solid #2a3f56', borderRadius: '6px', padding: '8px 12px', color: '#8696a0', fontSize: '0.85rem' }}>
-              <div style={{ color: '#34B7F1', fontSize: '1.2rem', fontWeight: '600' }}>{formatNumber(rows.reduce((sum, r) => sum + (r.views || 0), 0))}</div>
-              <div>Total Views</div>
-            </div>
-            <div style={{ background: '#1a2332', border: '1px solid #2a3f56', borderRadius: '6px', padding: '8px 12px', color: '#8696a0', fontSize: '0.85rem' }}>
-              <div style={{ color: '#FFCC00', fontSize: '1.2rem', fontWeight: '600' }}>{rows.length}/{count}</div>
-              <div>Page Universities</div>
-            </div>
+        <div className="users-controls books-search-controls">
+          <div className="books-search-field">
+            <FiSearch style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#8696a0', fontSize: '14px' }} />
+            <input
+              type="search"
+              enterKeyHint="search"
+              placeholder="Search by name or location..."
+              value={search}
+              onChange={(e) => { setPage(1); setSearch(e.target.value); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur();
+              }}
+              className="input books-search-input"
+            />
           </div>
-        )}
-
-        <div className="panel" style={{ marginBottom: 6 }}>
-          <label className="label">Search</label>
-          <input className="input" value={search} onChange={(e) => { setPage(1); setSearch(e.target.value); }} placeholder="Search by name or location..." />
         </div>
 
-        <div className="actions" style={{ marginBottom: 6, marginLeft: '20px' }}>
+        <div className="actions university-form-toggle-actions" style={{ marginBottom: 6, marginLeft: '20px' }}>
           <button className="btn primary" onClick={() => setShowAddForm(value => !value)}>{showAddForm ? 'Cancel' : 'Add New University'}</button>
         </div>
 
         {showAddForm && (
-          <div className="panel" style={{ marginBottom: 8 }}>
-            <div className="panel-title">Add University</div>
-            <div className="grid-2">
+          <div className="panel university-add-panel" style={{ marginBottom: 8 }}>
+            <div className="grid-2 university-add-form-grid">
               <div>
                 <label className="label">Name</label>
-                <input className="input" value={newUniversity.name} onChange={(e) => setNewUniversity({ ...newUniversity, name: e.target.value })} placeholder="University name" />
+                <div className="university-name-input-row">
+                  <input className="input" value={newUniversity.name} onChange={(e) => setNewUniversity({ ...newUniversity, name: e.target.value })} placeholder="University name" />
+                  <button type="button" className="btn university-autofill-button" onClick={handleAutoFillUniversity} disabled={autoFillingUniversity}>
+                    {autoFillingUniversity ? 'Filling...' : 'Auto-fill'}
+                  </button>
+                  {(universitySuggestions.length > 0 || loadingUniversitySuggestions) && (
+                    <div className="university-suggestions" role="listbox">
+                      {loadingUniversitySuggestions && <div className="university-suggestion-status">Searching...</div>}
+                      {universitySuggestions.map((suggestion) => (
+                        <button
+                          type="button"
+                          className="university-suggestion"
+                          key={suggestion.name}
+                          onClick={() => selectUniversitySuggestion(suggestion)}
+                        >
+                          <strong>{suggestion.name}</strong>
+                          {suggestion.location && <span>{suggestion.location}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="label">Location</label>
@@ -232,7 +354,16 @@ const UniversitiesManagement = ({ userProfile }) => {
               </div>
               <div>
                 <label className="label">Cover Image</label>
-                <input className="input" type="file" accept="image/*" onChange={(e) => setNewUniversityCover(e.target.files?.[0] || null)} />
+                <input className="input" type="file" accept="image/*" onChange={(e) => { setNewUniversityCover(e.target.files?.[0] || null); setPublicCoverImage(''); }} />
+                {publicCoverImage && (
+                  <div className="university-public-image-option">
+                    <img src={publicCoverImage} alt="Public university preview" />
+                    <div>
+                      <span>Public image selected</span>
+                      <button type="button" className="btn" onClick={() => setPublicCoverImage('')}>Clear</button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <label className="label" style={{ marginTop: 8 }}>Description</label>
@@ -244,7 +375,7 @@ const UniversitiesManagement = ({ userProfile }) => {
         )}
 
         <div className="panel" style={{ padding: 0, overflowX: 'auto' }}>
-          <table className="table" style={{ minWidth: '1200px' }}>
+          <table className="table universities-management-table" style={{ minWidth: '1200px' }}>
             <thead>
               <tr>
                 <th style={{ width: '60px' }}>Cover</th>
@@ -253,22 +384,22 @@ const UniversitiesManagement = ({ userProfile }) => {
                 <th style={{ width: '150px' }}>Location</th>
                 <th style={{ width: '100px', cursor: 'pointer' }} onClick={() => toggleSort('established')}>Est. {sort.col === 'established' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
                 <th style={{ width: '100px' }}>Students</th>
-                <th style={{ width: '80px', background: 'rgba(102, 187, 106, 0.1)', borderBottom: '2px solid #66BB6A' }}>Papers</th>
-                <th style={{ width: '180px' }}>Actions</th>
+                <th style={{ width: '80px' }}>Papers</th>
+                <th className="universities-actions-header" style={{ width: '180px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={10} style={{ textAlign: 'center', color: '#8696a0' }}>Loading...</td></tr>
+                <tr><td colSpan={8} style={{ textAlign: 'center', color: '#8696a0' }}>Loading...</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={10} style={{ textAlign: 'center', color: '#8696a0' }}>No data</td></tr>
+                <tr><td colSpan={8} style={{ textAlign: 'center', color: '#8696a0' }}>No data</td></tr>
               ) : rows.map(row => (
                 <tr key={row.id}>
                   <td>{row.cover_image_url ? <img src={row.cover_image_url} alt="cover" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4 }} /> : <span className="badge">No cover</span>}</td>
-                  <td>
+                  <td className="universities-actions-cell">
                     {editingId === row.id ? (
                       <input className="input" value={editDraft.name} onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })} />
-                    ) : row.name}
+                    ) : highlightSearchText(row.name, search)}
                   </td>
                   <td>
                     {editingId === row.id ? (
@@ -278,7 +409,7 @@ const UniversitiesManagement = ({ userProfile }) => {
                   <td>
                     {editingId === row.id ? (
                       <input className="input" value={editDraft.location} onChange={(e) => setEditDraft({ ...editDraft, location: e.target.value })} />
-                    ) : (row.location || '—')}
+                    ) : highlightSearchText(row.location || '—', search)}
                   </td>
                   <td>
                     {editingId === row.id ? (
@@ -286,11 +417,10 @@ const UniversitiesManagement = ({ userProfile }) => {
                     ) : (row.established || '—')}
                   </td>
                   <td>{row.student_count?.toLocaleString() || '—'}</td>
-                  <td style={{ fontWeight: '500', color: '#00a884' }}>{formatNumber(row.views || 0)}</td>
-                  <td style={{ fontWeight: '500', color: '#66BB6A' }}>{formatNumber(paperCounts[row.id] || 0)}</td>
+                  <td>{formatNumber(paperCounts[row.id] || 0)}</td>
                   <td>
                     {editingId === row.id ? (
-                      <div style={{ display: 'flex', gap: '4px', flexDirection: 'column' }}>
+                      <div className="universities-edit-actions">
                         <button className="btn primary" onClick={() => saveEdit(row)}>Save</button>
                         <button className="btn" onClick={cancelEdit}>Cancel</button>
                       </div>

@@ -21,8 +21,8 @@ import {
 } from 'react-icons/fi';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import SimpleScrollReader from './SimpleScrollReader';
 import './BookPanel.css';
+import { useReaderAudio } from '../contexts/ReaderAudioContext';
 import './Admin/admin.css';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { booksCache } from './utils/cacheManager';
@@ -30,6 +30,7 @@ import { perfOptimizer } from './utils/performanceOptimizer';
 import { indexedDBCache } from './utils/indexedDBCache';
 import { fetchBooksOptimized } from './utils/optimizedQueries';
 import { getBookSignedUrl } from './Admin/api';
+import { popBackAction, pushBackAction } from '../services/backNavigation';
 const highlightSearchText = (text, searchText) => {
   const value = String(text || '');
   const query = String(searchText || '').trim();
@@ -70,7 +71,6 @@ export const BookPanel = ({ demoMode = false }) => {
   const [showAuthModal, setShowAuthModal] = useState(() => Boolean(location.state?.reopenAuth));
   const [authAction, setAuthAction] = useState(() => location.state?.authAction || 'action');
   const [loadingUser, setLoadingUser] = useState(true);
-  const [showReader, setShowReader] = useState(false);
   const [openingBookId, setOpeningBookId] = useState(null);
   const [pendingAction, setPendingAction] = useState(null);
   const [focusedBookId, setFocusedBookId] = useState(null);
@@ -78,6 +78,7 @@ export const BookPanel = ({ demoMode = false }) => {
   const initialBooksLoadRef = useRef(false);
   const previousSearchTermRef = useRef('');
   const booksFetchesRef = useRef(new Map());
+  const { openReader, closeReaderView, isReaderOpen } = useReaderAudio();
 
   // Simple network error modal state
   const [showNetworkModal, setShowNetworkModal] = useState(false);
@@ -957,6 +958,21 @@ export const BookPanel = ({ demoMode = false }) => {
     setSelectedBook(null);
   };
 
+  const handleNativeBack = useCallback(() => {
+    if (isReaderOpen) {
+      closeReaderView();
+      return;
+    }
+    setSelectedBook(null);
+  }, [closeReaderView, isReaderOpen]);
+
+  useEffect(() => {
+    if (!selectedBook && !isReaderOpen) return undefined;
+
+    pushBackAction(handleNativeBack);
+    return () => popBackAction(handleNativeBack);
+  }, [handleNativeBack, selectedBook, isReaderOpen]);
+
   const requireAuth = (action) => {
     // Don't show modal while auth is loading - wait for verification
     if (loadingUser) {
@@ -989,8 +1005,9 @@ export const BookPanel = ({ demoMode = false }) => {
     setOpeningBookId(selectedBook?.id || null);
     try {
       const signedUrl = await getBookSignedUrl(selectedBook?.id);
-      setSelectedBook(prev => prev ? { ...prev, downloadUrl: signedUrl } : prev);
-      setShowReader(true);
+      const bookForReader = selectedBook ? { ...selectedBook, downloadUrl: signedUrl } : null;
+      setSelectedBook(bookForReader);
+      openReader(bookForReader);
     } catch (error) {
       console.error('Failed to create signed URL for book:', error);
     } finally {
@@ -1595,16 +1612,6 @@ export const BookPanel = ({ demoMode = false }) => {
           </motion.div>
         )}
       </AnimatePresence>
-      {showReader && selectedBook && (
-        <SimpleScrollReader
-          src={selectedBook.downloadUrl}
-          cacheKey={`book:${selectedBook.id}`}
-          title={selectedBook.title}
-          author={selectedBook.author}
-          sampleText={selectedBook.sampleText || selectedBook.description}
-          onClose={() => setShowReader(false)}
-        />
-      )}
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}

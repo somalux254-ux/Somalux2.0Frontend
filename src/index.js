@@ -41,6 +41,8 @@ const removeThemeListener = initializeTheme();
 
 const AppEntry = () => {
   useEffect(() => {
+     document.documentElement.classList.toggle('web-platform', !Capacitor.isNativePlatform());
+
     if (!Capacitor.isNativePlatform()) return undefined;
 
     const backButtonListener = App.addListener('backButton', async ({ canGoBack }) => {

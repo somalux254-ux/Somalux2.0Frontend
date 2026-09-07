@@ -7,6 +7,7 @@ import { BookManagement } from "./SomaLux/BookDashboard/BookManagement";
 import { BooksAdmin } from "./SomaLux/Books/Admin/BooksAdmin";
 import SettingsPage from './SomaLux/Settings/SettingsPage';
 import { NotificationProvider } from './SomaLux/contexts/NotificationContext';
+import { ReaderAudioProvider } from './SomaLux/contexts/ReaderAudioContext';
 import { supabase } from './SomaLux/Books/supabaseClient';
 import { signOutCompletely } from './utils/sessionManager';
 import { EmailSender } from "./SomaLux/Admin/EmailSender";
@@ -56,9 +57,10 @@ export function SomaLux() {
                     pauseOnHover
                 />
 
-                <Router>
-                    <StartupRouteGuard>
-                        <Routes>
+                <ReaderAudioProvider>
+                    <Router>
+                        <StartupRouteGuard>
+                            <Routes>
 
                         {/* Default redirect */}
                         <Route path="/" element={<Navigate to="/BookManagement" replace />} />
@@ -84,9 +86,10 @@ export function SomaLux() {
 
                         {/* Email */}
                         <Route path="/admin/email" element={<EmailSender />} />
-                        </Routes>
-                    </StartupRouteGuard>
-                </Router>
+                            </Routes>
+                        </StartupRouteGuard>
+                    </Router>
+                </ReaderAudioProvider>
             </div>
         </FeatureFlagsProvider>
     );

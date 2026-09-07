@@ -127,7 +127,7 @@ export async function createUniversity({ metadata, coverFile }) {
   return data;
 }
 
-export async function createUniversitySubmission({ metadata, coverFile }) {
+export async function createUniversitySubmission({ metadata, coverFile, coverImageUrl }) {
   // Validate required fields
   if (!metadata.name || metadata.name.trim() === '') {
     throw new Error('University name is required');
@@ -138,6 +138,8 @@ export async function createUniversitySubmission({ metadata, coverFile }) {
   if (coverFile) {
     const uploaded = await uploadUniversityCover(coverFile);
     cover_image_url = uploaded.publicUrl;
+  } else if (coverImageUrl) {
+    cover_image_url = coverImageUrl;
   }
   
   // Get current user ID

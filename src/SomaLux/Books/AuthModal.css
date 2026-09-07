@@ -48,6 +48,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  touch-action: manipulation;
   border-radius: 8px;
   transition: all 0.2s ease;
 }
@@ -180,13 +181,18 @@
   max-width: 340px;
 }
 
-.auth-legal a {
+.auth-legal-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: #2563eb;
+  font: inherit;
   font-weight: 700;
+  cursor: pointer;
   text-decoration: none;
 }
 
-.auth-legal a:hover {
+.auth-legal-link:hover {
   color: #1d4ed8;
   text-decoration: underline;
 }

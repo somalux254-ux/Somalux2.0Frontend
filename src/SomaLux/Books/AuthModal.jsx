@@ -1,11 +1,12 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { useLocation, useNavigate } from 'react-router-dom';
 import { FiX } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
 import { Capacitor } from '@capacitor/core';
 import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
 import { supabase } from './supabaseClient';
+import { AgreementTab } from '../Settings/tabs/UserAgreement';
+import { popBackAction, pushBackAction } from '../services/backNavigation';
 import './AuthModal.css';
 
 let googleSignInInitialization = null;
@@ -24,19 +25,34 @@ export const prewarmGoogleSignIn = () => {
 };
 
 export const AuthModal = ({ isOpen, onClose, onSuccess, action = 'action' }) => {
-  const location = useLocation();
-  const navigate = useNavigate();
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
+  const [legalDocument, setLegalDocument] = React.useState(null);
 
   React.useEffect(() => {
     if (isOpen) prewarmGoogleSignIn();
+    if (!isOpen) setLegalDocument(null);
 
     return () => {
       document.documentElement.style.removeProperty('background-color');
       document.body.style.removeProperty('background-color');
     };
   }, [isOpen]);
+
+  const handleNativeBack = React.useCallback(() => {
+    if (legalDocument) {
+      setLegalDocument(null);
+      return;
+    }
+    onClose?.();
+  }, [legalDocument, onClose]);
+
+  React.useEffect(() => {
+    if (!isOpen) return undefined;
+
+    pushBackAction(handleNativeBack);
+    return () => popBackAction(handleNativeBack);
+  }, [handleNativeBack, isOpen]);
 
   const getActionMessage = () => {
     const messages = {
@@ -140,21 +156,29 @@ export const AuthModal = ({ isOpen, onClose, onSuccess, action = 'action' }) => 
 
   const openSettingsDocument = (event, page) => {
     event.preventDefault();
-    navigate('/settings', {
-      state: {
-        settingsPage: page,
-        returnPath: location.pathname,
-        authAction: action,
-      },
-    });
-    onClose?.();
+    setLegalDocument(page);
   };
 
   return isOpen ? createPortal(
     (
+      legalDocument ? (
+        <AgreementTab
+          pageTitle={legalDocument === 'privacy' ? 'Privacy Policy' : 'User Agreement'}
+          onBack={() => setLegalDocument(null)}
+        />
+      ) : (
       <div className="auth-modal-overlay" onClick={onClose}>
         <div className="auth-modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="auth-modal-close" onClick={onClose}>
+            <button
+              type="button"
+              className="auth-modal-close"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onClose?.();
+              }}
+              onClick={(event) => event.stopPropagation()}
+            >
               <FiX size={18} />
             </button>
 
@@ -178,14 +202,15 @@ export const AuthModal = ({ isOpen, onClose, onSuccess, action = 'action' }) => 
                 </button>
                 <p className="auth-legal">
                   By continuing, you agree to our{' '}
-                  <a href="#agreement" onClick={(event) => openSettingsDocument(event, 'agreement')}>User Agreement</a>{' '}
+                  <button type="button" className="auth-legal-link" onClick={(event) => openSettingsDocument(event, 'agreement')}>User Agreement</button>{' '}
                   and acknowledge that you understand the{' '}
-                  <a href="#privacy" onClick={(event) => openSettingsDocument(event, 'privacy')}>Privacy Policy</a>.
+                  <button type="button" className="auth-legal-link" onClick={(event) => openSettingsDocument(event, 'privacy')}>Privacy Policy</button>.
                 </p>
               </div>
             </div>
         </div>
       </div>
+      )
     ),
     document.body
   ) : null;

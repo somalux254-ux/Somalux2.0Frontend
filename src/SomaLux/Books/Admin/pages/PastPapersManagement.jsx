@@ -409,13 +409,9 @@ const PastPapersManagement = ({ userProfile }) => {
       <div className="panel">
         <div className="panel-title">Past Papers Management</div>
 
-        {/* Stats Summary */}
+        {/* Page Summary */}
         {!loading && rows.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px', marginBottom: '12px' }}>
-            <div style={{ background: '#0b1216', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)', borderRadius: '6px', padding: '8px 12px', color: '#8696a0', fontSize: '0.85rem' }}>
-              <div style={{ color: '#00a884', fontSize: '1.2rem', fontWeight: '600' }}>{rows.reduce((sum, r) => sum + (r.downloads_count || 0), 0)}</div>
-              <div>Total Downloads</div>
-            </div>
             <div style={{ background: '#0b1216', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)', borderRadius: '6px', padding: '8px 12px', color: '#8696a0', fontSize: '0.85rem' }}>
             </div>
             <div style={{ background: '#0b1216', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)', borderRadius: '6px', padding: '8px 12px', color: '#8696a0', fontSize: '0.85rem' }}>
@@ -645,7 +641,7 @@ const PastPapersManagement = ({ userProfile }) => {
         )}
 
         <div className="panel" style={{ padding: 0, overflowX: 'auto' }}>
-          <table className="table" style={{ minWidth: '1200px' }}>
+          <table className="table" style={{ minWidth: '1100px' }}>
             <thead>
               <tr>
                 {showCheckboxes && (
@@ -665,7 +661,6 @@ const PastPapersManagement = ({ userProfile }) => {
                 <th style={{ width: '100px', cursor: 'pointer' }} onClick={() => toggleSort('year')}>Year {sort.col === 'year' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
                 <th style={{ width: '100px' }}>Semester</th>
                 <th style={{ width: '120px' }}>Exam Type</th>
-                <th style={{ width: '100px', cursor: 'pointer' }} onClick={() => toggleSort('downloads_count')}>Downloads {sort.col === 'downloads_count' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
                 <th style={{ width: '180px', cursor: 'pointer' }} onClick={() => toggleSort('created_at')}>Uploaded {sort.col === 'created_at' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
                 <th style={{ width: '150px' }}>Uploaded By</th>
                 <th style={{ width: '200px' }}>Actions</th>
@@ -673,9 +668,9 @@ const PastPapersManagement = ({ userProfile }) => {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={showCheckboxes ? 13 : 12} style={{ textAlign: 'center', color: '#8696a0' }}>Loading...</td></tr>
+                <tr><td colSpan={showCheckboxes ? 10 : 9} style={{ textAlign: 'center', color: '#8696a0' }}>Loading...</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={showCheckboxes ? 13 : 12} style={{ textAlign: 'center', color: '#8696a0' }}>No data</td></tr>
+                <tr><td colSpan={showCheckboxes ? 10 : 9} style={{ textAlign: 'center', color: '#8696a0' }}>No data</td></tr>
               ) : rows.map(row => (
                 <tr key={row.id} style={{ background: selectedIds.has(row.id) ? 'rgba(0, 168, 132, 0.1)' : 'transparent' }}>
                   {showCheckboxes && (
@@ -737,7 +732,6 @@ const PastPapersManagement = ({ userProfile }) => {
                   <td style={{ color: row.year ? '#e9edef' : '#8696a0' }}>{editingId === row.id ? <input className="input" type="number" value={editDraft.year} onChange={(e) => setEditDraft({ ...editDraft, year: e.target.value })} /> : (row.year || '—')}</td>
                   <td>{editingId === row.id ? <select className="select" value={editDraft.semester} onChange={(e) => setEditDraft({ ...editDraft, semester: e.target.value })}><option value="">—</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select> : (row.semester || '—')}</td>
                   <td>{editingId === row.id ? <select className="select" value={editDraft.exam_type} onChange={(e) => setEditDraft({ ...editDraft, exam_type: e.target.value })}><option value="Main">Main</option><option value="Supplementary">Supplementary</option><option value="CAT">CAT</option><option value="Mock">Mock</option></select> : (row.exam_type || 'Main')}</td>
-                  <td>{row.downloads_count || 0}</td>
                   <td style={{ color: '#8696a0', fontSize: '12px' }}>{formatTimestamp(row.created_at)}</td>
                   <td style={{ color: row.profiles?.full_name ? '#e9edef' : '#8696a0', fontSize: '13px' }}>{row.profiles?.full_name || row.profiles?.email || '—'}</td>
                   <td>

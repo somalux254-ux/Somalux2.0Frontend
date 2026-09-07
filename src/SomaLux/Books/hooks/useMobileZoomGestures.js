@@ -13,15 +13,15 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 
-const useMobileZoomGestures = (containerRef, onZoomIn, onZoomOut, onResetZoom, onSetZoom, currentScale, onPreviewZoom) => {
+const useMobileZoomGestures = (containerRef, onZoomIn, onZoomOut, onResetZoom, onSetZoom, currentScale, onPreviewZoom, onDoubleTap) => {
   const touchStartScaleRef = useRef(null);
   const lastTapTimeRef = useRef(0);
   const lastTapXRef = useRef(0);
   const lastTapYRef = useRef(0);
-  const doubleTapTimerRef = useRef(null);
   const isZoomingRef = useRef(false);
   const lastProcessedScaleRef = useRef(currentScale);
   const pendingScaleRef = useRef(null);
+  const pinchCenterRef = useRef(null);
   const zoomFrameRef = useRef(null);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
 
@@ -51,35 +51,28 @@ const useMobileZoomGestures = (containerRef, onZoomIn, onZoomOut, onResetZoom, o
         startScale: currentScale,
         timestamp: Date.now()
       };
+      pinchCenterRef.current = {
+        clientX: (touch1.clientX + touch2.clientX) / 2,
+        clientY: (touch1.clientY + touch2.clientY) / 2,
+      };
     } else if (e.touches.length === 1) {
-      // Single touch - check for double tap
-      const now = Date.now();
       const touch = e.touches[0];
-      const timeDiff = now - lastTapTimeRef.current;
-      const distanceDiff = Math.hypot(
-        touch.clientX - lastTapXRef.current,
-        touch.clientY - lastTapYRef.current
-      );
+      const now = Date.now();
+      const isDoubleTap = now - lastTapTimeRef.current < 300 &&
+        Math.hypot(touch.clientX - lastTapXRef.current, touch.clientY - lastTapYRef.current) < 30;
 
-      lastTapXRef.current = touch.clientX;
-      lastTapYRef.current = touch.clientY;
-
-      // Double tap detection (within 300ms and 30px)
-      if (timeDiff < 300 && distanceDiff < 30) {
-        // Clear any pending timer
-        clearTimeout(doubleTapTimerRef.current);
-        
-        // Double tap detected - toggle zoom
-        if (currentScale > 1.2) {
-          onResetZoom(); // Reset if zoomed in
-        } else {
-          onZoomIn(); // Zoom in if at normal scale
-        }
+      if (isDoubleTap && onDoubleTap) {
+        e.preventDefault();
+        onDoubleTap(touch, e.target);
+        lastTapTimeRef.current = 0;
+        return;
       }
 
       lastTapTimeRef.current = now;
+      lastTapXRef.current = touch.clientX;
+      lastTapYRef.current = touch.clientY;
     }
-  }, [currentScale, onZoomIn, onZoomOut, onResetZoom]);
+  }, [currentScale, onDoubleTap]);
 
   // Handle pinch-zoom movement - Smooth continuous scaling
   const handleTouchMove = useCallback((e) => {
@@ -108,18 +101,13 @@ const useMobileZoomGestures = (containerRef, onZoomIn, onZoomOut, onResetZoom, o
       console.log('🔍 Pinch zoom: factor=', zoomFactor.toFixed(2), 'target=', targetScale.toFixed(2), 'current=', currentScale.toFixed(2));
 
       if (onPreviewZoom) {
-        onPreviewZoom(targetScale);
+        onPreviewZoom(targetScale, undefined, pinchCenterRef.current);
       }
 
+      // Keep the pinch preview outside React until the gesture ends. Updating
+      // the PDF layout on every touch frame competes with the CSS preview and
+      // causes the scroll position to jump on mobile.
       pendingScaleRef.current = targetScale;
-      if (!zoomFrameRef.current) {
-        zoomFrameRef.current = requestAnimationFrame(() => {
-          zoomFrameRef.current = null;
-          if (onSetZoom && pendingScaleRef.current !== null) {
-            onSetZoom(pendingScaleRef.current);
-          }
-        });
-      }
       lastProcessedScaleRef.current = targetScale;
     }
   }, [onPreviewZoom, onSetZoom]);
@@ -127,18 +115,15 @@ const useMobileZoomGestures = (containerRef, onZoomIn, onZoomOut, onResetZoom, o
   // Handle pinch-zoom end
   const handleTouchEnd = useCallback((e) => {
     if (e.touches.length < 2) {
-      if (zoomFrameRef.current) {
-        cancelAnimationFrame(zoomFrameRef.current);
-        zoomFrameRef.current = null;
-      }
       if (onSetZoom && pendingScaleRef.current !== null) {
         onSetZoom(pendingScaleRef.current);
       }
       if (onPreviewZoom && pendingScaleRef.current !== null) {
-        onPreviewZoom(null, pendingScaleRef.current);
+        onPreviewZoom(null, pendingScaleRef.current, pinchCenterRef.current);
       }
       pendingScaleRef.current = null;
       touchStartScaleRef.current = null;
+      pinchCenterRef.current = null;
       isZoomingRef.current = false;
       lastProcessedScaleRef.current = currentScale;
     }
@@ -156,7 +141,7 @@ const useMobileZoomGestures = (containerRef, onZoomIn, onZoomOut, onResetZoom, o
 
     window.addEventListener('resize', handleResize);
 
-    if (!checkMobileDevice() || !containerRef?.current) {
+    if (!containerRef?.current) {
       return () => window.removeEventListener('resize', handleResize);
     }
 
@@ -182,7 +167,6 @@ const useMobileZoomGestures = (containerRef, onZoomIn, onZoomOut, onResetZoom, o
       container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
       document.removeEventListener('touchmove', preventPinchZoom);
-      clearTimeout(doubleTapTimerRef.current);
       if (zoomFrameRef.current) cancelAnimationFrame(zoomFrameRef.current);
     };
   }, [checkMobileDevice, containerRef, handleTouchStart, handleTouchMove, handleTouchEnd]);

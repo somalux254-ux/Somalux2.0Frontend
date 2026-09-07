@@ -350,12 +350,18 @@ body.book-page-no-scrollbar::-webkit-scrollbar {
 
 @media (min-width: 769px) {
   .book-management.fullscreen-chat .file-converter-content-convert.fullscreen-chat-content {
-    width: 100vw;
+    top: 30px;
     height: 100vh;
   }
 }
 
 /* ================= MAIN CONTENT ================= */
+
+@media (max-width: 768px) {
+  .web-platform .book-management-header {
+    top: 0;
+  }
+}
 
 .file-converter-content-convert {
   padding: 20px;
@@ -492,6 +498,16 @@ html:has(.book-management) body {
   .file-converter-content-convert {
     /* Ensure touch events work properly */
     touch-action: pan-y;
+  }
+}
+
+@media (max-width: 768px) {
+  .web-platform .book-management-header {
+    top: 0;
+  }
+
+  .web-platform .tools-scroll-container-convert {
+    top: 48px;
   }
 }
 

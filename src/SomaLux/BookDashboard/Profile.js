@@ -49,8 +49,8 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
   const [showSignOutModal, setShowSignOutModal] = useState(false);
 
   const FALLBACK = {
-    name: "Please Sign In",
-    email: "xxx@gmail.com",
+    name: "Get Started",
+    email: "Youremail@gmail.com",
     libraryId: "LBX-29475",
     membership: "Premium Plan",
     favorites: 0,
@@ -516,8 +516,9 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
                 <button
                   onClick={() => setShowAuthModal(true)}
                   style={{
-                    padding: '4px 6px',
-                    fontSize: '11px',
+                    padding: '8px 14px',
+                    fontSize: '13px',
+                    letterSpacing: '0.5px',
                     fontWeight: '600',
                     color: '#fff',
                     backgroundColor: '#00a884',
@@ -594,7 +595,7 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
                   <span>Settings</span>
                 </button>
 
-                {(authUser.role === 'admin' || authUser.role === 'editor' ||
+                {(localUser?.role === 'admin' || localUser?.role === 'editor' ||
                   ['campuslives254@gmail.com', 'paltechsomalux@gmail.com', 'eliblearning@gmail.com']
                     .includes(authUser.email?.toLowerCase())) && (
                   <button
@@ -625,7 +626,7 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
                     }}
                   >
                     <FiShield size={16} aria-hidden="true" />
-                    <span>{authUser.role === 'editor' ? 'Editor' : 'Admin'}</span>
+                    <span>{localUser?.role === 'editor' ? 'Editor' : 'Admin'}</span>
                     {pendingSubmissions > 0 && (
                       <span style={{
                         position: 'absolute',

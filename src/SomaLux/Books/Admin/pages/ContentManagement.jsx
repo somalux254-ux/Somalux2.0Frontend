@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FiBook, FiMapPin, FiFileText } from 'react-icons/fi';
 import Books from './Books';
 import UniversitiesManagement from './UniversitiesManagement';
 import PastPapersManagement from './PastPapersManagement';
@@ -8,14 +7,14 @@ import PastPapersManagement from './PastPapersManagement';
 const tabStyles = `
   .content-tabs {
     display: flex;
-    gap: 4px;
+    width: 100%;
     margin-bottom: 8px;
-    border-bottom: 1px solid #374151;
   }
   .content-tab {
+    flex: 1;
     display: flex;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
     padding: 6px 12px;
     background: transparent;
     border: none;
@@ -24,8 +23,6 @@ const tabStyles = `
     font-size: 14px;
     font-weight: 500;
     transition: all 0.3s ease;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
   }
   .content-tab:hover {
     color: #e9edef;
@@ -33,7 +30,6 @@ const tabStyles = `
   }
   .content-tab.active {
     color: #00a884;
-    border-bottom-color: #00a884;
   }
 `;
 
@@ -66,21 +62,18 @@ const ContentManagement = ({ userProfile }) => {
           className={`content-tab ${activeTab === 'books' ? 'active' : ''}`}
           onClick={() => setActiveTab('books')}
         >
-          <FiBook size={20} />
           Books
         </button>
         <button 
           className={`content-tab ${activeTab === 'universities' ? 'active' : ''}`}
           onClick={() => setActiveTab('universities')}
         >
-          <FiMapPin size={20} />
           Universities
         </button>
         <button 
           className={`content-tab ${activeTab === 'pastpapers' ? 'active' : ''}`}
           onClick={() => setActiveTab('pastpapers')}
         >
-          <FiFileText size={20} />
           Past Papers
         </button>
       </div>
