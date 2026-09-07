@@ -223,7 +223,7 @@
 
   .auth-actions {
     margin-top: auto;
-    transform: translateY(-4vh);
+    transform: translateY(0);
   }
 
   .auth-logo {
@@ -234,6 +234,7 @@
   .google-sign-in-btn {
     padding: 11px 12px;
     font-size: 13px;
+    margin-top: 8px;
   }
 }
 

@@ -6,6 +6,7 @@ import { Capacitor } from '@capacitor/core';
 import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
 import { supabase } from './supabaseClient';
 import { AgreementTab } from '../Settings/tabs/UserAgreement';
+import PrivacyPolicyPage from '../Settings/PrivacyPolicyPage';
 import { popBackAction, pushBackAction } from '../services/backNavigation';
 import './AuthModal.css';
 
@@ -162,10 +163,11 @@ export const AuthModal = ({ isOpen, onClose, onSuccess, action = 'action' }) => 
   return isOpen ? createPortal(
     (
       legalDocument ? (
-        <AgreementTab
-          pageTitle={legalDocument === 'privacy' ? 'Privacy Policy' : 'User Agreement'}
-          onBack={() => setLegalDocument(null)}
-        />
+        legalDocument === 'privacy' ? (
+          <PrivacyPolicyPage onBack={() => setLegalDocument(null)} />
+        ) : (
+          <AgreementTab onBack={() => setLegalDocument(null)} />
+        )
       ) : (
       <div className="auth-modal-overlay" onClick={onClose}>
         <div className="auth-modal-content" onClick={(e) => e.stopPropagation()}>

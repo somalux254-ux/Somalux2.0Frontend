@@ -89,8 +89,8 @@ export default function PrivacyPolicyPage({ onBack }) {
   ];
 
   return (
-    <div className="settings-privacy-policy-page" style={{ position: 'fixed', inset: 0, width: '100vw', height: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)', overflowY: 'auto' }}>
-      <div className="settings-stp-page-header fullpage" style={{ background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-muted)' }}>
+    <div className="settings-privacy-policy-page" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', maxWidth: '100%', background: 'var(--bg-primary)', zIndex: 1200, display: 'flex', flexDirection: 'column', margin: 0, padding: 0, color: 'var(--text-primary)', overflowX: 'hidden' }}>
+      <div className="settings-stp-page-header fullpage" style={{ background: 'var(--bg-primary)' }}>
         <button className="settings-stp-back-btn" onClick={() => (onBack ? onBack() : navigate(-1))} style={{ marginRight: 12 }}>
           <FiChevronLeft />
           <span style={{ marginLeft: 8 }}>Back</span>
@@ -98,12 +98,12 @@ export default function PrivacyPolicyPage({ onBack }) {
         <h1 className="settings-stp-page-title" style={{ margin: 0, fontSize: '18px', color: 'var(--text-primary)', textAlign: 'center' }}>Privacy Policy</h1>
         <div className="settings-stp-header-spacer" />
       </div>
-      <div style={{ padding: 16, paddingTop: 12, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+      <div style={{ overflowY: 'auto', overflowX: 'hidden', padding: 16, paddingTop: 0, width: '100%', maxWidth: '100%', boxSizing: 'border-box', paddingBottom: 'max(8px, env(safe-area-inset-bottom))', background: 'var(--bg-primary)' }}>
         <div className="agreement-text" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
           <h3>Somalux Privacy Policy</h3>
           <p><strong>Last updated:</strong> September 3, 2026</p>
           {privacySections.map((section) => (
-            <details key={section.title} style={{ marginBottom: 6, border: 'none', borderRadius: 12, padding: 10, background: 'var(--bg-surface)' }}>
+            <details key={section.title} style={{ marginBottom: 6, border: '1px solid var(--border-muted)', borderRadius: 12, padding: 10, background: 'var(--bg-surface)' }}>
               <summary style={{ cursor: 'pointer', fontSize: '1rem', fontWeight: 700, marginBottom: 6 }}>
                 {section.title}
               </summary>
