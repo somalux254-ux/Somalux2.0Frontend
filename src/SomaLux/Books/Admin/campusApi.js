@@ -93,6 +93,19 @@ export async function uploadUniversityCover(file) {
   }
 }
 
+async function uploadRemoteUniversityCover(imageUrl) {
+  const response = await fetch(imageUrl);
+  if (!response.ok) throw new Error(`Failed to fetch cover image: ${response.status}`);
+
+  const blob = await response.blob();
+  const extension = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+  const file = new File([blob], `university-cover.${extension}`, {
+    type: blob.type || 'image/jpeg'
+  });
+
+  return uploadUniversityCover(file);
+}
+
 function clearUniversitiesCache() {
   try {
     for (let i = 0; i < localStorage.length; i++) {
@@ -127,19 +140,28 @@ export async function createUniversity({ metadata, coverFile }) {
   return data;
 }
 
-export async function createUniversitySubmission({ metadata, coverFile, coverImageUrl }) {
+export async function createUniversitySubmission({ metadata, coverFile, coverFiles = [], coverImageUrl }) {
   // Validate required fields
   if (!metadata.name || metadata.name.trim() === '') {
     throw new Error('University name is required');
   }
 
   let cover_image_url = null;
+  let uploadedCovers = [];
   
-  if (coverFile) {
-    const uploaded = await uploadUniversityCover(coverFile);
-    cover_image_url = uploaded.publicUrl;
+  const files = coverFiles.length ? coverFiles : (coverFile ? [coverFile] : []);
+  if (files.length) {
+    uploadedCovers = await Promise.all(files.map((file) => uploadUniversityCover(file)));
+    cover_image_url = uploadedCovers[0].publicUrl;
   } else if (coverImageUrl) {
-    cover_image_url = coverImageUrl;
+    try {
+      const uploaded = await uploadRemoteUniversityCover(coverImageUrl);
+      cover_image_url = uploaded.publicUrl;
+      uploadedCovers = [uploaded];
+    } catch (error) {
+      console.warn('Could not copy remote university cover into storage; using source URL:', error);
+      cover_image_url = coverImageUrl;
+    }
   }
   
   // Get current user ID
@@ -173,18 +195,32 @@ export async function createUniversitySubmission({ metadata, coverFile, coverIma
     console.error('University upload error:', error);
     throw new Error(error.message || 'Failed to upload university');
   }
+
+  if (uploadedCovers.length) {
+    const { error: imagesError } = await supabase.from('university_images').insert(
+      uploadedCovers.map((cover, index) => ({
+        university_id: data.id,
+        image_url: cover.publicUrl,
+        is_primary: index === 0,
+        display_order: index,
+      }))
+    );
+    if (imagesError) throw imagesError;
+  }
   
   console.log('University uploaded successfully:', data);
   try { clearUniversitiesCache(); } catch (e) {}
   return data;
 }
 
-export async function updateUniversity(id, { updates, newCoverFile }) {
+export async function updateUniversity(id, { updates, newCoverFile, newCoverFiles = [] }) {
   const patch = { ...updates };
-  
-  if (newCoverFile) {
-    const uploaded = await uploadUniversityCover(newCoverFile);
-    patch.cover_image_url = uploaded.publicUrl;
+
+  const files = newCoverFiles.length ? newCoverFiles : (newCoverFile ? [newCoverFile] : []);
+  let uploadedCovers = [];
+  if (files.length) {
+    uploadedCovers = await Promise.all(files.map((file) => uploadUniversityCover(file)));
+    patch.cover_image_url = uploadedCovers[0].publicUrl;
   }
   
   const { data, error } = await supabase
@@ -195,6 +231,18 @@ export async function updateUniversity(id, { updates, newCoverFile }) {
     .single();
   
   if (error) throw error;
+
+  if (uploadedCovers.length) {
+    const { error: imagesError } = await supabase.from('university_images').insert(
+      uploadedCovers.map((cover, index) => ({
+        university_id: id,
+        image_url: cover.publicUrl,
+        is_primary: index === 0,
+        display_order: index,
+      }))
+    );
+    if (imagesError) throw imagesError;
+  }
   try { clearUniversitiesCache(); } catch (e) {}
   return data;
 }

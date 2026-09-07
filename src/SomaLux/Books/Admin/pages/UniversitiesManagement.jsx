@@ -33,6 +33,12 @@ const highlightSearchText = (text, searchText) => {
   return parts;
 };
 
+const normalizeUniversityName = (name) => {
+  const trimmedName = String(name || '').trim();
+  if (!trimmedName || /\buniversity\b/i.test(trimmedName)) return trimmedName;
+  return `${trimmedName} University`;
+};
+
 const UniversitiesManagement = ({ userProfile }) => {
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState([]);
@@ -43,16 +49,30 @@ const UniversitiesManagement = ({ userProfile }) => {
   const [sort, setSort] = useState({ col: 'created_at', dir: 'desc' });
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState({});
-  const [newCover, setNewCover] = useState(null);
+  const [newCoverFiles, setNewCoverFiles] = useState([]);
   const [paperCounts, setPaperCounts] = useState({});
   const [showAddForm, setShowAddForm] = useState(false);
   const [newUniversity, setNewUniversity] = useState({ name: '', description: '', website_url: '', location: '', established: '', student_count: '' });
-  const [newUniversityCover, setNewUniversityCover] = useState(null);
+  const [newUniversityCovers, setNewUniversityCovers] = useState([]);
+  const [newUniversityCoverPreviews, setNewUniversityCoverPreviews] = useState([]);
   const [publicCoverImage, setPublicCoverImage] = useState('');
+  const [publicCoverImages, setPublicCoverImages] = useState([]);
+  const [failedPreviewImages, setFailedPreviewImages] = useState(() => new Set());
+  const [previewImage, setPreviewImage] = useState(null);
   const [savingNewUniversity, setSavingNewUniversity] = useState(false);
   const [autoFillingUniversity, setAutoFillingUniversity] = useState(false);
   const [universitySuggestions, setUniversitySuggestions] = useState([]);
   const [loadingUniversitySuggestions, setLoadingUniversitySuggestions] = useState(false);
+
+  useEffect(() => {
+    const previews = newUniversityCovers.map((file) => ({
+      name: file.name,
+      url: URL.createObjectURL(file),
+    }));
+    setNewUniversityCoverPreviews(previews);
+
+    return () => previews.forEach((preview) => URL.revokeObjectURL(preview.url));
+  }, [newUniversityCovers]);
 
   const { confirm, showToast } = useAdminUI();
 
@@ -61,6 +81,12 @@ const UniversitiesManagement = ({ userProfile }) => {
   const isEditor = userProfile?.role === 'editor' || ADMIN_EMAILS.includes(userProfile?.email);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(count / pageSize)), [count, pageSize]);
+
+  const handlePreviewImageError = (imageUrl) => {
+    setFailedPreviewImages((current) => new Set([...current, imageUrl]));
+    setPublicCoverImages((current) => current.filter((candidate) => candidate !== imageUrl));
+    if (previewImage === imageUrl) setPreviewImage(null);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -136,7 +162,14 @@ const UniversitiesManagement = ({ userProfile }) => {
     setAutoFillingUniversity(true);
     try {
       const data = await autoFillUniversityData(universityName);
-      const hasDetails = data && (data.description || data.website_url || data.location || data.established || data.student_count);
+      const hasDetails = data && (
+        data.description ||
+        data.website_url ||
+        data.location ||
+        data.established ||
+        data.student_count ||
+        data.cover_images?.length
+      );
 
       if (!hasDetails) {
         showToast({ type: 'info', message: 'No additional public details were found.' });
@@ -147,11 +180,13 @@ const UniversitiesManagement = ({ userProfile }) => {
         ...current,
         name: data.name || current.name,
         description: data.description || current.description,
-        website_url: data.website_url || current.website_url,
+        website_url: data.website_url || (current.website_url.includes('wikipedia.org') ? '' : current.website_url),
         location: data.location || current.location,
         established: data.established ?? current.established,
         student_count: data.student_count ?? current.student_count,
       }));
+      setPublicCoverImages(data.cover_images || []);
+      setFailedPreviewImages(new Set());
       setPublicCoverImage(data.cover_images?.[0] || '');
       showToast({ type: 'success', message: 'University details filled from public sources.' });
     } catch (error) {
@@ -166,7 +201,9 @@ const UniversitiesManagement = ({ userProfile }) => {
       ...current,
       name: suggestion.name || current.name,
       description: suggestion.description || current.description,
-      website_url: suggestion.website_url || current.website_url,
+      website_url: suggestion.website_url && !suggestion.website_url.includes('wikipedia.org')
+        ? suggestion.website_url
+        : '',
     }));
     setUniversitySuggestions([]);
   };
@@ -185,13 +222,13 @@ const UniversitiesManagement = ({ userProfile }) => {
       established: row.established || '',
       student_count: row.student_count || ''
     });
-    setNewCover(null);
+    setNewCoverFiles([]);
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditDraft({});
-    setNewCover(null);
+    setNewCoverFiles([]);
   };
 
   const saveEdit = async (row) => {
@@ -209,13 +246,13 @@ const UniversitiesManagement = ({ userProfile }) => {
     }
 
     if (updates.student_count === '' || updates.student_count === undefined) {
-      updates.student_count = null;
+      updates.student_count = 0;
     } else {
       updates.student_count = Number(updates.student_count);
     }
 
     try {
-      await updateUniversity(row.id, { updates, newCoverFile: newCover });
+      await updateUniversity(row.id, { updates, newCoverFiles });
       cancelEdit();
       await load();
       showToast({ type: 'success', message: 'University updated successfully.' });
@@ -255,7 +292,8 @@ const UniversitiesManagement = ({ userProfile }) => {
   };
 
   const handleCreate = async () => {
-    if (!newUniversity.name.trim()) {
+    const universityName = normalizeUniversityName(newUniversity.name);
+    if (!universityName) {
       showToast({ type: 'error', message: 'University name is required.' });
       return;
     }
@@ -265,15 +303,17 @@ const UniversitiesManagement = ({ userProfile }) => {
       await createUniversitySubmission({
         metadata: {
           ...newUniversity,
+          name: universityName,
           established: newUniversity.established ? Number(newUniversity.established) : null,
           student_count: newUniversity.student_count ? Number(newUniversity.student_count) : 0
         },
-        coverFile: newUniversityCover,
+        coverFiles: newUniversityCovers,
         coverImageUrl: publicCoverImage
       });
       setNewUniversity({ name: '', description: '', website_url: '', location: '', established: '', student_count: '' });
-      setNewUniversityCover(null);
+      setNewUniversityCovers([]);
       setPublicCoverImage('');
+      setPublicCoverImages([]);
       setShowAddForm(false);
       await load();
       showToast({ type: 'success', message: 'University added successfully.' });
@@ -305,7 +345,7 @@ const UniversitiesManagement = ({ userProfile }) => {
         </div>
 
         <div className="actions university-form-toggle-actions" style={{ marginBottom: 6, marginLeft: '20px' }}>
-          <button className="btn primary" onClick={() => setShowAddForm(value => !value)}>{showAddForm ? 'Cancel' : 'Add New University'}</button>
+          <button className="btn primary" onClick={() => setShowAddForm(value => !value)}>{showAddForm ? 'Cancel' : 'Add University'}</button>
         </div>
 
         {showAddForm && (
@@ -314,10 +354,7 @@ const UniversitiesManagement = ({ userProfile }) => {
               <div>
                 <label className="label">Name</label>
                 <div className="university-name-input-row">
-                  <input className="input" value={newUniversity.name} onChange={(e) => setNewUniversity({ ...newUniversity, name: e.target.value })} placeholder="University name" />
-                  <button type="button" className="btn university-autofill-button" onClick={handleAutoFillUniversity} disabled={autoFillingUniversity}>
-                    {autoFillingUniversity ? 'Filling...' : 'Auto-fill'}
-                  </button>
+                  <input className="input" value={newUniversity.name} onChange={(e) => setNewUniversity({ ...newUniversity, name: e.target.value })} onBlur={() => setNewUniversity((current) => ({ ...current, name: normalizeUniversityName(current.name) }))} placeholder="University name" />
                   {(universitySuggestions.length > 0 || loadingUniversitySuggestions) && (
                     <div className="university-suggestions" role="listbox">
                       {loadingUniversitySuggestions && <div className="university-suggestion-status">Searching...</div>}
@@ -349,31 +386,43 @@ const UniversitiesManagement = ({ userProfile }) => {
                 <input className="input" type="number" value={newUniversity.established} onChange={(e) => setNewUniversity({ ...newUniversity, established: e.target.value })} placeholder="Year" />
               </div>
               <div>
-                <label className="label">Student Count</label>
-                <input className="input" type="number" value={newUniversity.student_count} onChange={(e) => setNewUniversity({ ...newUniversity, student_count: e.target.value })} placeholder="0" />
-              </div>
-              <div>
                 <label className="label">Cover Image</label>
-                <input className="input" type="file" accept="image/*" onChange={(e) => { setNewUniversityCover(e.target.files?.[0] || null); setPublicCoverImage(''); }} />
-                {publicCoverImage && (
-                  <div className="university-public-image-option">
-                    <img src={publicCoverImage} alt="Public university preview" />
-                    <div>
-                      <span>Public image selected</span>
-                      <button type="button" className="btn" onClick={() => setPublicCoverImage('')}>Clear</button>
-                    </div>
+                <input className="input" type="file" accept="image/*" multiple onChange={(e) => { setNewUniversityCovers(Array.from(e.target.files || [])); setPublicCoverImage(''); setPublicCoverImages([]); }} />
+                {newUniversityCoverPreviews.length > 0 && (
+                  <div className="university-image-preview-grid">
+                    {newUniversityCoverPreviews.map((preview, index) => (
+                      <div className="university-image-preview" key={`${preview.name}-${index}`} role="button" tabIndex={0} onClick={() => setPreviewImage(preview.url)} onKeyDown={(event) => event.key === 'Enter' && setPreviewImage(preview.url)}>
+                        <img src={preview.url} alt={preview.name} />
+                        {index === 0 && <span>Primary</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {publicCoverImages.filter((imageUrl) => !failedPreviewImages.has(imageUrl)).length > 0 && newUniversityCovers.length === 0 && (
+                  <div className="university-image-preview-grid">
+                    {publicCoverImages.filter((imageUrl) => !failedPreviewImages.has(imageUrl)).map((imageUrl, index) => (
+                      <div className="university-image-preview" key={`${imageUrl}-${index}`} role="button" tabIndex={0} onClick={() => setPreviewImage(imageUrl)} onKeyDown={(event) => event.key === 'Enter' && setPreviewImage(imageUrl)}>
+                        <img src={imageUrl} alt={`Official university image ${index + 1}`} onError={() => handlePreviewImageError(imageUrl)} />
+                        {index === 0 && <span>Primary</span>}
+                      </div>
+                    ))}
+                    <button type="button" className="btn university-clear-images" onClick={() => { setPublicCoverImage(''); setPublicCoverImages([]); }}>Clear fetched images</button>
                   </div>
                 )}
               </div>
             </div>
             <label className="label" style={{ marginTop: 8 }}>Description</label>
             <textarea className="input" rows={3} value={newUniversity.description} onChange={(e) => setNewUniversity({ ...newUniversity, description: e.target.value })} placeholder="Short description" />
-            <div className="actions" style={{ marginTop: 8 }}>
+            <div className="actions university-form-actions" style={{ marginTop: 8 }}>
+              <button type="button" className="btn university-autofill-button" onClick={handleAutoFillUniversity} disabled={autoFillingUniversity}>
+                {autoFillingUniversity ? 'Filling...' : 'Auto-fill'}
+              </button>
               <button className="btn primary" onClick={handleCreate} disabled={savingNewUniversity}>{savingNewUniversity ? 'Saving...' : 'Save University'}</button>
             </div>
           </div>
         )}
 
+        {!showAddForm && <>
         <div className="panel" style={{ padding: 0, overflowX: 'auto' }}>
           <table className="table universities-management-table" style={{ minWidth: '1200px' }}>
             <thead>
@@ -395,7 +444,23 @@ const UniversitiesManagement = ({ userProfile }) => {
                 <tr><td colSpan={8} style={{ textAlign: 'center', color: '#8696a0' }}>No data</td></tr>
               ) : rows.map(row => (
                 <tr key={row.id}>
-                  <td>{row.cover_image_url ? <img src={row.cover_image_url} alt="cover" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4 }} /> : <span className="badge">No cover</span>}</td>
+                  <td>
+                    {row.cover_image_url ? <img src={row.cover_image_url} alt="cover" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4 }} /> : <span className="badge">No cover</span>}
+                    {editingId === row.id && (
+                      <div className="university-edit-cover-picker">
+                        <input
+                          id={`university-cover-input-${row.id}`}
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={(e) => setNewCoverFiles(Array.from(e.target.files || []))}
+                        />
+                        <label className="btn" htmlFor={`university-cover-input-${row.id}`}>
+                          {newCoverFiles.length ? `${newCoverFiles.length} image${newCoverFiles.length === 1 ? '' : 's'} selected` : 'Choose Images'}
+                        </label>
+                      </div>
+                    )}
+                  </td>
                   <td className="universities-actions-cell">
                     {editingId === row.id ? (
                       <input className="input" value={editDraft.name} onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })} />
@@ -442,6 +507,14 @@ const UniversitiesManagement = ({ userProfile }) => {
           <span style={{ color: '#cfd8dc' }}>Page {page} of {totalPages}</span>
           <button className="btn" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next</button>
         </div>
+        </>}
+
+        {previewImage && (
+          <div className="university-image-lightbox" role="dialog" aria-modal="true" aria-label="University image preview" onClick={() => setPreviewImage(null)}>
+            <button type="button" className="university-image-lightbox-close" onClick={() => setPreviewImage(null)} aria-label="Close image preview">×</button>
+            <img src={previewImage} alt="Full university image preview" onError={() => setPreviewImage(null)} onClick={(event) => event.stopPropagation()} />
+          </div>
+        )}
       </div>
     </div>
   );

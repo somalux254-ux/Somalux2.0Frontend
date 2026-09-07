@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createBookSubmission, createBook } from '../api';
+import { createBookSubmission, createBook, fetchCategories } from '../api';
 import { createPastPaper, createPastPaperSubmission, getUniversitiesForDropdown, getFacultiesByUniversity, getUnitNamesByUniversityAndFaculty, getYearsByUniversityFacultyAndUnitName, checkDuplicatePastPaper } from '../pastPapersApi';
 import { FiUpload, FiFile, FiImage, FiBook, FiFileText, FiSearch, FiX, FiLoader } from 'react-icons/fi';
 import { useAdminUI } from '../AdminUIContext';
@@ -84,9 +84,10 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
   const [pdf, setPdf] = useState(null);
   const [cover, setCover] = useState(null);
   const [bookForm, setBookForm] = useState({ 
-    title: '', author: '', description: '',
+    title: '', author: '', description: '', category_id: '',
     year: '', language: '', isbn: '', pages: '', publisher: '' 
   });
+  const [categories, setCategories] = useState([]);
 
   // Past Papers state
   const [paperPdf, setPaperPdf] = useState(null);
@@ -119,6 +120,10 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
         setUniversities(await getUniversitiesForDropdown());
       } catch {} 
     })(); 
+  }, []);
+
+  useEffect(() => {
+    fetchCategories().then(setCategories).catch(() => setCategories([]));
   }, []);
 
   // Auto-extract cover from PDF when PDF is selected
@@ -398,6 +403,7 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
         title: bookForm.title || (pdf?.name?.replace(/\.[^/.]+$/, '') || ''),
         author: bookForm.author || 'Unknown',
         description: bookForm.description || '',
+        category_id: bookForm.category_id || null,
         year: bookForm.year ? Number(bookForm.year) : null,
         language: bookForm.language || '',
         isbn: bookForm.isbn || '',
@@ -422,7 +428,7 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
       // Reset form
       setPdf(null);
       setCover(null);
-      setBookForm({ title: '', author: '', description: '', year: '', language: '', isbn: '', pages: '', publisher: '' });
+      setBookForm({ title: '', author: '', description: '', category_id: '', year: '', language: '', isbn: '', pages: '', publisher: '' });
       navigate('/user/upload');
     } catch (e) {
       console.error('Book upload failed:', e);
@@ -611,6 +617,11 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
             <input className="input" placeholder="Author" value={bookForm.author} onChange={onBookChange('author')} />
             <label className="label" style={{ marginTop: 10 }}>Description</label>
             <textarea className="input" rows={5} placeholder="Short description" value={bookForm.description} onChange={onBookChange('description')} />
+            <label className="label" style={{ marginTop: 10 }}>Category</label>
+            <select className="select" value={bookForm.category_id} onChange={onBookChange('category_id')}>
+              <option value="">Uncategorized</option>
+              {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
+            </select>
 
             <div style={{ marginTop: 10 }}>
               <div>

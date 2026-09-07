@@ -3,18 +3,23 @@ import { API_URL } from '../../../../../config';
 
 // API Configuration
 const USE_BACKEND_PROXY = true; // Set to false to use direct API calls
+let prefillDatabaseAvailable = false;
+
+const isMissingPrefillDatabaseObject = (error) =>
+  ['PGRST202', 'PGRST205'].includes(error?.code);
 
 /**
  * Search for university names for autocomplete
  */
 export async function searchUniversityNames(query, limit = 10) {
   try {
-    // Check cache first
-    let { data, error } = await supabase
-      .rpc('search_university_names', { p_query: query, p_limit: limit });
-
-    if (error) throw error;
-    if (data?.length) return data;
+    // The optional prefill RPC is disabled until its database migration is installed.
+    if (prefillDatabaseAvailable) {
+      const { data, error } = await supabase
+        .rpc('search_university_names', { p_query: query, p_limit: limit });
+      if (!error && data?.length) return data;
+      if (error && isMissingPrefillDatabaseObject(error)) prefillDatabaseAvailable = false;
+    }
 
     // Try Wikipedia/Wikidata search as primary method (more reliable, no API key needed)
     const wikiResults = await searchWikipediaUniversities(query, limit);

@@ -5,6 +5,32 @@ const API_BASE = API_URL;
 const BOOKS_BUCKET = 'elib-books';
 const signedBookUrlCache = new Map();
 
+export async function fetchCategories() {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('id, name, description')
+    .order('name');
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createCategory(values) {
+  const { data, error } = await supabase.from('categories').insert(values).select().maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateCategory(id, values) {
+  const { data, error } = await supabase.from('categories').update(values).eq('id', id).select().maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteCategory(id) {
+  const { error } = await supabase.from('categories').delete().eq('id', id);
+  if (error) throw error;
+}
+
 // Backend origin helper (mirrors patterns used elsewhere in the app)
 export function getBackendOrigin() {
   if (typeof window === 'undefined') return API_URL;
@@ -131,7 +157,7 @@ export async function fetchAllUsers() {
   }
 }
 
-export async function fetchBooks({ page = 1, pageSize = 10, search = '', sort = { col: 'created_at', dir: 'desc' }, uploadedBy = null }) {
+export async function fetchBooks({ page = 1, pageSize = 10, search = '', categoryId = null, uncategorized = false, sort = { col: 'created_at', dir: 'desc' }, uploadedBy = null }) {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
   
@@ -149,7 +175,7 @@ export async function fetchBooks({ page = 1, pageSize = 10, search = '', sort = 
     
     let query = supabase
       .from('books')
-      .select('id, title, author, description, cover_image_url, file_url, file_size, pages, uploaded_by, created_at, downloads_count', { count: 'exact' })
+      .select('id, title, author, description, category_id, cover_image_url, file_url, file_size, pages, uploaded_by, created_at, downloads_count', { count: 'exact' })
       .order(dbSortCol, { ascending: (sort.dir || 'desc') === 'asc' })
       .range(from, to);
 
@@ -158,6 +184,11 @@ export async function fetchBooks({ page = 1, pageSize = 10, search = '', sort = 
     }
     if (uploadedBy) {
       query = query.eq('uploaded_by', uploadedBy);
+    }
+    if (uncategorized) {
+      query = query.is('category_id', null);
+    } else if (categoryId) {
+      query = query.eq('category_id', categoryId);
     }
     const { data, error, count } = await query;
     if (error) {
@@ -305,6 +336,8 @@ export async function createBook({ metadata, pdfFile, coverFile }) {
     file_url,
     cover_image_url,
     uploaded_by: metadata.uploaded_by || null,
+    category_id: metadata.category_id || null,
+    category_id: metadata.category_id || null,
     file_size: pdfFile?.size || null
   };
   

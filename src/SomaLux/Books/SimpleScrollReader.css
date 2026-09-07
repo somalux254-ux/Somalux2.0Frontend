@@ -443,11 +443,9 @@
   color: #f8fafc;
   background: #17202b;
   border: 1px solid rgba(148, 163, 184, 0.35);
-  border-radius: 10px;
+  border-radius: 14px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   transform: translateX(-50%);
-  touch-action: none;
-  user-select: none;
 }
 
 .ssr-floating-audio-info {
@@ -1534,16 +1532,13 @@
 
 /* Footer */
 .ssr-footer {
-  height: max(8px, env(safe-area-inset-bottom));
-  background: rgba(10, 15, 21, 0.96);
+  padding: 8px 20px;
+  background: linear-gradient(90deg, #0b1216, #0f1a1e);
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-light);
   flex-shrink: 0;
-  margin-bottom: 0;
-  border: 0;
-  box-shadow: none;
-}
-
-.ssr-footer-content {
-  display: none;
 }
 
 /* Mobile Controls Wrapper */

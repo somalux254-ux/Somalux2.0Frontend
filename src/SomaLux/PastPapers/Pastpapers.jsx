@@ -603,20 +603,6 @@ export const PaperPanel = ({ demoMode = false }) => {
     loadUniversities().catch(() => setLoading(false));
   }, [loadPastPapers, loadUniversities, loadFaculties]);
 
-  // Reload papers when university filter changes - debounced
-  useEffect(() => {
-    if (!universityFilter) return;
-    
-    if (reloadTimeoutRef.current) clearTimeout(reloadTimeoutRef.current);
-    reloadTimeoutRef.current = setTimeout(() => {
-      loadPastPapers();
-    }, 300);
-    
-    return () => {
-      if (reloadTimeoutRef.current) clearTimeout(reloadTimeoutRef.current);
-    };
-  }, [universityFilter]);
-
   // Refresh subscription whenever user changes
   useEffect(() => {
     if (user) {
@@ -1248,7 +1234,7 @@ export const PaperPanel = ({ demoMode = false }) => {
             <>
           {/* Search and Filter Controls - Matching BookPanel Layout */}
           <PaperGrid
-            displayedPapers={displayedPapers}
+            displayedPapers={displayedPapersMemo}
             currentPage={currentPage}
             setCurrentPage={setCurrentPage}
             onNextPage={handleNextPage}

@@ -40,6 +40,8 @@ export const AdminUIProvider = ({ children }) => {
       label = 'Value',
       defaultValue = '',
       multiline = false,
+      inputClassName = '',
+      actionsClassName = '',
       confirmLabel = 'OK',
       cancelLabel = 'Cancel',
       variant = 'default',
@@ -53,6 +55,8 @@ export const AdminUIProvider = ({ children }) => {
         label,
         value: defaultValue,
         multiline,
+        inputClassName,
+        actionsClassName,
         confirmLabel,
         cancelLabel,
         variant,
@@ -135,20 +139,20 @@ export const AdminUIProvider = ({ children }) => {
               <label className="label" style={{ marginBottom: 6 }}>{promptState.label}</label>
               {promptState.multiline ? (
                 <textarea
-                  className="input"
+                  className={`input ${promptState.inputClassName || ''}`}
                   rows={3}
                   value={promptState.value}
                   onChange={(e) => setPromptState((prev) => prev ? { ...prev, value: e.target.value } : prev)}
                 />
               ) : (
                 <input
-                  className="input"
+                  className={`input ${promptState.inputClassName || ''}`}
                   value={promptState.value}
                   onChange={(e) => setPromptState((prev) => prev ? { ...prev, value: e.target.value } : prev)}
                 />
               )}
             </div>
-            <div className="actions" style={{ padding: '0 24px 20px', justifyContent: 'flex-end' }}>
+            <div className={`actions ${promptState.actionsClassName || ''}`} style={{ padding: '0 24px 20px', justifyContent: 'flex-end' }}>
               <button
                 className="btn"
                 onClick={() => {

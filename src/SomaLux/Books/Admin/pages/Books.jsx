@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { FiChevronLeft, FiChevronRight, FiSearch } from 'react-icons/fi';
-import { fetchBooks, deleteBook, updateBook } from '../api';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiFilter, FiSearch } from 'react-icons/fi';
+import { fetchBooks, fetchCategories, createCategory, deleteBook, updateBook } from '../api';
 import { useAdminUI } from '../AdminUIContext';
 import { supabase } from '../../supabaseClient';
 import '../../BookPanel.css';
@@ -39,6 +39,8 @@ const Books = ({ userProfile }) => {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(23);
   const [search, setSearch] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [categoryId, setCategoryId] = useState(null);
   const [sort, setSort] = useState({ col: 'created_at', dir: 'desc' });
   const [editingId, setEditingId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -48,6 +50,10 @@ const Books = ({ userProfile }) => {
   const [newCover, setNewCover] = useState(null);
   const [isMultiEditMode, setIsMultiEditMode] = useState(false);
   const [showCheckboxes, setShowCheckboxes] = useState(false);
+  const [useCustomCategory, setUseCustomCategory] = useState(false);
+  const [customCategory, setCustomCategory] = useState('');
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const filterMenuRef = useRef(null);
 
 
   const { confirm, showToast } = useAdminUI();
@@ -64,7 +70,9 @@ const Books = ({ userProfile }) => {
       const fetchParams = { 
         page, 
         pageSize, 
-        search, 
+        search,
+        categoryId,
+        uncategorized: categoryId === 'uncategorized',
         sort
       };
       const { data, count: total } = await fetchBooks(fetchParams);
@@ -81,6 +89,8 @@ const Books = ({ userProfile }) => {
         page: 1, 
         pageSize: 10000, 
         search, 
+        categoryId,
+        uncategorized: categoryId === 'uncategorized',
         sort 
       };
       const { data } = await fetchBooks(fetchParams);
@@ -98,7 +108,21 @@ const Books = ({ userProfile }) => {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, search, sort.col, sort.dir, userProfile]);
+  }, [page, search, categoryId, sort.col, sort.dir, userProfile]);
+
+  useEffect(() => {
+    fetchCategories().then(setCategories).catch(() => setCategories([]));
+  }, []);
+
+  useEffect(() => {
+    const closeFilterMenu = (event) => {
+      if (filterMenuRef.current && !filterMenuRef.current.contains(event.target)) {
+        setFilterMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', closeFilterMenu);
+    return () => document.removeEventListener('mousedown', closeFilterMenu);
+  }, []);
 
   useEffect(() => {
     if (!userProfile) return undefined;
@@ -136,11 +160,14 @@ const Books = ({ userProfile }) => {
       language: row.language || '',
       isbn: row.isbn || '',
       pages: row.pages || '',
+      category_id: row.category_id || '',
       publisher: row.publisher || ''
     });
     setExpandedEditFields(new Set());
     setNewPdf(null);
     setNewCover(null);
+    setUseCustomCategory(false);
+    setCustomCategory('');
   };
 
   const cancelEdit = () => {
@@ -149,6 +176,21 @@ const Books = ({ userProfile }) => {
     setExpandedEditFields(new Set());
     setNewPdf(null);
     setNewCover(null);
+    setCustomCategory('');
+    setUseCustomCategory(false);
+  };
+
+  const resolveCategoryId = async () => {
+    const name = customCategory.trim();
+    if (!name) throw new Error('Enter a name for the new category.');
+
+    const existing = categories.find(category => category.name?.trim().toLowerCase() === name.toLowerCase());
+    if (existing) return existing.id;
+
+    const created = await createCategory({ name, description: '' });
+    if (!created?.id) throw new Error('The category was created but no ID was returned.');
+    setCategories(current => [...current, created].sort((a, b) => a.name.localeCompare(b.name)));
+    return created.id;
   };
 
   const expandEditFieldOnEnter = (field, event) => {
@@ -200,6 +242,8 @@ const Books = ({ userProfile }) => {
     }
 
     setIsMultiEditMode(true);
+    setUseCustomCategory(false);
+    setCustomCategory('');
     setEditDraft({
       title: '', author: '', year: '', publisher: ''
     });
@@ -210,6 +254,8 @@ const Books = ({ userProfile }) => {
     setEditDraft({});
     setSelectedIds(new Set());
     setShowCheckboxes(false);
+    setCustomCategory('');
+    setUseCustomCategory(false);
   };
 
   const saveMultiEdit = async () => {
@@ -223,6 +269,11 @@ const Books = ({ userProfile }) => {
     if (editDraft.author) updates.author = editDraft.author;
     if (editDraft.year) updates.year = editDraft.year;
     if (editDraft.publisher) updates.publisher = editDraft.publisher;
+    if (editDraft.category_id === '__custom__') {
+      updates.category_id = await resolveCategoryId();
+    } else if (editDraft.category_id !== '') {
+      updates.category_id = editDraft.category_id === '__uncategorized__' ? null : editDraft.category_id;
+    }
 
     if (Object.keys(updates).length === 0) {
       showToast({ type: 'error', message: 'Please enter at least one field to update.' });
@@ -242,7 +293,9 @@ const Books = ({ userProfile }) => {
         const { data: allSelectedBooks } = await fetchBooks({ 
           page: 1, 
           pageSize: 10000, 
-          search, 
+          search,
+          categoryId,
+          uncategorized: categoryId === 'uncategorized',
           sort 
         });
         missingBooksMap = new Map(allSelectedBooks.map(p => [p.id, p]));
@@ -279,7 +332,7 @@ const Books = ({ userProfile }) => {
 
       cancelMultiEdit();
       setLoading(true);
-      const { data, count: total } = await fetchBooks({ page, pageSize, search, sort });
+      const { data, count: total } = await fetchBooks({ page, pageSize, search, categoryId, uncategorized: categoryId === 'uncategorized', sort });
       setRows(data);
       setCount(total);
       setLoading(false);
@@ -297,6 +350,10 @@ const Books = ({ userProfile }) => {
       return;
     }
     const updates = { ...editDraft };
+
+    if (updates.category_id === '__custom__') {
+      updates.category_id = await resolveCategoryId();
+    }
 
     try {
       await updateBook(row.id, { updates, newPdfFile: newPdf, newCoverFile: newCover, oldFilePath: row.file_path });
@@ -408,7 +465,7 @@ const Books = ({ userProfile }) => {
       setSelectedIds(new Set());
       setShowCheckboxes(false);
       setLoading(true);
-      const { data, count: total } = await fetchBooks({ page, pageSize, search, sort });
+      const { data, count: total } = await fetchBooks({ page, pageSize, search, categoryId, uncategorized: categoryId === 'uncategorized', sort });
       setRows(data);
       setCount(total);
       setLoading(false);
@@ -424,9 +481,19 @@ const Books = ({ userProfile }) => {
     setSort((s) => (s.col === col ? { col, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { col, dir: 'asc' }));
   };
 
+  const applyCategoryFilter = (value) => {
+    setPage(1);
+    setCategoryId(value || null);
+    setFilterMenuOpen(false);
+  };
+
+  const activeCategoryLabel = categoryId === 'uncategorized'
+    ? 'Uncategorized'
+    : categories.find(category => String(category.id) === String(categoryId))?.name || 'All categories';
+
   return (
     <div>
-      <div className="panel">
+      <div className="panel books-panel">
         <div className="users-controls books-search-controls">
           <div className="books-search-field">
             <FiSearch style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#8696a0', fontSize: '14px' }} />
@@ -441,6 +508,43 @@ const Books = ({ userProfile }) => {
               }}
               className="input books-search-input"
             />
+          </div>
+          <div className="users-filter-menu books-category-filter" ref={filterMenuRef}>
+            <button
+              type="button"
+              className={`users-filter-trigger${filterMenuOpen ? ' is-open' : ''}`}
+              onClick={() => setFilterMenuOpen((open) => !open)}
+              aria-expanded={filterMenuOpen}
+              aria-haspopup="menu"
+              aria-label="Filter books by category"
+            >
+              <FiFilter />
+              <span>{activeCategoryLabel}</span>
+              <FiChevronDown className="users-filter-chevron" />
+            </button>
+            {filterMenuOpen && (
+              <div className="users-filter-panel" role="menu">
+                <div className="users-filter-group">
+                  <div className="users-filter-heading">Category</div>
+                  {[
+                    { value: '', label: 'All categories' },
+                    { value: 'uncategorized', label: 'Uncategorized' },
+                    ...categories.map(category => ({ value: category.id, label: category.name }))
+                  ].map(option => (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={`users-filter-option${String(categoryId || '') === String(option.value) ? ' is-selected' : ''}`}
+                      onClick={() => applyCategoryFilter(option.value)}
+                      key={option.value || 'all-categories'}
+                    >
+                      <span>{option.label}</span>
+                      {String(categoryId || '') === String(option.value) && <FiCheck />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -510,6 +614,40 @@ const Books = ({ userProfile }) => {
                   value={editDraft.author || ''} 
                   onChange={(e) => setEditDraft({ ...editDraft, author: e.target.value })} 
                 />
+              </div>
+              <div>
+                <label className="label" style={{ fontSize: '13px' }}>Category</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  {useCustomCategory ? (
+                    <input
+                      className="input"
+                      style={{ flex: 1, minWidth: 0 }}
+                      value={customCategory}
+                      onChange={(e) => setCustomCategory(e.target.value)}
+                      placeholder="New category name"
+                    />
+                  ) : (
+                    <select className="select" style={{ flex: 1, minWidth: 0 }} value={editDraft.category_id || ''} onChange={(e) => setEditDraft({ ...editDraft, category_id: e.target.value })}>
+                      <option value="">Leave unchanged</option>
+                      <option value="__uncategorized__">Uncategorized</option>
+                      {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
+                    </select>
+                  )}
+                  <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', color: '#8696a0', fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    <input
+                      className="custom-category-toggle"
+                      type="checkbox"
+                      checked={useCustomCategory}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setUseCustomCategory(checked);
+                        setEditDraft({ ...editDraft, category_id: checked ? '__custom__' : '' });
+                        if (!checked) setCustomCategory('');
+                      }}
+                    />
+                    Custom
+                  </label>
+                </div>
               </div>
               <div>
                 <label className="label" style={{ fontSize: '13px' }}>Year</label>
@@ -610,6 +748,7 @@ const Books = ({ userProfile }) => {
                 <th style={{ width: '50px' }}>Cover</th>
                 <th className="book-title-column" style={{ width: '220px', cursor: 'pointer' }} onClick={() => toggleSort('title')}>Title {sort.col === 'title' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
                 <th style={{ width: '150px', cursor: 'pointer' }} onClick={() => toggleSort('author')}>Author {sort.col === 'author' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
+                <th style={{ width: '220px' }}>Category</th>
                 <th style={{ width: '75px', cursor: 'pointer' }} onClick={() => toggleSort('year')}>Year {sort.col === 'year' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
                 <th style={{ width: '70px' }}>Pages</th>
                 <th style={{ width: '140px' }}>Publisher</th>
@@ -619,9 +758,9 @@ const Books = ({ userProfile }) => {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={showCheckboxes ? 10 : 9} style={{ color: '#8696a0', textAlign: 'center' }}>Loading...</td></tr>
+                <tr><td colSpan={showCheckboxes ? 11 : 10} style={{ color: '#8696a0', textAlign: 'center' }}>Loading...</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={showCheckboxes ? 10 : 9} style={{ color: '#8696a0', textAlign: 'center' }}>No data</td></tr>
+                <tr><td colSpan={showCheckboxes ? 11 : 10} style={{ color: '#8696a0', textAlign: 'center' }}>No data</td></tr>
               ) : rows.map(row => (
                 <tr key={row.id} style={{ background: selectedIds.has(row.id) ? 'rgba(0, 168, 132, 0.1)' : 'transparent' }}>
                   {showCheckboxes && (
@@ -645,6 +784,53 @@ const Books = ({ userProfile }) => {
                     {editingId === row.id ? (
                       <textarea className={`input book-edit-textarea${expandedEditFields.has('author') ? ' is-expanded' : ''}`} rows={expandedEditFields.has('author') ? 2 : 1} value={editDraft.author} onKeyDown={(e) => expandEditFieldOnEnter('author', e)} onChange={(e) => setEditDraft({ ...editDraft, author: e.target.value })} />
                     ) : highlightSearchText(row.author, search)}
+                  </td>
+                  <td style={{ minWidth: '220px' }}>
+                    {editingId === row.id ? (
+                      <>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                          {useCustomCategory ? (
+                            <input
+                              className="input"
+                              style={{ flex: 1, minWidth: 0 }}
+                              value={customCategory}
+                              onChange={(e) => setCustomCategory(e.target.value)}
+                              placeholder="New category name"
+                              aria-label={`New category for ${row.title}`}
+                            />
+                          ) : (
+                            <select
+                              className="select"
+                              style={{ flex: 1, minWidth: 0 }}
+                              value={editDraft.category_id || ''}
+                              onChange={(e) => { setUseCustomCategory(false); setEditDraft({ ...editDraft, category_id: e.target.value || null }); }}
+                              aria-label={`Category for ${row.title}`}
+                            >
+                              <option value="">Uncategorized</option>
+                              {categories.map(category => (
+                                <option key={category.id} value={category.id}>{category.name}</option>
+                              ))}
+                            </select>
+                          )}
+                          <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', color: '#8696a0', fontSize: '11px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                            <input
+                              className="custom-category-toggle"
+                              type="checkbox"
+                              checked={useCustomCategory}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setUseCustomCategory(checked);
+                                setEditDraft({ ...editDraft, category_id: checked ? '__custom__' : (row.category_id || '') });
+                                if (!checked) setCustomCategory('');
+                              }}
+                            />
+                            Custom
+                          </label>
+                        </div>
+                      </>
+                    ) : (
+                      categories.find(category => String(category.id) === String(row.category_id))?.name || 'Uncategorized'
+                    )}
                   </td>
                   <td>
                     {editingId === row.id ? (

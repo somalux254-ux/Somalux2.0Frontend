@@ -516,17 +516,18 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
                 <button
                   onClick={() => setShowAuthModal(true)}
                   style={{
-                    padding: '8px 14px',
-                    fontSize: '13px',
-                    letterSpacing: '0.5px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    letterSpacing: '0.8px',
                     fontWeight: '600',
                     color: '#fff',
                     backgroundColor: '#00a884',
                     border: 'none',
-                    borderRadius: '3px',
+                    borderRadius: '2px',
                     cursor: 'pointer',
                     transition: 'background-color 0.2s',
                     whiteSpace: 'nowrap',
+                    lineHeight: '1.2',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = '#008069';

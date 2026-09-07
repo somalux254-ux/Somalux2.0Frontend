@@ -16,20 +16,30 @@ const tabStyles = `
     align-items: center;
     justify-content: center;
     padding: 6px 12px;
-    background: transparent;
+    background: transparent !important;
     border: none;
     color: #8696a0;
     cursor: pointer;
     font-size: 14px;
     font-weight: 500;
-    transition: all 0.3s ease;
-  }
-  .content-tab:hover {
-    color: #e9edef;
-    background: rgba(0, 168, 132, 0.05);
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
+    background-color: transparent !important;
   }
   .content-tab.active {
     color: #00a884;
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+  .content-page-tabs .content-tab:hover,
+  .content-page-tabs .content-tab:active,
+  .content-page-tabs .content-tab:focus,
+  .content-page-tabs .content-tab:focus-visible,
+  .content-page-tabs .content-tab.active {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
   }
 `;
 

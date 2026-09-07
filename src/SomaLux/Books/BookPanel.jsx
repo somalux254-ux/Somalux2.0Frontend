@@ -9,6 +9,8 @@ import SubscriptionModal from '../Subscriptions/SubscriptionModal';
 import { FaSearch } from 'react-icons/fa';
 import {
   FiBook,
+  FiCheck,
+  FiChevronDown,
   FiFilter,
   FiChevronLeft,
   FiChevronRight,
@@ -49,7 +51,6 @@ export const BookPanel = ({ demoMode = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [books, setBooks] = useState([]);
-  const [displayedBooks, setDisplayedBooks] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
@@ -75,6 +76,12 @@ export const BookPanel = ({ demoMode = false }) => {
   const [pendingAction, setPendingAction] = useState(null);
   const [focusedBookId, setFocusedBookId] = useState(null);
   const [focusedBookLoading, setFocusedBookLoading] = useState(false);
+  const [categoryFilterId, setCategoryFilterId] = useState(null);
+  const [categoryFilterName, setCategoryFilterName] = useState(null);
+  const [filteredByCategory, setFilteredByCategory] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
+  const categoryMenuRef = useRef(null);
   const initialBooksLoadRef = useRef(false);
   const previousSearchTermRef = useRef('');
   const booksFetchesRef = useRef(new Map());
@@ -120,6 +127,31 @@ export const BookPanel = ({ demoMode = false }) => {
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  useEffect(() => {
+    let mounted = true;
+    supabase
+      .from('categories')
+      .select('id, name')
+      .order('name')
+      .then(({ data, error }) => {
+        if (error) throw error;
+        if (mounted) setCategories(data || []);
+      })
+      .catch((error) => console.warn('BookPanel: failed to load categories', error));
+
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    const closeCategoryMenu = (event) => {
+      if (categoryMenuRef.current && !categoryMenuRef.current.contains(event.target)) {
+        setCategoryMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', closeCategoryMenu);
+    return () => document.removeEventListener('mousedown', closeCategoryMenu);
+  }, []);
 
 /*************  ✨ Windsurf Command ⭐  *************/
 /**
@@ -238,6 +270,8 @@ export const BookPanel = ({ demoMode = false }) => {
   title: row.title || '',
   author: row.author || '',
   description: row.description || '',
+  categoryId: row.category_id ? String(row.category_id) : null,
+  genre: row.categories?.name || row.category?.name || 'Uncategorized',
   year: row.year || null,
   language: row.language || 'Unknown',
   isbn: row.isbn || '',
@@ -680,64 +714,67 @@ export const BookPanel = ({ demoMode = false }) => {
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => { setIsMounted(true); }, []);
 
-  // Read query params for single-book deep links (bookmarkable link)
+  // Read query params for category and single-book deep links.
   useEffect(() => {
     try {
       const params = new URLSearchParams(location.search || '');
+      const cid = params.get('category');
+      const cname = params.get('categoryName');
       const bid = params.get('book');
+      if (cid) {
+        setCategoryFilterId(cid);
+        setCategoryFilterName(cname || null);
+        setFilteredByCategory([]);
+        setCurrentPage(1);
+        setWelcomeMessage(false);
+      } else {
+        setCategoryFilterId(null);
+        setCategoryFilterName(null);
+        setFilteredByCategory(null);
+      }
       if (bid) {
-        // For a direct book link, clear any previous filters/search so we don't hide the book
         setFocusedBookId(bid);
+        setCategoryFilterId(null);
+        setCategoryFilterName(null);
+        setFilteredByCategory(null);
         setSearchTerm('');
         setActiveFilter('all');
         setCurrentPage(1);
         setWelcomeMessage(false);
       }
     } catch (err) {
-      // ignore
+      // Ignore malformed URL parameters.
     }
   }, [location.search]);
 
-  // When a focused book id is provided via query param, ensure that book exists in local state
+  // When a focused book id is provided via query param, ensure that book exists in local state.
   useEffect(() => {
-    if (!focusedBookId) return;
-
-    // If we already have this book loaded, no need to fetch
-    const alreadyLoaded = books.some(b => String(b.id) === String(focusedBookId));
+    if (!focusedBookId) return undefined;
+    const alreadyLoaded = books.some(book => String(book.id) === String(focusedBookId));
     if (alreadyLoaded) {
       setFocusedBookLoading(false);
-      return;
+      return undefined;
     }
 
     let mounted = true;
     (async () => {
       try {
         setFocusedBookLoading(true);
-        // Fetch the single book row by id
         const { data: row, error } = await supabase
           .from('books')
           .select('id, title, author, description, year, language, isbn, cover_image_url, file_url, created_at, downloads_count, pages, publisher, rating, rating_count')
           .eq('id', focusedBookId)
           .maybeSingle();
-
         if (error) {
           console.warn('BookPanel: failed to fetch focused book by id', focusedBookId, error);
           return;
         }
-        if (!row) {
-          console.warn('BookPanel: no book found for id', focusedBookId);
-          return;
-        }
-
+        if (!row) return;
         const mapped = mapRowToUi(row, 50);
-
         if (!mounted) return;
-
-        // Merge into books state if not present
         setBooks(prev => {
-          const exists = (prev || []).some(b => String(b.id) === String(mapped.id));
-          if (exists) return prev;
-          return [mapped, ...(prev || [])];
+          const exists = (prev || []).some(book => String(book.id) === String(mapped.id));
+          return exists ? prev : [mapped, ...(prev || [])];
         });
       } catch (err) {
         console.error('BookPanel: error ensuring focused book is loaded', err);
@@ -749,21 +786,46 @@ export const BookPanel = ({ demoMode = false }) => {
     return () => { mounted = false; };
   }, [focusedBookId, books]);
 
+  // Load all books for a linked category, even when they are outside the current page cache.
+  useEffect(() => {
+    if (!categoryFilterId) return undefined;
+
+    let mounted = true;
+    (async () => {
+      try {
+        const { data: rows, error } = await supabase
+          .from('books')
+          .select('id, title, author, description, category_id, cover_image_url, file_url, downloads_count, pages, rating, rating_count, created_at')
+          .eq('category_id', categoryFilterId)
+          .order('created_at', { ascending: false })
+          .limit(1000);
+
+        if (error) throw error;
+        if (mounted) setFilteredByCategory((rows || []).map(mapRowToUi));
+      } catch (error) {
+        console.warn('Failed to load books for category:', error);
+        if (mounted) setFilteredByCategory([]);
+      }
+    })();
+
+    return () => { mounted = false; };
+  }, [categoryFilterId]);
+
   const filteredBooks = useMemo(() => {
-    const source = books;
-    // Deduplicate by book ID to prevent React key warnings
+    const source = filteredByCategory !== null ? filteredByCategory : books;
     const seenIds = new Set();
     let result = source.filter(book => {
-      if (seenIds.has(book.id)) {
-        return false; // Skip duplicate
-      }
+      if (seenIds.has(book.id)) return false;
       seenIds.add(book.id);
       return true;
     });
 
-    // If a focused book id was provided (e.g. via ?book= in the URL), only show that book
     if (focusedBookId) {
       result = result.filter(book => String(book.id) === String(focusedBookId));
+    }
+
+    if (categoryFilterId !== null && categoryFilterId !== undefined) {
+      result = result.filter(book => String(book.categoryId) === String(categoryFilterId));
     }
 
     if (debouncedSearchTerm) {
@@ -790,12 +852,11 @@ export const BookPanel = ({ demoMode = false }) => {
     }
 
     return result;
-  }, [books, debouncedSearchTerm, activeFilter, sortBy, wishlist, focusedBookId]);
+  }, [books, filteredByCategory, debouncedSearchTerm, activeFilter, sortBy, wishlist, categoryFilterId, focusedBookId]);
 
-  useEffect(() => {
-    // Show the current page slice
+  const displayedBooks = useMemo(() => {
     const start = (currentPage - 1) * BOOKS_PER_PAGE;
-    setDisplayedBooks(filteredBooks.slice(start, start + BOOKS_PER_PAGE));
+    return filteredBooks.slice(start, start + BOOKS_PER_PAGE);
   }, [filteredBooks, currentPage]);
 
   // Server-side search fetch (paginated) to provide accurate results when searching
@@ -956,6 +1017,30 @@ export const BookPanel = ({ demoMode = false }) => {
 
   const closeDetails = () => {
     setSelectedBook(null);
+  };
+
+  const clearCategoryFilter = () => {
+    setCategoryFilterId(null);
+    setCategoryFilterName(null);
+    setFilteredByCategory(null);
+    setCurrentPage(1);
+    navigate('/BookManagement', { replace: true });
+  };
+
+  const handleCategoryFilterChange = (event) => {
+    const categoryId = event.target.value;
+    if (!categoryId) {
+      clearCategoryFilter();
+      return;
+    }
+
+    const category = categories.find(item => String(item.id) === categoryId);
+    setCategoryFilterId(categoryId);
+    setCategoryFilterName(category?.name || null);
+    setFilteredByCategory([]);
+    setCurrentPage(1);
+    navigate(`/BookManagement?category=${encodeURIComponent(categoryId)}&categoryName=${encodeURIComponent(category?.name || '')}`);
+    setCategoryMenuOpen(false);
   };
 
   const handleNativeBack = useCallback(() => {
@@ -1137,6 +1222,38 @@ export const BookPanel = ({ demoMode = false }) => {
         </div>
 
         <div className="filter-wrapperBKP">
+          <div className="category-filter-wrapperBKP" ref={categoryMenuRef}>
+            <button
+              type="button"
+              className={`category-filterBKP${categoryMenuOpen ? ' activeBKP' : ''}`}
+              onClick={() => setCategoryMenuOpen((open) => !open)}
+              aria-expanded={categoryMenuOpen}
+              aria-haspopup="menu"
+              aria-label="Filter books by category"
+            >
+              <span>{categoryFilterId ? (categoryFilterName || 'Category') : 'All'}</span>
+              <FiChevronDown className="category-filter-chevronBKP" size={17} strokeWidth={3} />
+            </button>
+            {categoryMenuOpen && (
+              <div className="category-filter-menuBKP" role="menu">
+                <button type="button" role="menuitem" onClick={() => handleCategoryFilterChange({ target: { value: '' } })}>
+                  <span>All</span>
+                  {!categoryFilterId && <FiCheck size={14} />}
+                </button>
+                {categories.map(category => (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    key={category.id}
+                    onClick={() => handleCategoryFilterChange({ target: { value: String(category.id) } })}
+                  >
+                    <span>{category.name}</span>
+                    {String(categoryFilterId) === String(category.id) && <FiCheck size={14} />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             onClick={toggleFilters}
             className={`filter-buttonBKP ${showFilters ? 'activeBKP' : ''}`}

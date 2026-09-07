@@ -41,7 +41,7 @@ if (pdfjs.GlobalWorkerOptions.workerSrc) {
   }
 }
 
-const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleText, cacheKey, isOpen = true, onOpenBookDetails }) => {
+const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleText, cacheKey, isOpen = true }) => {
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 1;
   const DEFAULT_ZOOM = MIN_ZOOM;
@@ -151,18 +151,10 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
   const textLoadPromiseRef = useRef(null);
   const isReaderMountedRef = useRef(true);
 
-  const clearPendingSentenceTimer = useCallback(() => {
-    if (sentenceTimerRef.current) {
-      clearTimeout(sentenceTimerRef.current);
-      sentenceTimerRef.current = null;
-    }
-  }, []);
-
   useEffect(() => {
     isReaderMountedRef.current = true;
     return () => {
       isReaderMountedRef.current = false;
-      clearPendingSentenceTimer();
       isPlayingRef.current = false;
       if (useNativeTextToSpeech) {
         TextToSpeech.stop().catch(() => {});
@@ -170,10 +162,9 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
       }
       window.speechSynthesis?.cancel?.();
     };
-  }, [clearPendingSentenceTimer, useNativeTextToSpeech]);
+  }, [useNativeTextToSpeech]);
   const [isPaused, setIsPaused] = useState(false);
   const [audioPageIndex, setAudioPageIndex] = useState(1);
-  const [floatingAudioPosition, setFloatingAudioPosition] = useState({ x: null, y: null });
   const [bookmarks, setBookmarks] = useState(new Set());
   const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const [summaryPageNumber, setSummaryPageNumber] = useState(null);
@@ -183,57 +174,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
   const [notes, setNotes] = useState(new Map());
   const [readingStartTime, setReadingStartTime] = useState(new Date());
   const [totalReadingTime, setTotalReadingTime] = useState(0);
-
-  const clampFloatingAudioPosition = useCallback((nextX, nextY, width = 420, height = 64) => {
-    if (typeof window === 'undefined') return { x: nextX, y: nextY };
-    const padding = 12;
-    const maxX = Math.max(padding, window.innerWidth - width - padding);
-    const maxY = Math.max(padding, window.innerHeight - height - padding);
-    return {
-      x: Math.min(Math.max(padding, nextX), maxX),
-      y: Math.min(Math.max(padding, nextY), maxY)
-    };
-  }, []);
-
-  const handleFloatingAudioPointerDown = useCallback((event) => {
-    if (event.target.closest('button')) return;
-    if (!floatingAudioPlayerRef.current) return;
-
-    event.preventDefault();
-    const rect = floatingAudioPlayerRef.current.getBoundingClientRect();
-    floatingAudioDragRef.current = {
-      active: true,
-      pointerId: event.pointerId,
-      startPointerX: event.clientX,
-      startPointerY: event.clientY,
-      startLeft: rect.left,
-      startTop: rect.top,
-      dragged: false
-    };
-
-    floatingAudioPlayerRef.current.setPointerCapture?.(event.pointerId);
-  }, []);
-
-  const handleFloatingAudioPointerMove = useCallback((event) => {
-    if (!floatingAudioDragRef.current.active || floatingAudioDragRef.current.pointerId !== event.pointerId || !floatingAudioPlayerRef.current) return;
-
-    const rect = floatingAudioPlayerRef.current.getBoundingClientRect();
-    const dx = event.clientX - floatingAudioDragRef.current.startPointerX;
-    const dy = event.clientY - floatingAudioDragRef.current.startPointerY;
-    const nextX = floatingAudioDragRef.current.startLeft + dx;
-    const nextY = floatingAudioDragRef.current.startTop + dy;
-    const clamped = clampFloatingAudioPosition(nextX, nextY, rect.width || 420, rect.height || 64);
-    floatingAudioDragRef.current.dragged = floatingAudioDragRef.current.dragged || Math.abs(dx) > 4 || Math.abs(dy) > 4;
-    setFloatingAudioPosition({ x: clamped.x, y: clamped.y });
-  }, [clampFloatingAudioPosition]);
-
-  const handleFloatingAudioPointerUp = useCallback((event) => {
-    if (!floatingAudioDragRef.current.active) return;
-    if (floatingAudioDragRef.current.pointerId !== null && floatingAudioDragRef.current.pointerId !== event.pointerId) return;
-
-    floatingAudioDragRef.current = { active: false, pointerId: null, startPointerX: 0, startPointerY: 0, startLeft: 0, startTop: 0, dragged: false };
-    floatingAudioPlayerRef.current?.releasePointerCapture?.(event.pointerId);
-  }, []);
 
   useEffect(() => {
     if (useNativeTextToSpeech || !isAudioPlaying || !window.speechSynthesis) return undefined;
@@ -259,8 +199,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
   const containerRef = useRef(null);
   const scrollAreaRef = useRef(null);
   const contentAreaRef = useRef(null);
-  const floatingAudioPlayerRef = useRef(null);
-  const floatingAudioDragRef = useRef({ active: false, pointerId: null, startPointerX: 0, startPointerY: 0, startLeft: 0, startTop: 0, dragged: false });
   const [pageWidth, setPageWidth] = useState(null);
   const pageRefsMap = useRef({});
   const zoomIndicatorRef = useRef(null);
@@ -274,7 +212,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
   const currentPageAudioRef = useRef(1);
   const pausedPageRef = useRef(null);
   const pausedSentenceIndexRef = useRef(0);
-  const sentenceTimerRef = useRef(null);
   
   // Edge optimization: Scroll tracking
   const lastScrollTimeRef = useRef(0);
@@ -849,7 +786,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
   }, []);
 
   const playPageAudio = useCallback(() => {
-    clearPendingSentenceTimer();
     if (!useNativeTextToSpeech && (typeof window === 'undefined' || !window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined')) {
       setIsAudioPlaying(false);
       setIsPaused(false);
@@ -1013,16 +949,14 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
         });
         if (isPlayingRef.current && speechRetryCountRef.current < 2) {
           speechRetryCountRef.current += 1;
-          sentenceTimerRef.current = setTimeout(readNextSentence, 500);
+          setTimeout(readNextSentence, 500);
           return;
         }
-        clearPendingSentenceTimer();
         setIsAudioPlaying(false);
         setIsPaused(false);
         isPlayingRef.current = false;
       };
 
-      window.speechSynthesis.cancel();
       window.speechSynthesis.resume();
       window.speechSynthesis.speak(utterance);
     };
@@ -1106,8 +1040,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
       return;
     }
 
-    clearPendingSentenceTimer();
-
     if (isAudioPlaying) {
       // Pause audio - save position for resume
       if (useNativeTextToSpeech) {
@@ -1136,86 +1068,59 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
     } else {
       const ready = await prepareBrowserTextToSpeech();
       if (!ready) return;
-      if (!useNativeTextToSpeech) {
-        window.speechSynthesis.cancel();
-      }
-
+      await ensureTextLoaded();
       const readablePages = Object.values(pageTextMapRef.current)
         .filter(page => page.text?.trim())
         .sort((firstPage, secondPage) => firstPage.pageNum - secondPage.pageNum);
-      const fallbackText = pageTextMapRef.current[currentPage]?.text?.trim() || title || 'Reading in progress';
-      const readablePage = readablePages[0] || { pageNum: currentPage, text: fallbackText };
+      const readablePage = readablePages[0];
       const selectedPageText = readablePages
         .map(page => `Page ${page.pageNum}. ${page.text.trim()}`)
-        .join('\n\n') || fallbackText;
-
+        .join('\n\n');
       console.log('[tts] Text extraction ready', {
         pageCount: readablePages.length,
-        selectedPage: readablePage.pageNum,
+        selectedPage: readablePage?.pageNum || currentPage,
         selectedPageCharacters: selectedPageText.length
       });
-
+      if (!selectedPageText) {
+        console.error('[tts] Selected PDF page contains no extractable text');
+        setIsAudioPlaying(false);
+        isPlayingRef.current = false;
+        return;
+      }
+      // Start at the first page containing text; covers and scanned pages are skipped.
+      if (!useNativeTextToSpeech) window.speechSynthesis.cancel();
       audioSentenceIndexRef.current = 0;
       pausedPageRef.current = null;
       pausedSentenceIndexRef.current = 0;
-
+      
       if (scrollAreaRef.current) {
         scrollAreaRef.current.scrollTop = 0;
       }
 
-      setAudioPageIndex(readablePage.pageNum);
-      currentPageAudioRef.current = readablePage.pageNum;
+      setAudioPageIndex(readablePage?.pageNum || currentPage);
+      currentPageAudioRef.current = readablePage?.pageNum || currentPage;
       isPlayingRef.current = true;
       setIsAudioPlaying(true);
       setIsPaused(false);
       setAudioProgress(0);
-
       if (useNativeTextToSpeech) {
-        try {
-          await PersistentTts.speak({
-            text: selectedPageText,
-            title,
-            page: currentPage
-          });
-        } catch (error) {
+        PersistentTts.speak({
+          text: selectedPageText,
+          title,
+          page: currentPage
+        }).catch(error => {
           console.warn('[tts] Foreground service failed to start', error);
-          setIsAudioPlaying(false);
-          setIsPaused(false);
-          isPlayingRef.current = false;
-        }
+        });
         return;
       }
-
-      if (!readablePages.length && fallbackText) {
-        const fallbackUtterance = new SpeechSynthesisUtterance(fallbackText);
-        fallbackUtterance.lang = 'en-US';
-        fallbackUtterance.pitch = 1;
-        fallbackUtterance.volume = 1;
-        fallbackUtterance.onend = () => {
-          setIsAudioPlaying(false);
-          setIsPaused(false);
-          isPlayingRef.current = false;
-        };
-        fallbackUtterance.onerror = () => {
-          setIsAudioPlaying(false);
-          setIsPaused(false);
-          isPlayingRef.current = false;
-        };
-        window.speechSynthesis.resume();
-        window.speechSynthesis.speak(fallbackUtterance);
-        return;
-      }
-
-      void ensureTextLoaded();
       playPageAudio();
     }
-  }, [clearPendingSentenceTimer, ensureTextLoaded, isAudioPlaying, isPaused, playPageAudio, prepareBrowserTextToSpeech, prepareNativeTextToSpeech, title, useNativeTextToSpeech]);
+  }, [ensureTextLoaded, isAudioPlaying, isPaused, playPageAudio, prepareBrowserTextToSpeech, prepareNativeTextToSpeech, useNativeTextToSpeech]);
 
   audioToggleRef.current = toggleAudio;
   audioStateRef.current = { isAudioPlaying, isPaused };
 
   const stopAudio = useCallback(() => {
-    clearPendingSentenceTimer();
     if (useNativeTextToSpeech) {
       TextToSpeech.stop().catch(() => {});
       PersistentTts.stop().catch(() => {});
@@ -1227,7 +1132,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
     isPlayingRef.current = false;
     pausedPageRef.current = null;
     audioSentenceIndexRef.current = 0;
-  }, [clearPendingSentenceTimer, useNativeTextToSpeech]);
+  }, [useNativeTextToSpeech]);
 
   // Copy selected text
   const copyText = async () => {
@@ -1386,26 +1291,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
     if (!isAudioPlaying && !isPaused) return null;
 
     return (
-      <div
-        ref={floatingAudioPlayerRef}
-        className="ssr-floating-audio-player"
-        role="region"
-        aria-label={`Reading ${title}`}
-        style={
-          floatingAudioPosition.x !== null && floatingAudioPosition.y !== null
-            ? { left: `${floatingAudioPosition.x}px`, top: `${floatingAudioPosition.y}px`, bottom: 'auto', transform: 'none' }
-            : undefined
-        }
-        onPointerDown={handleFloatingAudioPointerDown}
-        onPointerMove={handleFloatingAudioPointerMove}
-        onPointerUp={handleFloatingAudioPointerUp}
-        onPointerCancel={handleFloatingAudioPointerUp}
-        onClick={(event) => {
-          if (event.target.closest('button')) return;
-          if (floatingAudioDragRef.current.dragged) return;
-          onOpenBookDetails?.();
-        }}
-      >
+      <div className="ssr-floating-audio-player" role="region" aria-label={`Reading ${title}`}>
         <div className="ssr-floating-audio-info">
           <img className="ssr-floating-audio-icon" src="/Som96.png" alt="" aria-hidden="true" />
           <div className="ssr-floating-audio-copy">
@@ -1729,8 +1615,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
             )}
           </div>
         </div>
-
-        {!isLoading && hasPdfSource && documentSource && <div className="ssr-footer" aria-label="Reader footer" />}
 
         {/* Floating View Bookmarks Button - Mobile Only, Shows only when bookmarks exist */}
         {getBookmarkedPages().length > 0 && (

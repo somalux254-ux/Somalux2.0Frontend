@@ -63,17 +63,6 @@ const UniversityCard = React.memo(({
       <p style={{ margin: '2px 0 0 0', fontSize: '0.65rem', color: '#8696a0' }}>
         {highlightSearchText(uni.location, searchTerm)}
       </p>
-      
-      <div style={{ 
-        marginTop: 'auto', 
-        paddingTop: '6px',
-        borderTop: '1px solid #2a3942',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: '4px'
-      }}>
-      </div>
     </div>
   </motion.div>
 ), (prevProps, nextProps) => {

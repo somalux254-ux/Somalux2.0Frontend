@@ -7,7 +7,7 @@ export async function fetchBooksOptimized(supabase, page = 1, booksPerPage = 20)
 
   const booksResult = await supabase
     .from('books')
-    .select('id, title, author, description, cover_image_url, file_url, downloads_count, pages, rating, rating_count, created_at')
+    .select('id, title, author, description, category_id, cover_image_url, file_url, downloads_count, pages, rating, rating_count, created_at')
     .order('created_at', { ascending: false })
     .range(from, to);
 

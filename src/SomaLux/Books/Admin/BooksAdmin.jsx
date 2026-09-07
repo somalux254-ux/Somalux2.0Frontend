@@ -27,6 +27,7 @@ const NotificationBadge = ({ count }) => {
 // Books-only admin pages
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const ContentManagement = React.lazy(() => import('./pages/ContentManagement'));
+const BookCategories = React.lazy(() => import('./pages/Categories'));
 const Upload = React.lazy(() => import('./pages/Upload'));
 const AutoUpload = React.lazy(() => import('./pages/AutoUpload'));
 const PastPapersAutoDownload = React.lazy(() => import('../../PastPapersDownloader/PastPapersAutoDownload'));
@@ -201,6 +202,12 @@ export const BooksAdmin = () => {
               <FiGrid /> <span className="nav-label">Content</span>
             </NavLink>
 
+            {canAccessContentFeatures && (
+              <NavLink to="/books/admin/categories" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+                <FiFolder /> <span className="nav-label">Categories</span>
+              </NavLink>
+            )}
+
             <NavLink to="/books/admin/upload" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
               <FiUpload /> <span className="nav-label">Upload</span>
             </NavLink>
@@ -275,6 +282,12 @@ export const BooksAdmin = () => {
           <NavLink to="/books/admin/content" className={({ isActive }) => `bottom-item ${isActive ? 'active' : ''}`}>
             <FiGrid /> <span>Content</span>
           </NavLink>
+
+          {canAccessContentFeatures && (
+            <NavLink to="/books/admin/categories" className={({ isActive }) => `bottom-item ${isActive ? 'active' : ''}`}>
+              <FiFolder /> <span>Categories</span>
+            </NavLink>
+          )}
 
           <NavLink to="/books/admin/upload" className={({ isActive }) => `bottom-item ${isActive ? 'active' : ''}`}>
             <FiUpload /> <span>Upload</span>
@@ -379,6 +392,9 @@ export const BooksAdmin = () => {
 
                 {/* Books Routes */}
                 <Route path="content" element={<ContentManagement userProfile={userProfile} />} />
+                {canAccessContentFeatures && (
+                  <Route path="categories" element={<BookCategories userProfile={userProfile} />} />
+                )}
                 <Route path="upload" element={<Upload userProfile={userProfile} />} />
                 <Route path="upload-history" element={<UploadHistoryPage userProfile={userProfile} />} />
 

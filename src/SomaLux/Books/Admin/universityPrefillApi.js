@@ -3,10 +3,27 @@ import { API_URL } from '../../../config';
 
 // API Configuration
 const USE_BACKEND_PROXY = true; // Set to false to use direct API calls
-let prefillDatabaseAvailable = true;
+let prefillDatabaseAvailable = false;
 
 const isMissingPrefillDatabaseObject = (error) =>
   ['PGRST202', 'PGRST205'].includes(error?.code);
+
+const isWikipediaUrl = (value) => {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase();
+    return hostname === 'wikipedia.org' || hostname.endsWith('.wikipedia.org');
+  } catch {
+    return false;
+  }
+};
+
+const toWikimediaImageUrl = (value) => {
+  const imageValue = String(value || '').trim();
+  if (!imageValue) return null;
+  if (/^https?:\/\//i.test(imageValue)) return imageValue;
+  const fileName = imageValue.replace(/^File:/i, '');
+  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(fileName)}`;
+};
 
 /**
  * Search for university names for autocomplete
@@ -80,14 +97,13 @@ async function searchWikipediaUniversities(query, limit = 10) {
     // data[0] = query, data[1] = titles, data[2] = descriptions, data[3] = urls
     const titles = data[1] || [];
     const descriptions = data[2] || [];
-    const urls = data[3] || [];
     
     return titles
       .filter(title => title.toLowerCase().includes('university') || title.toLowerCase().includes('college'))
       .map((title, index) => ({
         name: title,
         description: descriptions[index] || '',
-        website_url: urls[index] || '',
+        website_url: '',
       }));
   } catch (error) {
     console.error('Error searching Wikipedia:', error);
@@ -129,7 +145,7 @@ export async function fetchUniversityDataFromGoogle(universityName) {
         return {
           name: data.university.name || universityName,
           description: data.university.description || '',
-          website_url: data.university.website_url || '',
+          website_url: isWikipediaUrl(data.university.website_url) ? '' : (data.university.website_url || ''),
           location: data.university.location || '',
           established: null,
           student_count: null,
@@ -143,6 +159,28 @@ export async function fetchUniversityDataFromGoogle(universityName) {
   
   return null;
 }
+
+export async function fetchOfficialUniversityWebsite(websiteUrl) {
+  if (!websiteUrl || isWikipediaUrl(websiteUrl) || !USE_BACKEND_PROXY) return null;
+
+  try {
+    const response = await fetch(`${API_URL}/api/university/official?url=${encodeURIComponent(websiteUrl)}`);
+    if (!response.ok) return null;
+    const data = await response.json();
+    return {
+      website_url: isWikipediaUrl(data.website_url) ? '' : (data.website_url || websiteUrl),
+      description: data.description || '',
+      cover_images: (data.images || []).map((imageUrl) => proxyUniversityImage(imageUrl, websiteUrl)),
+    };
+  } catch (error) {
+    console.warn('Official university website lookup failed:', error?.message || error);
+    return null;
+  }
+}
+
+const proxyUniversityImage = (imageUrl, referrer) => (
+  `${API_URL}/api/university/image?url=${encodeURIComponent(imageUrl)}${referrer ? `&referrer=${encodeURIComponent(referrer)}` : ''}`
+);
 
 /**
  * Fetch university summary from Wikipedia REST API
@@ -174,8 +212,9 @@ export async function fetchUniversityDataFromWikipedia(universityName) {
  */
 export async function fetchUniversityDataFromWikidata(universityName) {
   try {
+    const searchName = String(universityName || '').replace(/"/g, '\\"');
     const sparqlQuery = `
-      SELECT ?item ?itemLabel ?locationLabel ?established ?studentCount ?website
+      SELECT ?item ?itemLabel ?itemDescription ?locationLabel ?established ?studentCount ?website ?image
       WHERE {
         ?item wdt:P31/wdt:P279* wd:Q3918;
               rdfs:label ?itemLabel.
@@ -183,29 +222,34 @@ export async function fetchUniversityDataFromWikidata(universityName) {
         OPTIONAL { ?item wdt:P571 ?established. }
         OPTIONAL { ?item wdt:P2196 ?studentCount. }
         OPTIONAL { ?item wdt:P856 ?website. }
-        FILTER(CONTAINS(LCASE(?itemLabel), LCASE("${universityName}")))
+        OPTIONAL { ?item wdt:P18 ?image. }
+        FILTER(CONTAINS(LCASE(?itemLabel), LCASE("${searchName}")))
         FILTER(LANG(?itemLabel) = "en")
         SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
       }
-      LIMIT 1
+      ORDER BY DESC(?website) DESC(?image)
+      LIMIT 5
     `;
     const url = `https://query.wikidata.org/sparql?query=${encodeURIComponent(sparqlQuery)}&format=json`;
     const response = await fetch(url);
     if (!response.ok) return null;
 
     const data = await response.json();
-    const binding = data.results.bindings[0];
+    const bindings = data.results.bindings || [];
+    const binding = bindings.find((candidate) =>
+      candidate.itemLabel?.value?.toLowerCase() === String(universityName).trim().toLowerCase()
+    ) || bindings[0];
 
     if (!binding) return null;
 
     return {
       name: binding.itemLabel.value,
-      description: '',
-      website_url: binding.website?.value || '',
+      description: binding.itemDescription?.value || '',
+      website_url: isWikipediaUrl(binding.website?.value) ? '' : (binding.website?.value || ''),
       location: binding.locationLabel?.value || '',
       established: binding.established?.value ? new Date(binding.established.value).getFullYear() : null,
       student_count: binding.studentCount?.value || null,
-      cover_images: [],
+      cover_images: binding.image?.value ? [toWikimediaImageUrl(binding.image.value)] : [],
     };
   } catch (error) {
     console.error('Error fetching from Wikidata:', error);
@@ -253,7 +297,8 @@ export async function fetchWikimediaImages(universityName) {
       return deprioritize(a) - deprioritize(b);
     });
 
-    return prioritized.slice(0, 5);
+    const suitable = prioritized.filter((url) => !/logo|seal|coat_of_arms|emblem|icon|flag|banner|portrait/i.test(url));
+    return (suitable.length ? suitable : prioritized).slice(0, 5);
   } catch (e) {
     console.error('Error fetching Wikimedia images:', e);
     return [];
@@ -278,6 +323,26 @@ export async function fetchUnsplashImages(universityName) {
   }
   
   return [];
+}
+
+/**
+ * Fetch campus-focused image candidates from Google Images via the backend.
+ */
+export async function fetchGoogleImages(universityName) {
+  if (!USE_BACKEND_PROXY) return [];
+
+  try {
+    const response = await fetch(`${API_URL}/api/university/google-images?query=${encodeURIComponent(universityName)}`);
+    if (!response.ok) return [];
+    const data = await response.json();
+    return {
+      source: data.source || 'fallback',
+      images: (data.images || []).map((imageUrl) => proxyUniversityImage(imageUrl)),
+    };
+  } catch (error) {
+    console.warn('Google Images lookup failed:', error?.message || error);
+    return { source: 'fallback', images: [] };
+  }
 }
 
 /**
@@ -461,43 +526,91 @@ export async function autoFillUniversityData(universityName) {
   try {
     // Check cache first
     let data = await getUniversityPrefillData(universityName);
-    if (data) return data;
-
-    // Prefer Wikipedia + Wikidata for accuracy (no API keys needed)
-    const wikiSummary = await fetchUniversityDataFromWikipedia(universityName);
-    const wikidata = await fetchUniversityDataFromWikidata(universityName);
-
-    if (wikiSummary || wikidata) {
-      const merged = {
-        name: (wikiSummary?.name || wikidata?.name || universityName) ?? universityName,
-        description: wikiSummary?.description || '',
-        website_url: wikidata?.website_url || '',
-        location: wikidata?.location || '',
-        established: wikidata?.established ?? null,
-        student_count: wikidata?.student_count ?? null,
-        cover_images: wikiSummary?.cover_images || [],
-      };
-      data = merged;
+    if (data?.prefill_version !== 8) {
+      data = null;
+    }
+    if (data?.website_url && isWikipediaUrl(data.website_url)) {
+      data.website_url = '';
     }
 
-    // Try Google as last resort (via proxy if enabled)
     if (!data) {
-      data = await fetchUniversityDataFromGoogle(universityName);
+      // Prefer Wikipedia + Wikidata for accuracy (no API keys needed)
+      const [wikiResult, wikidataResult, googleResult] = await Promise.allSettled([
+        fetchUniversityDataFromWikipedia(universityName),
+        fetchUniversityDataFromWikidata(universityName),
+        fetchUniversityDataFromGoogle(universityName),
+      ]);
+      const wikiSummary = wikiResult.status === 'fulfilled' ? wikiResult.value : null;
+      const wikidata = wikidataResult.status === 'fulfilled' ? wikidataResult.value : null;
+      const google = googleResult.status === 'fulfilled' ? googleResult.value : null;
+
+      if (wikiSummary || wikidata || google) {
+        const merged = {
+          name: (wikidata?.name || google?.name || wikiSummary?.name || universityName) ?? universityName,
+          description: google?.description || wikidata?.description || wikiSummary?.description || '',
+          website_url: wikidata?.website_url || google?.website_url || '',
+          location: wikidata?.location || '',
+          established: wikidata?.established ?? null,
+          student_count: wikidata?.student_count ?? null,
+          cover_images: google?.cover_images?.length
+            ? google.cover_images
+            : (wikidata?.cover_images?.length ? wikidata.cover_images : (wikiSummary?.cover_images || [])),
+        };
+        data = merged;
+      }
+    }
+
+    if (data?.website_url) {
+      const officialSite = await fetchOfficialUniversityWebsite(data.website_url);
+      if (officialSite) {
+        data = {
+          ...data,
+          description: officialSite.description || data.description,
+          cover_images: [...(data.cover_images || []), ...(officialSite.cover_images || [])]
+            .filter((imageUrl, index, images) => images.indexOf(imageUrl) === index)
+            .slice(0, 8),
+        };
+      }
+    }
+
+    const googleImages = await fetchGoogleImages(data?.name || universityName);
+    if (googleImages.source === 'google_custom_search' && googleImages.images.length) {
+      data.cover_images = googleImages.images;
+    }
+
+    if (data?.cover_images?.length) {
+      data.cover_images = data.cover_images.map((imageUrl) => (
+        imageUrl.startsWith(`${API_URL}/api/university/image`)
+          ? imageUrl
+          : proxyUniversityImage(imageUrl, data.website_url)
+      ));
     }
 
     // Fetch images
     if (data && (!data.cover_images || data.cover_images.length === 0)) {
-      const commons = await fetchWikimediaImages(data.name || universityName);
-      if (commons.length) {
-        data.cover_images = commons;
-      } else {
-        const unsplash = await fetchUnsplashImages(data.name || universityName);
-        data.cover_images = unsplash;
+      const [commonsResult, unsplashResult] = await Promise.allSettled([
+        fetchWikimediaImages(data.name || universityName),
+        fetchUnsplashImages(data.name || universityName),
+      ]);
+      const commons = commonsResult.status === 'fulfilled' ? commonsResult.value : [];
+      const unsplash = unsplashResult.status === 'fulfilled' ? unsplashResult.value : [];
+      data.cover_images = (commons.length ? commons : unsplash).map((imageUrl) => proxyUniversityImage(imageUrl));
+
+      if (!data.cover_images.length && data.website_url) {
+        try {
+          const officialDomain = new URL(data.website_url).origin;
+          data.cover_images = [
+            `https://www.google.com/s2/favicons?domain=${encodeURIComponent(officialDomain)}&sz=512`,
+          ];
+        } catch {
+          data.cover_images = [];
+        }
       }
     }
 
     // Cache the result
     if (data) {
+      data.prefill_version = 8;
       await cacheUniversityPrefillData(universityName, data, 'wikipedia_wikidata');
     }
 
