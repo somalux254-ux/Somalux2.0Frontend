@@ -1531,7 +1531,7 @@ export const BookPanel = ({ demoMode = false }) => {
           </div>
 
           {(() => {
-            if (currentPage <= 1 && !hasMore) return null;
+            if (currentPage === 1 && displayedBooks.length < BOOKS_PER_PAGE) return null;
 
             return (
               <div>

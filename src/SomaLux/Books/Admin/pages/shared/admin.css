@@ -358,7 +358,7 @@
     background: #0b1216;
     position: sticky;
     top: 0;
-    z-index: 2;
+    z-index: 2001 !important;
     flex-shrink: 0;
 }
 
@@ -842,12 +842,12 @@ select option {
         position: fixed;
         left: 0;
         right: 0;
-        bottom: 0;
+        bottom: 5vh;
         height: 64px;
         background: #111b21;
         border-top: 1px solid #2a3942;
         padding: 6px 8px;
-        z-index: 10;
+        z-index: 10 !important;
     }
 
     .admin-bottombar .bottom-item {
@@ -876,7 +876,7 @@ select option {
         background: #111b21;
         border: 1px solid #2a3942;
         border-radius: 8px;
-        box-shadow: 0 12px 32px rgba(0,0,0,0.6);
+        box-shadow: none;
         padding: 8px;
         display: flex;
         flex-direction: column;
@@ -906,6 +906,10 @@ select option {
     }
 }
 
+[data-theme="light"] .admin-topbar {
+  z-index: 3 !important;
+}
+
 /* Modal styles */
 .modal-overlay {
     position: fixed;
@@ -920,6 +924,10 @@ select option {
     z-index: 1000;
     padding: 10px;
 }
+
+  [data-theme="dark"] .modal-overlay {
+    z-index: 3000;
+  }
 
 .modal-content {
     background: #111b21;
@@ -1016,19 +1024,19 @@ select option {
 /* Toast notifications */
 .toast-container {
     position: fixed;
-    top: 20px;
+  top: 72px;
     right: 20px;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    z-index: 1100;
+    z-index: 100001;
 }
 
 .toast {
     min-width: 220px;
     max-width: 320px;
-    padding: 10px 14px;
-    border-radius: 8px;
+    padding: 14px 14px;
+    border-radius: 4px;
     font-size: 13px;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
     border: 1px solid #2a3942;
@@ -1038,9 +1046,9 @@ select option {
 }
 
 .toast-success {
-    border-color: rgba(0, 168, 132, 0.6);
-    background: linear-gradient(135deg, rgba(0, 168, 132, 0.932) 0%, rgba(0, 200, 150, 0.7) 100%);
-    box-shadow: 0 8px 20px rgba(0, 168, 132, 0.4);
+  border-color: #033b2c;
+  background: #064e3b;
+  box-shadow: 0 8px 20px rgba(3, 59, 44, 0.4);
 }
 
 .toast-error {
@@ -1053,14 +1061,13 @@ select option {
     border-color: rgba(52, 183, 241, 0.6);
     background: rgba(52, 184, 241, 0.877);
 }
-
 /* Debug badge (chart data status) */
 .debug-badge {
   display: inline-block;
   margin-left: 8px;
   padding: 2px 6px;
-  border-radius: 999px;
-  font-size: 11px;
+  border-color: #064e3b;
+  background: #075e54;
   font-weight: 600;
   vertical-align: middle;
   border: 1px solid #2a3942;
@@ -1206,6 +1213,11 @@ select option {
 .viewer-time-dropdown[open] {
   border-color: #00a884;
   background: #0e171e;
+}
+
+[data-theme="light"] .viewer-time-dropdown,
+[data-theme="light"] .viewer-time-dropdown[open] {
+  background: #acd9bb;
 }
 
 .viewer-time-dropdown summary {

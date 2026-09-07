@@ -641,7 +641,7 @@ const PastPapersManagement = ({ userProfile }) => {
         )}
 
         <div className="panel" style={{ padding: 0, overflowX: 'auto' }}>
-          <table className="table" style={{ minWidth: '1100px' }}>
+          <table className="table numbered-table" style={{ minWidth: '1100px' }}>
             <thead>
               <tr>
                 {showCheckboxes && (
@@ -655,6 +655,7 @@ const PastPapersManagement = ({ userProfile }) => {
                     />
                   </th>
                 )}
+                <th style={{ width: '42px' }}>#</th>
                 <th style={{ width: '250px' }}>Unit Name</th>
                 <th style={{ width: '150px', cursor: 'pointer' }} onClick={() => toggleSort('unit_code')}>Unit Code {sort.col === 'unit_code' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
                 <th style={{ width: '150px' }}>Faculty</th>
@@ -668,10 +669,10 @@ const PastPapersManagement = ({ userProfile }) => {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={showCheckboxes ? 10 : 9} style={{ textAlign: 'center', color: '#8696a0' }}>Loading...</td></tr>
+                <tr><td colSpan={showCheckboxes ? 11 : 10} style={{ textAlign: 'center', color: '#8696a0' }}>Loading...</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={showCheckboxes ? 10 : 9} style={{ textAlign: 'center', color: '#8696a0' }}>No data</td></tr>
-              ) : rows.map(row => (
+                <tr><td colSpan={showCheckboxes ? 11 : 10} style={{ textAlign: 'center', color: '#8696a0' }}>No data</td></tr>
+              ) : rows.map((row, idx) => (
                 <tr key={row.id} style={{ background: selectedIds.has(row.id) ? 'rgba(0, 168, 132, 0.1)' : 'transparent' }}>
                   {showCheckboxes && (
                     <td style={{ textAlign: 'center' }}>
@@ -684,6 +685,7 @@ const PastPapersManagement = ({ userProfile }) => {
                       />
                     </td>
                   )}
+                  <td className="admin-row-number">{idx + 1}</td>
                   <td style={{ color: row.unit_name ? '#e9edef' : '#8696a0' }}>{editingId === row.id ? <input className="input" value={editDraft.unit_name} onChange={(e) => setEditDraft({ ...editDraft, unit_name: e.target.value })} /> : (row.unit_name || '—')}</td>
                   <td style={{ color: row.unit_code ? '#e9edef' : '#8696a0' }}>{editingId === row.id ? <input className="input" value={editDraft.unit_code} onChange={(e) => setEditDraft({ ...editDraft, unit_code: e.target.value })} /> : (row.unit_code || '—')}</td>
                   <td style={{ color: row.faculty ? '#e9edef' : '#8696a0' }}>
@@ -752,11 +754,11 @@ const PastPapersManagement = ({ userProfile }) => {
             </tbody>
           </table>
         </div>
-        <div className="actions" style={{ marginTop: 6 }}>
+        {totalPages > 1 && <div className="actions" style={{ marginTop: 6 }}>
           <button className="btn" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Prev</button>
           <span style={{ color: '#cfd8dc' }}>Page {page} of {totalPages}</span>
           <button className="btn" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next</button>
-        </div>
+        </div>}
       </div>
     </div>
   );

@@ -332,7 +332,7 @@ const Verify = ({ userProfile }) => {
                 return (
                   <tr key={u.id}>
                     <td style={{ fontSize: '13px', fontWeight: '600', color: '#00a884' }}>
-                      #{rowNum}
+                      {rowNum}
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -429,11 +429,11 @@ const Verify = ({ userProfile }) => {
       </div>
 
       {/* Pagination */}
-      <div className="actions" style={{ marginTop: 10, justifyContent: 'space-between' }}>
+      {totalPages > 1 && <div className="actions" style={{ marginTop: 10, justifyContent: 'space-between' }}>
         <button className="btn" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Prev</button>
         <span className="verify-pagination-label" style={{ color: '#cfd8dc' }}>Page {page} of {totalPages} ({filteredRows.length} users)</span>
         <button className="btn" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next</button>
-      </div>
+      </div>}
     </div>
   );
 };

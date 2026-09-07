@@ -340,9 +340,10 @@ const Users = ({ isSuperAdmin }) => {
       </div>
 
       <div style={{ overflowX: 'auto', width: '100%' }}>
-        <table className="table">
+        <table className="table numbered-table">
         <thead>
           <tr>
+            <th>#</th>
             <th>Name</th>
             <th>Email</th>
             <th>Last Seen</th>
@@ -352,12 +353,13 @@ const Users = ({ isSuperAdmin }) => {
         </thead>
         <tbody>
           {loading ? (
-            <tr><td colSpan={5} style={{ color: '#8696a0', textAlign: 'center' }}>Loading...</td></tr>
+            <tr><td colSpan={6} style={{ color: '#8696a0', textAlign: 'center' }}>Loading...</td></tr>
           ) : paginatedRows.length === 0 ? (
-            <tr><td colSpan={5} style={{ color: '#8696a0', textAlign: 'center' }}>No users found</td></tr>
+            <tr><td colSpan={6} style={{ color: '#8696a0', textAlign: 'center' }}>No users found</td></tr>
           ) : paginatedRows.map((u, idx) => {
             return (
             <tr key={u.id}>
+              <td className="admin-row-number">{idx + 1}</td>
               <td>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div className="viewer-avatar">
@@ -446,7 +448,7 @@ const Users = ({ isSuperAdmin }) => {
       </table>
       </div>
       
-      {filteredRows.length > 0 && (
+      {totalPages > 1 && (
         <div className="actions" style={{ marginTop: 10, justifyContent: 'space-between' }}>
           <button className="btn" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Prev</button>
           <span className="users-pagination-label" style={{ color: '#cfd8dc' }}>Page {page} of {totalPages} ({filteredRows.length} users)</span>

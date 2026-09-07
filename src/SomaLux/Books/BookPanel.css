@@ -266,8 +266,8 @@
   }
 
   .category-filterBKP {
-    width: 105px;
-    max-width: 105px;
+    width: 84px;
+    max-width: 84px;
     height: 30px;
     min-height: 30px;
     font-size: 0.75rem;
@@ -364,11 +364,11 @@
   line-height: 1;
   min-height: 32px;
   height: 32px;
-  width: 135px;
+  width: 96px;
   padding: 0.15rem 0.5rem;
-  background: var(--bg-dark);
-  color: var(--text-dark);
-  border: 0.5px solid var(--border-color);
+  background: transparent;
+  color: #b3bcc5;
+  border: none;
   border-radius: 6px;
   font-size: 0.85rem;
   outline: none;
@@ -376,8 +376,8 @@
 }
 
 .category-filterBKP:focus {
-  border-color: var(--primary);
-  outline: 0.5px solid var(--primary);
+  border: none;
+  outline: none;
 }
 
 .category-filterBKP span {
@@ -395,6 +395,7 @@
   right: 7px;
   top: 50%;
   transform: translateY(-50%);
+  color: var(--text-light);
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -411,7 +412,6 @@
   background: var(--bg-secondary);
   border: none;
   border-radius: 6px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
 }
 
 .category-filter-menuBKP button {
@@ -434,6 +434,20 @@
 .category-filter-menuBKP button:hover {
   background: rgba(0, 168, 132, 0.14);
   color: var(--primary);
+}
+
+[data-theme="light"] .category-filter-menuBKP {
+  background: #acd9bb;
+  border: none;
+}
+
+[data-theme="light"] .category-filter-menuBKP button {
+  color: #26332f;
+}
+
+[data-theme="light"] .category-filter-menuBKP button:hover {
+  background: rgba(0, 120, 92, 0.14);
+  color: #006b52;
 }
 
 .filter-buttonBKP {

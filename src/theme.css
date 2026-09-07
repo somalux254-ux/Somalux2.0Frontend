@@ -69,10 +69,10 @@ body,
 }
 
 [data-theme="light"] .chrome-dropdown {
-  background: #eef1f2 !important;
+  background: #acd9bb !important;
   color: var(--text-primary) !important;
-  border: 1px solid var(--border-muted) !important;
-  box-shadow: 0 10px 30px rgba(23, 32, 39, 0.18) !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 [data-theme="light"] .chrome-user-block {
@@ -110,9 +110,9 @@ body,
 [data-theme="light"] .chrome-item,
 [data-theme="light"] .library-item,
 [data-theme="light"] .genre-item {
-  background: var(--bg-secondary) !important;
+  background: #acd9bb !important;
   color: var(--text-primary) !important;
-  border-color: var(--border-muted) !important;
+  border-color: transparent !important;
 }
 
 [data-theme="light"] .settings-user-agreement-page .agreement-text section,

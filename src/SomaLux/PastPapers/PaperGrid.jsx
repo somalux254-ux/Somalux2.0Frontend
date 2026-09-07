@@ -496,26 +496,28 @@ export const PaperGrid = React.memo(({
           </div>
 
           {/* Pagination Controls */}
-          <div
-            className="book-pagination-actions"
-            style={{ marginTop: 10 }}
-          >
-            <button
-              className="btn book-pagination-button"
-              disabled={currentPage <= 1}
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+          {(currentPage > 1 || displayedPapers.length >= pageSize) && (
+            <div
+              className="book-pagination-actions"
+              style={{ marginTop: 10 }}
             >
-              <FiChevronLeft size={16} aria-hidden="true" /> Prev
-            </button>
+              <button
+                className="btn book-pagination-button"
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              >
+                <FiChevronLeft size={16} aria-hidden="true" /> Prev
+              </button>
 
-            <button
-              className="btn book-pagination-button"
-              disabled={currentPage >= Math.max(1, Math.ceil(filteredPapers.length / pageSize))}
-              onClick={onNextPage}
-            >
-              Next <FiChevronRight size={16} aria-hidden="true" />
-            </button>
-          </div>
+              <button
+                className="btn book-pagination-button"
+                disabled={currentPage >= Math.max(1, Math.ceil(filteredPapers.length / pageSize))}
+                onClick={onNextPage}
+              >
+                Next <FiChevronRight size={16} aria-hidden="true" />
+              </button>
+            </div>
+          )}
     </>
   );
 });

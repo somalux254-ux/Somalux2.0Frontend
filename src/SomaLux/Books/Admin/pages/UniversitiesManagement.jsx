@@ -342,10 +342,7 @@ const UniversitiesManagement = ({ userProfile }) => {
               className="input books-search-input"
             />
           </div>
-        </div>
-
-        <div className="actions university-form-toggle-actions" style={{ marginBottom: 6, marginLeft: '20px' }}>
-          <button className="btn primary" onClick={() => setShowAddForm(value => !value)}>{showAddForm ? 'Cancel' : 'Add University'}</button>
+          <button className="btn primary university-add-trigger" onClick={() => setShowAddForm(value => !value)}>{showAddForm ? 'Cancel' : 'Add University'}</button>
         </div>
 
         {showAddForm && (
@@ -424,9 +421,10 @@ const UniversitiesManagement = ({ userProfile }) => {
 
         {!showAddForm && <>
         <div className="panel" style={{ padding: 0, overflowX: 'auto' }}>
-          <table className="table universities-management-table" style={{ minWidth: '1200px' }}>
+          <table className="table universities-management-table numbered-table" style={{ minWidth: '1200px' }}>
             <thead>
               <tr>
+                <th style={{ width: '42px' }}>#</th>
                 <th style={{ width: '60px' }}>Cover</th>
                 <th style={{ width: '250px', cursor: 'pointer' }} onClick={() => toggleSort('name')}>Name {sort.col === 'name' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
                 <th style={{ width: '300px' }}>Description</th>
@@ -439,11 +437,12 @@ const UniversitiesManagement = ({ userProfile }) => {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} style={{ textAlign: 'center', color: '#8696a0' }}>Loading...</td></tr>
+                <tr><td colSpan={9} style={{ textAlign: 'center', color: '#8696a0' }}>Loading...</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={8} style={{ textAlign: 'center', color: '#8696a0' }}>No data</td></tr>
-              ) : rows.map(row => (
+                <tr><td colSpan={9} style={{ textAlign: 'center', color: '#8696a0' }}>No data</td></tr>
+              ) : rows.map((row, idx) => (
                 <tr key={row.id}>
+                  <td className="admin-row-number">{idx + 1}</td>
                   <td>
                     {row.cover_image_url ? <img src={row.cover_image_url} alt="cover" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4 }} /> : <span className="badge">No cover</span>}
                     {editingId === row.id && (
@@ -502,11 +501,11 @@ const UniversitiesManagement = ({ userProfile }) => {
           </table>
         </div>
 
-        <div className="actions" style={{ marginTop: 6 }}>
+        {totalPages > 1 && <div className="actions" style={{ marginTop: 6 }}>
           <button className="btn" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>Prev</button>
           <span style={{ color: '#cfd8dc' }}>Page {page} of {totalPages}</span>
           <button className="btn" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next</button>
-        </div>
+        </div>}
         </>}
 
         {previewImage && (

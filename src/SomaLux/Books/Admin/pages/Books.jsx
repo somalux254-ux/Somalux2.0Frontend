@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FiCheck, FiChevronDown, FiChevronLeft, FiChevronRight, FiFilter, FiSearch } from 'react-icons/fi';
 import { fetchBooks, fetchCategories, createCategory, deleteBook, updateBook } from '../api';
 import { useAdminUI } from '../AdminUIContext';
@@ -30,6 +31,79 @@ const highlightSearchText = (text, searchText) => {
   if (start === 0) return value;
   if (start < value.length) parts.push(value.slice(start));
   return parts;
+};
+
+const CategoryDropdown = ({ value, options, onChange, ariaLabel, placeholder = 'Select category' }) => {
+  const [open, setOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState(null);
+  const menuRef = useRef(null);
+  const panelRef = useRef(null);
+  const selectedLabel = options.find(option => String(option.value) === String(value))?.label || placeholder;
+
+  useEffect(() => {
+    const closeMenu = (event) => {
+      if (
+        menuRef.current && !menuRef.current.contains(event.target) &&
+        panelRef.current && !panelRef.current.contains(event.target)
+      ) setOpen(false);
+    };
+    document.addEventListener('mousedown', closeMenu);
+    return () => document.removeEventListener('mousedown', closeMenu);
+  }, []);
+
+  const toggleMenu = () => {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+    const trigger = menuRef.current?.querySelector('.users-filter-trigger');
+    if (trigger) {
+      const rect = trigger.getBoundingClientRect();
+      setMenuPosition({ top: rect.bottom + 5, left: rect.left, width: rect.width });
+    }
+    setOpen(true);
+  };
+
+  return (
+    <div className="users-filter-menu books-category-edit-dropdown" ref={menuRef}>
+      <button
+        type="button"
+        className={`users-filter-trigger${open ? ' is-open' : ''}`}
+        onClick={toggleMenu}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={ariaLabel}
+      >
+        <span>{selectedLabel}</span>
+        <FiChevronDown className="users-filter-chevron" />
+      </button>
+      {open && menuPosition && createPortal(
+        <div
+          className="users-filter-panel books-category-edit-panel"
+          role="menu"
+          ref={panelRef}
+          style={{ top: menuPosition.top, left: menuPosition.left, minWidth: menuPosition.width }}
+        >
+          {options.map(option => (
+            <button
+              type="button"
+              role="menuitem"
+              className={`users-filter-option${String(value) === String(option.value) ? ' is-selected' : ''}`}
+              onClick={() => {
+                onChange(option.value);
+                setOpen(false);
+              }}
+              key={String(option.value)}
+            >
+              <span>{option.label}</span>
+              {String(value) === String(option.value) && <FiCheck />}
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
 };
 
 const Books = ({ userProfile }) => {
@@ -627,11 +701,16 @@ const Books = ({ userProfile }) => {
                       placeholder="New category name"
                     />
                   ) : (
-                    <select className="select" style={{ flex: 1, minWidth: 0 }} value={editDraft.category_id || ''} onChange={(e) => setEditDraft({ ...editDraft, category_id: e.target.value })}>
-                      <option value="">Leave unchanged</option>
-                      <option value="__uncategorized__">Uncategorized</option>
-                      {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
-                    </select>
+                    <CategoryDropdown
+                      value={editDraft.category_id || ''}
+                      options={[
+                        { value: '', label: 'Leave unchanged' },
+                        { value: '__uncategorized__', label: 'Uncategorized' },
+                        ...categories.map(category => ({ value: category.id, label: category.name }))
+                      ]}
+                      onChange={(value) => setEditDraft({ ...editDraft, category_id: value })}
+                      ariaLabel="Category for selected books"
+                    />
                   )}
                   <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', color: '#8696a0', fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                     <input
@@ -731,7 +810,7 @@ const Books = ({ userProfile }) => {
         )}
 
         <div className="panel books-table-panel" style={{ padding: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <table className="table books-management-table" style={{ minWidth: '1100px' }}>
+          <table className="table books-management-table numbered-table" style={{ minWidth: '1100px' }}>
             <thead>
               <tr>
                 {showCheckboxes && (
@@ -745,6 +824,7 @@ const Books = ({ userProfile }) => {
                     />
                   </th>
                 )}
+                <th style={{ width: '42px' }}>#</th>
                 <th style={{ width: '50px' }}>Cover</th>
                 <th className="book-title-column" style={{ width: '220px', cursor: 'pointer' }} onClick={() => toggleSort('title')}>Title {sort.col === 'title' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
                 <th style={{ width: '150px', cursor: 'pointer' }} onClick={() => toggleSort('author')}>Author {sort.col === 'author' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
@@ -758,10 +838,10 @@ const Books = ({ userProfile }) => {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={showCheckboxes ? 11 : 10} style={{ color: '#8696a0', textAlign: 'center' }}>Loading...</td></tr>
+                <tr><td colSpan={showCheckboxes ? 12 : 11} style={{ color: '#8696a0', textAlign: 'center' }}>Loading...</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={showCheckboxes ? 11 : 10} style={{ color: '#8696a0', textAlign: 'center' }}>No data</td></tr>
-              ) : rows.map(row => (
+                <tr><td colSpan={showCheckboxes ? 12 : 11} style={{ color: '#8696a0', textAlign: 'center' }}>No data</td></tr>
+              ) : rows.map((row, idx) => (
                 <tr key={row.id} style={{ background: selectedIds.has(row.id) ? 'rgba(0, 168, 132, 0.1)' : 'transparent' }}>
                   {showCheckboxes && (
                     <td style={{ textAlign: 'center' }}>
@@ -774,6 +854,7 @@ const Books = ({ userProfile }) => {
                       />
                     </td>
                   )}
+                  <td className="admin-row-number">{idx + 1}</td>
                   <td>{row.cover_url ? <img src={row.cover_url} alt="cover" style={{ width: 44, height: 58, aspectRatio: '3 / 4', objectFit: 'cover', borderRadius: 4, display: 'block' }} /> : <span className="badge">No cover</span>}</td>
                   <td className="book-title-column">
                     {editingId === row.id ? (
@@ -799,18 +880,15 @@ const Books = ({ userProfile }) => {
                               aria-label={`New category for ${row.title}`}
                             />
                           ) : (
-                            <select
-                              className="select"
-                              style={{ flex: 1, minWidth: 0 }}
+                            <CategoryDropdown
                               value={editDraft.category_id || ''}
-                              onChange={(e) => { setUseCustomCategory(false); setEditDraft({ ...editDraft, category_id: e.target.value || null }); }}
-                              aria-label={`Category for ${row.title}`}
-                            >
-                              <option value="">Uncategorized</option>
-                              {categories.map(category => (
-                                <option key={category.id} value={category.id}>{category.name}</option>
-                              ))}
-                            </select>
+                              options={[
+                                { value: '', label: 'Uncategorized' },
+                                ...categories.map(category => ({ value: category.id, label: category.name }))
+                              ]}
+                              onChange={(value) => { setUseCustomCategory(false); setEditDraft({ ...editDraft, category_id: value || null }); }}
+                              ariaLabel={`Category for ${row.title}`}
+                            />
                           )}
                           <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', color: '#8696a0', fontSize: '11px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                             <input
@@ -855,7 +933,7 @@ const Books = ({ userProfile }) => {
                         <div className="book-file-action">
                           <label className="label">Replace PDF</label>
                           <div
-                            className="file-upload-btn"
+                            className={`file-upload-btn${newPdf ? ' has-file' : ''}`}
                             onClick={() => document.getElementById(`pdf-input-${row.id}`).click()}
                             style={{
                               border: '1px solid #374151',
@@ -887,7 +965,7 @@ const Books = ({ userProfile }) => {
                         <div className="book-file-action">
                           <label className="label">Replace Cover</label>
                           <div
-                            className="file-upload-btn"
+                            className={`file-upload-btn${newCover ? ' has-file' : ''}`}
                             onClick={() => document.getElementById(`cover-input-${row.id}`).click()}
                             style={{
                               border: '1px solid #374151',
@@ -947,7 +1025,7 @@ const Books = ({ userProfile }) => {
           </table>
         </div>
 
-        <div className="book-pagination-actions" style={{ marginTop: 10 }}>
+        {totalPages > 1 && <div className="book-pagination-actions" style={{ marginTop: 10 }}>
           <button className="btn book-pagination-button" disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>
             <FiChevronLeft size={16} aria-hidden="true" /> Prev
           </button>
@@ -955,7 +1033,7 @@ const Books = ({ userProfile }) => {
           <button className="btn book-pagination-button" disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>
             Next <FiChevronRight size={16} aria-hidden="true" />
           </button>
-        </div>
+        </div>}
       </div>
     </div>
   );

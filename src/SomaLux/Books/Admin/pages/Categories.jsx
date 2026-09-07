@@ -158,17 +158,18 @@ const Categories = () => {
       )}
 
       <div style={{ overflowX: 'auto' }}>
-        <table className="table categories-table">
+        <table className="table categories-table numbered-table">
           <thead>
-            <tr><th>Category</th><th style={{ textAlign: 'center' }}>Books</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
+            <tr><th>#</th><th>Category</th><th style={{ textAlign: 'center' }}>Books</th><th style={{ textAlign: 'right' }}>Actions</th></tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={3} style={{ textAlign: 'center', padding: '2rem', color: '#8696a0' }}>Loading categories...</td></tr>
+              <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: '#8696a0' }}>Loading categories...</td></tr>
             ) : filteredRows.length === 0 ? (
-              <tr><td colSpan={3} style={{ textAlign: 'center', padding: '2rem', color: '#8696a0' }}>{searchTerm ? 'No matching categories.' : 'No categories created yet.'}</td></tr>
-            ) : filteredRows.map(row => (
+              <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: '#8696a0' }}>{searchTerm ? 'No matching categories.' : 'No categories created yet.'}</td></tr>
+            ) : filteredRows.map((row, idx) => (
               <tr key={row.id}>
+                <td className="admin-row-number">{idx + 1}</td>
                 <td>
                   {editingId === row.id ? <input className="input" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: '#e9edef', fontWeight: 600 }}><FiFolder color="#00a884" />{row.name}</span>}
                 </td>
