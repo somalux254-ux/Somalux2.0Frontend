@@ -5,6 +5,13 @@ import { FaSearch } from 'react-icons/fa';
 import { formatNumber } from './formatNumber';
 import './PaperPanel.css';
 
+const formatUniversityName = (name) => String(name || '')
+  .trim()
+  .toLowerCase()
+  .split(/\s+/)
+  .map(word => word.split('-').map(part => part ? `${part[0].toUpperCase()}${part.slice(1)}` : part).join('-'))
+  .join(' ');
+
 const highlightSearchText = (text, searchText) => {
   const value = String(text || '');
   const query = String(searchText || '').trim();
@@ -45,7 +52,7 @@ const UniversityCard = React.memo(({
     {uni.cover_image_url && (
       <img
         src={uni.cover_image_url}
-        alt={uni.name}
+        alt={formatUniversityName(uni.name)}
         loading="lazy"
         className="university-coverpast"
         style={{ 
@@ -58,7 +65,7 @@ const UniversityCard = React.memo(({
 
     <div className="card-contentpast" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
       <h3 style={{ margin: 0, fontSize: '0.8rem', color: '#e9edef', fontWeight: '600' }}>
-        {highlightSearchText(uni.name, searchTerm)}
+        {highlightSearchText(formatUniversityName(uni.name), searchTerm)}
       </h3>
       <p style={{ margin: '2px 0 0 0', fontSize: '0.65rem', color: '#8696a0' }}>
         {highlightSearchText(uni.location, searchTerm)}

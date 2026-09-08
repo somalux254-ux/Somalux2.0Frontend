@@ -266,8 +266,8 @@
   }
 
   .category-filterBKP {
-    width: 84px;
-    max-width: 84px;
+    width: 60px;
+    max-width: 60px;
     height: 30px;
     min-height: 30px;
     font-size: 0.75rem;
@@ -364,7 +364,7 @@
   line-height: 1;
   min-height: 32px;
   height: 32px;
-  width: 96px;
+  width: 68px;
   padding: 0.15rem 0.5rem;
   background: transparent;
   color: #b3bcc5;

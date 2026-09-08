@@ -388,10 +388,6 @@
   white-space: nowrap;
 }
 
-.settings-stp-header-upgrade-btn:hover {
-  background: rgba(245, 158, 11, 0.1);
-}
-
 .settings-stp-header-upgrade-btn > div {
   transform: scale(0.9);
   transform-origin: center;

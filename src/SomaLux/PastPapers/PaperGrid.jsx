@@ -1,6 +1,6 @@
 import React, { useRef, useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { FiFileText, FiFilter, FiX, FiDownload, FiEye, FiBookmark, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiFileText, FiX, FiDownload, FiEye, FiBookmark, FiChevronLeft, FiChevronRight, FiChevronDown, FiCheck } from 'react-icons/fi';
 import { AiOutlineHeart, AiFillHeart } from 'react-icons/ai';
 import { FaSearch } from 'react-icons/fa';
 import { formatNumber } from './formatNumber';
@@ -155,49 +155,51 @@ export const PaperGrid = React.memo(({
         <div className="filter-wrapperpast">
           <button
             onClick={toggleFilters}
-            className={`filter-buttonpast ${showFilters ? 'activepast' : ''}`}
-            style={{ display: 'none' }}
+            className={`paper-filter-selectpast ${showFilters ? 'activepast' : ''}`}
+            aria-expanded={showFilters}
+            aria-haspopup="menu"
           >
-            <FiFilter /> {activeFilter !== 'all' && '• '}Filters
+            <span>{activeFilter === 'recent' ? 'Recent' : activeFilter === 'faculty' ? 'Faculty' : 'All'}</span>
+            <FiChevronDown className="paper-filter-chevronpast" size={17} strokeWidth={3} />
           </button>
 
           {showFilters && (
-            <div 
-              className="filter-dropdownpast"
-              style={{ display: 'none' }}
-            >
+            <div className="paper-filter-menupast" role="menu">
               <div className="filter-sectionpast">
-                <h4>Filter by:</h4>
-                <div
-                  className={`filter-optionpast ${activeFilter === 'all' ? 'activepast' : ''}`}
-                  onClick={() => handleFilterChange('all')}
-                >
-                  All Papers
-                </div>
+                <button type="button" role="menuitem" onClick={() => handleFilterChange('all')}>
+                  <span>All Papers</span>
+                  {activeFilter === 'all' && <FiCheck size={14} />}
+                </button>
 
                 {faculties && faculties.length > 0 && (
-                  <div
-                    className={`filter-optionpast ${activeFilter === 'faculty' ? 'activepast' : ''}`}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="paper-filter-faculty-actionpast"
                     onClick={() => onFacultyClick?.()}
-                    style={{ cursor: 'pointer', fontWeight: 'bold', color: '#00a884' }}
                   >
-                    📚 Faculty
-                  </div>
+                    <span>Browse Faculty</span>
+                    <FiChevronRight size={14} />
+                  </button>
                 )}
+
+                <button type="button" role="menuitem" onClick={() => handleFilterChange('recent')}>
+                  <span>Recent Papers</span>
+                  {activeFilter === 'recent' && <FiCheck size={14} />}
+                </button>
               </div>
               <div className="filter-sectionpast">
-                <h4>Sort by:</h4>
-                <div
-                  className={`filter-optionpast ${sortBy === 'default' ? 'activepast' : ''}`}
-                  onClick={() => handleSortChange('default')}
-                >
-                  Default
-                </div>
                 <div
                   className={`filter-optionpast ${sortBy === 'title' ? 'activepast' : ''}`}
                   onClick={() => handleSortChange('title')}
                 >
                   Title (A-Z)
+                </div>
+                <div
+                  className={`filter-optionpast ${sortBy === 'title-desc' ? 'activepast' : ''}`}
+                  onClick={() => handleSortChange('title-desc')}
+                >
+                  Title (Z-A)
                 </div>
                 <div
                   className={`filter-optionpast ${sortBy === 'course' ? 'activepast' : ''}`}
@@ -206,10 +208,22 @@ export const PaperGrid = React.memo(({
                   Course (A-Z)
                 </div>
                 <div
+                  className={`filter-optionpast ${sortBy === 'course-desc' ? 'activepast' : ''}`}
+                  onClick={() => handleSortChange('course-desc')}
+                >
+                  Course (Z-A)
+                </div>
+                <div
                   className={`filter-optionpast ${sortBy === 'year' ? 'activepast' : ''}`}
                   onClick={() => handleSortChange('year')}
                 >
                   Year (Newest)
+                </div>
+                <div
+                  className={`filter-optionpast ${sortBy === 'year-asc' ? 'activepast' : ''}`}
+                  onClick={() => handleSortChange('year-asc')}
+                >
+                  Year (Oldest)
                 </div>
               </div>
             </div>

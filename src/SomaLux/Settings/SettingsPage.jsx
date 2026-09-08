@@ -141,6 +141,16 @@ function SettingsPage({ onBack, onLogout }) {
     }
   };
 
+  const returnToSettingsMain = () => {
+    setShowPremiumPanel(false);
+    setShowSubscriptionModal(false);
+    setCurrentPage('main');
+    navigate('/settings', {
+      replace: true,
+      state: { settingsPage: 'main' },
+    });
+  };
+
   const handleToggle = (category, key) => {
     // Calculate the new value BEFORE state update (since state updates are async)
     const currentValue = settings[category]?.[key];
@@ -336,7 +346,7 @@ function SettingsPage({ onBack, onLogout }) {
 
         {showPremiumPanel && (
           <PremiumPanel
-            onClose={() => setShowPremiumPanel(false)}
+            onClose={returnToSettingsMain}
             onSelectPlan={(plan) => {
               setSelectedSubscriptionPlan(plan === 'pro' ? 'pro' : 'premium');
               setShowPremiumPanel(false);
@@ -347,14 +357,14 @@ function SettingsPage({ onBack, onLogout }) {
 
         <SubscriptionModal
           isOpen={showSubscriptionModal}
-          onClose={() => setShowSubscriptionModal(false)}
+          onClose={returnToSettingsMain}
           onBack={() => {
             setShowSubscriptionModal(false);
             setShowPremiumPanel(true);
           }}
           product="somalux"
           selectedPlan={selectedSubscriptionPlan}
-          onSubscribed={() => setShowSubscriptionModal(false)}
+          onSubscribed={returnToSettingsMain}
         />
       </div>
     );
