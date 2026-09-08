@@ -2,9 +2,9 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { supabase } from './supabaseClient';
-import { initializeSession, setupAuthListener } from '../../utils/sessionManager';
+import { initializeSession, setupAuthListener } from '../../auth/sessionManager';
 import { Download } from './Download';
-import { AuthModal } from './AuthModal';
+import { AuthModal } from '../../auth/AuthModal';
 import SubscriptionModal from '../Subscriptions/SubscriptionModal';
 import { FaSearch } from 'react-icons/fa';
 import {

@@ -4,7 +4,7 @@ import { FiSettings, FiUser, FiShield } from 'react-icons/fi';
 import { userCache } from "../Books/utils/cacheManager";
 import { supabase } from "../Books/supabaseClient";
 import { ProfileAvatar, ProfilePlaceholder } from "./ProfileAvatar";
-import { AuthModals } from "./AuthModals";
+import { AuthModals } from "../../auth/AuthModals";
 import { getCurrentUserProfile } from "../Books/Admin/api";
 import "./Profile.css";
 

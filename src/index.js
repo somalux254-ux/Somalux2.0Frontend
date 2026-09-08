@@ -9,12 +9,13 @@ import './pdfConfig.js';
 
 import { SomaLux } from './SomaLux';
 import SpeedTracker from './SpeedTracker';
-import { prewarmGoogleSignIn } from './SomaLux/Books/AuthModal';
+import { prewarmGoogleSignIn } from './auth/AuthModal';
 import { supabase } from './SomaLux/Books/supabaseClient';
-import { handleOAuthCallback } from './utils/oauthHandler';
+import { handleOAuthCallback } from './auth/oauthHandler';
 import { handleSubscriptionBack } from './SomaLux/Subscriptions/backNavigation';
 import { runBackAction } from './SomaLux/services/backNavigation';
 import { initializeTheme } from './theme';
+import { initializeLiveUpdate } from './liveUpdate';
 import './theme.css';
 // Remove old PWA workers so the website offers the native APK instead.
 if ('serviceWorker' in navigator) {
@@ -37,6 +38,7 @@ const hydrateAuthSession = async () => {
 };
 
 hydrateAuthSession();
+void initializeLiveUpdate();
 const removeThemeListener = initializeTheme();
 
 const AppEntry = () => {
@@ -56,9 +58,13 @@ const AppEntry = () => {
         App.exitApp();
       }
     });
+    const appStateListener = App.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) void initializeLiveUpdate();
+    });
 
     return () => {
       backButtonListener.then((listener) => listener.remove());
+      appStateListener.then((listener) => listener.remove());
     };
   }, []);
 

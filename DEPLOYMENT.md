@@ -61,15 +61,15 @@ ADMIN_EMAILS
 
 Confirm the backend health URL returns JSON showing that the service is running.
 
-## 3. Deploy the Frontend to Render
+## 3. Deploy the Frontend to Netlify
 
-Create a Render **Static Site** connected to `Somalux2.0Frontend`.
+Create a Netlify site connected to `Somalux2.0Frontend`.
 
 ```text
 Branch: main
-Root Directory: leave blank
-Build Command: npm run build
-Publish Directory: build
+Base directory: leave blank
+Build command: npm run build
+Publish directory: build
 ```
 
 Add these frontend environment variables:
@@ -94,12 +94,12 @@ https://www.somalux.co.ke
 
 Do not point the frontend domain to the backend. The backend should keep its Render URL, or use a separate API subdomain such as `api.somalux.co.ke`.
 
-In Render:
+In Netlify:
 
-1. Open the frontend Static Site.
+1. Open the frontend site.
 2. Go to **Settings > Custom Domains**.
 3. Add `somalux.co.ke` and `www.somalux.co.ke`.
-4. Add the DNS records Render provides at your domain provider.
+4. Add the DNS records Netlify provides at your domain provider.
 5. Wait for **Verified** and **Certificate Issued**.
 
 The root website should display the frontend. The backend health URL should display JSON.
@@ -162,7 +162,9 @@ $git = "C:\Program Files\Git\cmd\git.exe"
 & $git push
 ```
 
-Render redeploys the frontend from the pushed `main` branch.
+Netlify redeploys the frontend from the pushed `main` branch.
+
+The production Android APK also checks the frontend deployment for OTA updates when it opens. The frontend build publishes `ota/latest.json` and `ota/live-update.zip` on Netlify. Do not remove these files from the publish directory. An OTA update is applied the next time the app launches after the download completes. Native Android changes still require a new APK.
 
 For an updated APK:
 
@@ -182,17 +184,17 @@ Stop any old React server first so it does not reuse stale environment variables
 
 ## 8. Troubleshooting
 
-### Render says the root directory does not exist
+### Netlify says the base directory does not exist
 
-The backend repository was pushed with its contents at the repository root. Leave Render's Root Directory blank.
+The frontend repository was pushed with its contents at the repository root. Leave Netlify's Base directory blank.
 
 ### The website shows backend JSON
 
-The custom domain is attached to the backend. Move it to the frontend Static Site.
+The custom domain is attached to the backend. Move it to the Netlify frontend site.
 
 ### The website shows a 404 after refreshing a route
 
-Use the frontend's hash routing or configure a Render rewrite to `/index.html`.
+The included `netlify.toml` configures the rewrite to `/index.html`.
 
 ### Google sign-in fails in release but works in debug
 

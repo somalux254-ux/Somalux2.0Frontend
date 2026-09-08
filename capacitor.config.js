@@ -12,6 +12,10 @@ const config = {
       }
     : {}),
   plugins: {
+    LiveUpdate: {
+      autoDeleteBundles: true,
+      readyTimeout: 10000,
+    },
     SplashScreen: {
       launchAutoHide: true,
     },

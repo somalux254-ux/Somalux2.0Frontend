@@ -15,7 +15,7 @@ import {
   fetchUniversities,
   toggleUniversityLike
 } from '../Books/Admin/campusApi';
-import { AuthModal } from '../Books/AuthModal';
+import { AuthModal } from '../../auth/AuthModal';
 import SubscriptionModal from '../Subscriptions/SubscriptionModal';
 import SecureReader from '../Books/SecureReader';
 import SimpleScrollReader from '../Books/SimpleScrollReader';
@@ -798,12 +798,18 @@ export const PaperPanel = ({ demoMode = false }) => {
       const sortedResult = result.slice(); // Non-mutating copy
       if (sortBy === 'title') {
         sortedResult.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+      } else if (sortBy === 'title-desc') {
+        sortedResult.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
       } else if (sortBy === 'course') {
         sortedResult.sort((a, b) => (a.course || '').localeCompare(b.course || ''));
+      } else if (sortBy === 'course-desc') {
+        sortedResult.sort((a, b) => (b.course || '').localeCompare(a.course || ''));
       } else if (sortBy === 'university') {
         sortedResult.sort((a, b) => (a.university || '').localeCompare(b.university || ''));
       } else if (sortBy === 'year') {
         sortedResult.sort((a, b) => (b.year || 0) - (a.year || 0));
+      } else if (sortBy === 'year-asc') {
+        sortedResult.sort((a, b) => (a.year || 0) - (b.year || 0));
       }
       return sortedResult;
     }
@@ -1201,6 +1207,8 @@ export const PaperPanel = ({ demoMode = false }) => {
           onAuthRequired={handleAuthRequired}
           papers={papers}
           onUniversitySelect={(uni) => {
+            if (!handleAuthRequired('view university')) return;
+
             setUniversities(prevUnis => 
               prevUnis.map(u => 
                 u.id === uni.id 

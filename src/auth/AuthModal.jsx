@@ -4,10 +4,10 @@ import { FiX } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
 import { Capacitor } from '@capacitor/core';
 import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
-import { supabase } from './supabaseClient';
-import { AgreementTab } from '../Settings/tabs/UserAgreement';
-import PrivacyPolicyPage from '../Settings/PrivacyPolicyPage';
-import { popBackAction, pushBackAction } from '../services/backNavigation';
+import { supabase } from '../SomaLux/Books/supabaseClient';
+import { AgreementTab } from '../SomaLux/Settings/tabs/UserAgreement';
+import PrivacyPolicyPage from '../SomaLux/Settings/PrivacyPolicyPage';
+import { popBackAction, pushBackAction } from '../SomaLux/services/backNavigation';
 import './AuthModal.css';
 
 let googleSignInInitialization = null;

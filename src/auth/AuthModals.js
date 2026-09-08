@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../Books/supabaseClient";
-import { signOutCompletely } from "../../utils/sessionManager";
-import { AuthModal } from "../Books/AuthModal";
+import { supabase } from "../SomaLux/Books/supabaseClient";
+import { signOutCompletely } from "./sessionManager";
+import { AuthModal } from "./AuthModal";
 import "./AuthModals.css"; // Import this CSS file
 
 export const AuthModals = ({

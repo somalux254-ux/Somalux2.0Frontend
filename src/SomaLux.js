@@ -9,7 +9,7 @@ import SettingsPage from './SomaLux/Settings/SettingsPage';
 import { NotificationProvider } from './SomaLux/contexts/NotificationContext';
 import { ReaderAudioProvider } from './SomaLux/contexts/ReaderAudioContext';
 import { supabase } from './SomaLux/Books/supabaseClient';
-import { signOutCompletely } from './utils/sessionManager';
+import { signOutCompletely } from './auth/sessionManager';
 import { EmailSender } from "./SomaLux/Admin/EmailSender";
 import NativeInstallPrompt from "./components/NativeInstallPrompt";
 
