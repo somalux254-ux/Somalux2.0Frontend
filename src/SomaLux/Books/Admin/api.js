@@ -5,6 +5,25 @@ const API_BASE = API_URL;
 const BOOKS_BUCKET = 'elib-books';
 const signedBookUrlCache = new Map();
 
+async function getValidAccessToken() {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+
+  const storedAccessToken = sessionData?.session?.access_token;
+
+  if (storedAccessToken) {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (!userError && userData?.user) {
+      return storedAccessToken;
+    }
+  }
+
+  const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+  if (refreshError) throw refreshError;
+
+  return refreshData?.session?.access_token || null;
+}
+
 export async function fetchCategories() {
   const { data, error } = await supabase
     .from('categories')
@@ -61,13 +80,13 @@ export async function getBookSignedUrl(bookId) {
     return cached.request;
   }
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) throw new Error('Not authenticated');
+  const accessToken = await getValidAccessToken();
+  if (!accessToken) throw new Error('Not authenticated');
 
   const requestStartedAt = Date.now();
   console.log('[signed-url] Client request started', { bookId });
   const request = fetch(`${getBackendOrigin()}/api/elib/books/${encodeURIComponent(bookId)}/signed-url`, {
-    headers: { Authorization: `Bearer ${session.access_token}` }
+    headers: { Authorization: `Bearer ${accessToken}` }
   }).then(async response => {
     const result = await response.json().catch(() => ({}));
     if (!response.ok || !result.signedUrl) {
@@ -217,9 +236,9 @@ export async function fetchBooks({ page = 1, pageSize = 10, search = '', categor
 
 export async function uploadFile(file) {
   try {
-    // Get auth session
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    // Get a valid auth session token, refreshing it if needed
+    const accessToken = await getValidAccessToken();
+    if (!accessToken) {
       throw new Error('Not authenticated');
     }
 
@@ -240,7 +259,7 @@ export async function uploadFile(file) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
+        'Authorization': `Bearer ${accessToken}`
       },
       body: JSON.stringify({
         fileBase64: base64,

@@ -69,7 +69,7 @@ export const BookManagement = () => {
   // Tab definitions (without components to avoid rendering all)
   const tabs = [
     { id: 'books',      label: 'Books' },
-    { id: 'pastpapers', label: 'ExamPapers' },
+    { id: 'pastpapers', label: 'Exams' },
   ];
 
   // Navigate to tab by updating URL

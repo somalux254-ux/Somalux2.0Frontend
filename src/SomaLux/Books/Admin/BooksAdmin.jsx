@@ -71,7 +71,11 @@ export const BooksAdmin = () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const res = await fetch(`${API_URL}/api/elib/submissions/summary`, {
-          headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
+          headers: {
+            ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+            ...(userProfile?.email ? { 'x-actor-email': userProfile.email } : {}),
+            ...(userProfile?.id ? { 'x-actor-id': userProfile.id } : {}),
+          },
         });
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error || 'Failed to load submissions summary');
@@ -81,7 +85,7 @@ export const BooksAdmin = () => {
       }
     };
     fetchSummary();
-  }, []);
+  }, [userProfile]);
 
   // Collapse sidebar on mobile
   useEffect(() => {

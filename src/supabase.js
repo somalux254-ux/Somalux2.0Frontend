@@ -4,8 +4,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || 'https://agirxwnwpxpddaqylucg.supabase.co';
-const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnaXJ4d253cHhwZGRhcXlsdWNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyNzQ4MTMsImV4cCI6MjEwMzg1MDgxM30._XDzUC-wKiVe4QQNuO0UGeILdHQEHev892Hk_XJkHAg';
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || 'https://zmgigoggurfxkgtwjlvn.supabase.co';
+const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InptZ2lnb2dndXJmeGtndHdqbHZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5NDQwMzEsImV4cCI6MjEwNDUyMDAzMX0.jusNUmBC-8dxOO8t71y-tRdyTKyX4rELHRn9e74kiDs';
 
 // Export Supabase client for any components that need it
 export const supabase = createClient(supabaseUrl, supabaseKey, {

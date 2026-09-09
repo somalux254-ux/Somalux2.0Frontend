@@ -7,7 +7,7 @@ const buildDirectory = path.resolve(__dirname, '..', 'build');
 const otaDirectory = path.join(buildDirectory, 'ota');
 const bundlePath = path.join(otaDirectory, 'live-update.zip');
 const manifestPath = path.join(otaDirectory, 'latest.json');
-const bundleId = process.env.COMMIT_REF || `${Date.now()}`;
+const bundleId = process.env.COMMIT_REF || process.env.GIT_COMMIT || process.env.REVISION || `${Date.now()}`;
 
 fs.mkdirSync(otaDirectory, { recursive: true });
 
@@ -16,12 +16,12 @@ const archive = archiver('zip', { zlib: { level: 9 } });
 
 output.on('close', () => {
   const checksum = crypto.createHash('sha256').update(fs.readFileSync(bundlePath)).digest('hex');
-  const siteUrl = process.env.URL || 'https://somalux.co.ke';
+  const siteUrl = process.env.REACT_APP_LIVE_UPDATE_BASE_URL || process.env.URL || 'https://somalux.co.ke';
 
   fs.writeFileSync(manifestPath, JSON.stringify({
     bundleId,
     checksum,
-    url: `${siteUrl}/ota/live-update.zip`,
+    url: `${siteUrl.replace(/\/$/, '')}/ota/live-update.zip`,
   }, null, 2));
 
   console.log(`[LiveUpdate] Created ${bundlePath} (${archive.pointer()} bytes)`);

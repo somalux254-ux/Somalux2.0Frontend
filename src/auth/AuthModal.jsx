@@ -125,7 +125,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess, action = 'action' }) => 
 
       const redirectTo = typeof window !== 'undefined'
         ? window.location.origin
-        : 'https://agirxwnwpxpddaqylucg.supabase.co/auth/v1/callback';
+        : 'https://zmgigoggurfxkgtwjlvn.supabase.co/auth/v1/callback';
 
       const { data, error: signInError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
