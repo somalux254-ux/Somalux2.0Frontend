@@ -2,6 +2,13 @@
   command = "npm run build"
   publish = "build"
 
+[[headers]]
+  for = "/ota/*"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+    Pragma = "no-cache"
+    Expires = "0"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

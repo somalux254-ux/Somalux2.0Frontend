@@ -591,6 +591,110 @@
   gap: 0px;
 }
 
+.settings-stp-app-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.settings-stp-app-tile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+[data-theme="light"] .settings-stp-app-tile {
+  color: #0b1216;
+}
+
+[data-theme="dark"] .settings-stp-app-tile {
+  color: #f5f5f5;
+}
+
+.settings-stp-app-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  overflow: hidden;
+  border-radius: 10px;
+  flex: 0 0 52px;
+}
+
+[data-theme="light"] .settings-stp-app-icon {
+  background: #0b1216;
+}
+
+[data-theme="dark"] .settings-stp-app-icon {
+  background: #fff;
+}
+
+.settings-stp-app-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+[data-theme="dark"] .settings-stp-app-logo-joblink {
+  filter: brightness(0);
+}
+
+[data-theme="dark"] .settings-stp-app-logo-staylink {
+  filter: brightness(0);
+}
+
+.settings-stp-app-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.settings-stp-app-details {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.settings-stp-app-install {
+  margin-left: auto;
+  padding: 8px 12px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.settings-stp-app-install:hover,
+.settings-stp-app-install:focus-visible {
+  text-decoration: underline;
+}
+
+.settings-stp-app-coming-soon {
+  color: #6b7280;
+  cursor: default;
+}
+
+[data-theme="dark"] .settings-stp-app-coming-soon {
+  color: #a0a8b8;
+}
+
+.settings-stp-app-description {
+  display: block;
+  color: #6b7280;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+[data-theme="dark"] .settings-stp-app-description {
+  color: #a0a8b8;
+}
+
 /* Settings Option */
 .settings-stp-page-option {
   display: flex;

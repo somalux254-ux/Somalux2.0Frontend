@@ -286,9 +286,9 @@ export async function uploadFile(file) {
 
 export async function uploadCover(file) {
   try {
-    // Get auth session
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    // Get a fresh access token before uploading
+    const accessToken = await getValidAccessToken();
+    if (!accessToken) {
       throw new Error('Not authenticated');
     }
 
@@ -309,7 +309,7 @@ export async function uploadCover(file) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
+        'Authorization': `Bearer ${accessToken}`
       },
       body: JSON.stringify({
         fileBase64: base64,

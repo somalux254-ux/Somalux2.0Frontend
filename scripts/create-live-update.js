@@ -21,7 +21,7 @@ output.on('close', () => {
   fs.writeFileSync(manifestPath, JSON.stringify({
     bundleId,
     checksum,
-    url: `${siteUrl.replace(/\/$/, '')}/ota/live-update.zip`,
+    url: `${siteUrl.replace(/\/$/, '')}/ota/live-update.zip?v=${bundleId}`,
   }, null, 2));
 
   console.log(`[LiveUpdate] Created ${bundlePath} (${archive.pointer()} bytes)`);

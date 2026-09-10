@@ -1,42 +1,46 @@
 import React from 'react';
-import { FiDownload, FiX } from 'react-icons/fi';
+import { FiX } from 'react-icons/fi';
 import { Capacitor } from '@capacitor/core';
 import { API_URL } from '../config';
 import './NativeInstallPrompt.css';
 
 const APK_DOWNLOAD_URL = `${API_URL}/api/android/apk/download?source=website-prompt`;
 const APK_DOWNLOAD_STARTED_KEY = 'somalux-apk-download-started';
+const APK_PROMPT_VIEW_COUNT_KEY = 'somalux-apk-prompt-view-count';
+const MAX_APK_PROMPT_VIEWS = 3;
+const APK_PROMPT_DURATION_MS = 10000;
+
+const getBooleanSetting = (key) => {
+  try {
+    return window.localStorage.getItem(key) === 'true';
+  } catch (error) {
+    return false;
+  }
+};
 
 export const NativeInstallPrompt = () => {
-  const [isVisible, setIsVisible] = React.useState(() => {
-    let downloadStarted = false;
-    try {
-      downloadStarted = window.localStorage.getItem(APK_DOWNLOAD_STARTED_KEY) === 'true';
-    } catch (error) {}
-    return Capacitor.getPlatform() === 'web' && !downloadStarted;
-  });
+  const [isVisible, setIsVisible] = React.useState(false);
 
   React.useEffect(() => {
-    if (Capacitor.getPlatform() !== 'web') {
-      setIsVisible(false);
+    if (Capacitor.getPlatform() !== 'web' || getBooleanSetting(APK_DOWNLOAD_STARTED_KEY)) {
       return undefined;
     }
 
-    const reminderId = window.setInterval(() => {
-      let downloadStarted = false;
-      try {
-        downloadStarted = window.localStorage.getItem(APK_DOWNLOAD_STARTED_KEY) === 'true';
-      } catch (error) {}
+    let viewCount = 0;
+    try {
+      viewCount = Number.parseInt(window.localStorage.getItem(APK_PROMPT_VIEW_COUNT_KEY) || '0', 10);
+    } catch (error) {}
 
-      if (downloadStarted) {
-        setIsVisible(false);
-        return;
-      }
+    if (viewCount >= MAX_APK_PROMPT_VIEWS) return undefined;
 
-      setIsVisible((visible) => !visible);
-    }, 30000);
+    try {
+      window.localStorage.setItem(APK_PROMPT_VIEW_COUNT_KEY, String(viewCount + 1));
+    } catch (error) {}
 
-    return () => window.clearInterval(reminderId);
+    setIsVisible(true);
+    const timeoutId = window.setTimeout(() => setIsVisible(false), APK_PROMPT_DURATION_MS);
+
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
   const startDownload = () => {
@@ -46,21 +50,26 @@ export const NativeInstallPrompt = () => {
     setIsVisible(false);
   };
 
-  const dismissPrompt = () => setIsVisible(false);
+  const dismissPrompt = () => {
+    setIsVisible(false);
+  };
 
   if (!isVisible) return null;
 
   return (
-    <aside className="native-install-prompt" role="status" aria-label="Install Somalux">
-      <img className="native-install-logo" src="/Som96.png" alt="" />
-      <div>
-        <strong>Somalux</strong>
-        <span>Download and install the mobile app for a better experience.</span>
+    <aside className="native-install-prompt" role="status" aria-label="Install Somalux App">
+      <div className="native-install-content">
+        <img className="native-install-logo" src="/Som96.png" alt="" />
+        <div className="native-install-text">
+          <span className="native-install-label">Install</span>
+          <strong>Somalux</strong>
+        </div>
       </div>
+
       <a className="native-install-action" href={APK_DOWNLOAD_URL} onClick={startDownload}>
-        <FiDownload size={24} aria-hidden="true" />
-        <span>Download and install</span>
+        <span>Install</span>
       </a>
+
       <button
         className="native-install-close"
         type="button"

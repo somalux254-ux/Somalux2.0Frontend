@@ -483,52 +483,40 @@ export async function deletePastPaper({ id, file_path }) {
 // =====================================================
 
 export async function getFaculties() {
+  const fallbackFaculties = [
+    'Agriculture',
+    'FASS',
+    'Commerce',
+    'FEDCOS',
+    'FERD',
+    'FET',
+    'Health Sciences',
+    'Law',
+    'Science',
+    'Veterinary Medicine',
+    'Veterinary Medicine and Surgery'
+  ];
+
   try {
-    // Hardcoded faculties in the system (short forms only, no duplicates)
-    const hardcodedFaculties = [
-      'Agriculture',
-      'FASS',
-      'Commerce',
-      'FEDCOS',
-      'FERD',
-      'FET',
-      'Health Sciences',
-      'Law',
-      'Science',
-      'Veterinary Medicine'
-    ];
-    
-    // Get unique faculties from database
     const { data, error } = await supabase
       .from('past_papers')
       .select('faculty');
-    
-    if (error || !data) {
-      return hardcodedFaculties.sort();
-    }
-    
-    const dbFaculties = [...new Set(data.map(item => item.faculty))].filter(Boolean);
-    
-    // Merge hardcoded and database faculties, keeping unique values
-    const allFaculties = [...new Set([...hardcodedFaculties, ...dbFaculties])];
-    
-    // Sort alphabetically
-    return allFaculties.sort();
+
+    if (error) throw error;
+
+    const dbFaculties = [...new Set((data || [])
+      .map(item => item?.faculty)
+      .filter(Boolean)
+      .map(faculty => String(faculty).trim()))];
+
+    const allFaculties = [...new Set([...fallbackFaculties, ...dbFaculties])]
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+
+    return allFaculties;
   } catch (error) {
     console.error('Error fetching faculties:', error);
-    // Return hardcoded faculties as fallback
-    return [
-      'Agriculture',
-      'FASS',
-      'Commerce',
-      'FEDCOS',
-      'FERD',
-      'FET',
-      'Health Sciences',
-      'Law',
-      'Science',
-      'Veterinary Medicine'
-    ].sort();
+    return [...new Set(fallbackFaculties)].sort((a, b) => a.localeCompare(b));
   }
 }
 

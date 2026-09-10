@@ -59,6 +59,8 @@ export const PaperPanel = ({ demoMode = false }) => {
   const [authAction, setAuthAction] = useState('view');
   const [universities, setUniversities] = useState([]);
   const [faculties, setFaculties] = useState([]);
+  const [loadingUniversityPapers, setLoadingUniversityPapers] = useState(false);
+  const [universityPaperTotal, setUniversityPaperTotal] = useState(0);
   const [subscription, setSubscription] = useState(null);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [checkingSubscription, setCheckingSubscription] = useState(false);
@@ -274,6 +276,28 @@ export const PaperPanel = ({ demoMode = false }) => {
       created_at: paper.created_at
     }));
   }, []);
+
+  const loadUniversityPapers = useCallback(async (universityId) => {
+    if (!universityId) return;
+
+    setLoadingUniversityPapers(true);
+    try {
+      const firstPage = await fetchPastPapers({
+        page: 1,
+        pageSize,
+        universityId,
+        forceRefresh: false
+      });
+      setUniversityPaperTotal(firstPage.count || firstPage.data?.length || 0);
+      setPapers(transformData(firstPage.data || []));
+      setCurrentPage(1);
+    } catch (error) {
+      console.error('Error loading university papers:', error);
+      setPapers([]);
+    } finally {
+      setLoadingUniversityPapers(false);
+    }
+  }, [transformData]);
 
   const loadUniversities = useCallback(async () => {
     try {
@@ -560,21 +584,8 @@ export const PaperPanel = ({ demoMode = false }) => {
 
   // Load past papers from database - use cache first for INSTANT load
   useEffect(() => {
-    // Try to load from cache FIRST (instant display)
-    let hasCachedPapers = false;
+    // Try to load cached universities first so the landing grid appears immediately.
     let hasCachedUnis = false;
-    
-    try {
-      const cached = localStorage.getItem('cachedPastPapers');
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        // Use cache if less than 5 minutes old
-        if (Date.now() - timestamp < 5 * 60 * 1000) {
-          setPapers(data);
-          hasCachedPapers = true;
-        }
-      }
-    } catch (e) {}
 
     try {
       const cachedUnis = localStorage.getItem('cachedUniversities');
@@ -596,12 +607,9 @@ export const PaperPanel = ({ demoMode = false }) => {
     // Load fresh data in background (non-blocking)
     loadFaculties(); // Load faculties ASAP (fast operation)
     
-    // Load papers in background
-    loadPastPapers().catch(() => setLoading(false));
-    
     // Load universities in background
     loadUniversities().catch(() => setLoading(false));
-  }, [loadPastPapers, loadUniversities, loadFaculties]);
+  }, [loadUniversities, loadFaculties]);
 
   // Refresh subscription whenever user changes
   useEffect(() => {
@@ -817,7 +825,12 @@ export const PaperPanel = ({ demoMode = false }) => {
     return result;
   }, [papers, debouncedSearchTerm, activeFilter, sortBy, universityFilter, facultyFilter]);
 
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredPapers.length / pageSize)), [filteredPapers.length, pageSize]);
+  const totalPages = useMemo(() => {
+    if (universityFilter && universityPaperTotal > 0) {
+      return Math.max(1, Math.ceil(universityPaperTotal / pageSize));
+    }
+    return Math.max(1, Math.ceil(filteredPapers.length / pageSize));
+  }, [filteredPapers.length, pageSize, universityFilter, universityPaperTotal]);
 
   // Get unique faculties for the selected university
   const universitiesFilteredFaculties = useMemo(() => {
@@ -903,7 +916,7 @@ export const PaperPanel = ({ demoMode = false }) => {
     
   };
 
-  const handleNextPage = () => {
+  const handleNextPage = async () => {
     if (isAuthLoading) return;
     if (!user) {
       setAuthAction('next page');
@@ -911,7 +924,29 @@ export const PaperPanel = ({ demoMode = false }) => {
       return;
     }
 
-    setCurrentPage(p => Math.min(Math.max(1, Math.ceil(filteredPapers.length / pageSize)), p + 1));
+    const nextPage = currentPage + 1;
+    if (nextPage > totalPages || loadingUniversityPapers) return;
+
+    if (universityFilter && selectedUniversity?.id) {
+      setLoadingUniversityPapers(true);
+      try {
+        const nextPageData = await fetchPastPapers({
+          page: nextPage,
+          pageSize,
+          universityId: selectedUniversity.id,
+          forceRefresh: false
+        });
+        setPapers(previous => [...previous, ...transformData(nextPageData.data || [])]);
+        setCurrentPage(nextPage);
+      } catch (error) {
+        console.error('Error loading next university exam page:', error);
+      } finally {
+        setLoadingUniversityPapers(false);
+      }
+      return;
+    }
+
+    setCurrentPage(nextPage);
   };
 
   const handleAuthRequired = (action) => {
@@ -1216,8 +1251,10 @@ export const PaperPanel = ({ demoMode = false }) => {
                   : u
               )
             );
+            setSelectedUniversity(uni);
             setUniversityFilter(uni.name);
             setSearchTerm('');
+            loadUniversityPapers(uni.id);
           }}
           setSelectedUniversity={setSelectedUniversity}
           user={user}
@@ -1238,6 +1275,10 @@ export const PaperPanel = ({ demoMode = false }) => {
               onBack={handleBackFromFacultyGrid}
               user={user}
             />
+          ) : loadingUniversityPapers ? (
+            <div className="empty-statepast">
+              <p>Loading exams...</p>
+            </div>
           ) : (
             <>
           {/* Search and Filter Controls - Matching BookPanel Layout */}
@@ -1261,6 +1302,8 @@ export const PaperPanel = ({ demoMode = false }) => {
             onPaperSelect={handlePaperClick}
             onBack={() => {
               setUniversityFilter(null);
+              setUniversityPaperTotal(0);
+              setSelectedUniversity(null);
               setSearchTerm('');
               setUniversitySearchTerm('');
             }}
