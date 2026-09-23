@@ -1,5 +1,6 @@
 import { supabase } from '../supabaseClient';
 import { API_URL } from '../../../config';
+import { mergeBookCategories, isSyntheticCategoryId, seedDefaultBookCategories } from '../defaultBookCategories';
 
 const API_BASE = API_URL;
 const BOOKS_BUCKET = 'elib-books';
@@ -25,29 +26,38 @@ async function getValidAccessToken() {
 }
 
 export async function fetchCategories() {
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem('categories_cache_v2');
+  }
   const { data, error } = await supabase
     .from('categories')
     .select('id, name, description')
     .order('name');
   if (error) throw error;
-  return data || [];
-}
-
-export async function createCategory(values) {
-  const { data, error } = await supabase.from('categories').insert(values).select().maybeSingle();
-  if (error) throw error;
-  return data;
+  return mergeBookCategories(data || []);
 }
 
 export async function updateCategory(id, values) {
+  if (!id || isSyntheticCategoryId(id)) {
+    throw new Error('This default category cannot be edited from the admin dashboard. Seed it into the database first.');
+  }
   const { data, error } = await supabase.from('categories').update(values).eq('id', id).select().maybeSingle();
   if (error) throw error;
   return data;
 }
 
 export async function deleteCategory(id) {
+  if (!id || isSyntheticCategoryId(id)) {
+    throw new Error('This default category cannot be deleted from the admin dashboard. Seed it into the database first.');
+  }
   const { error } = await supabase.from('categories').delete().eq('id', id);
   if (error) throw error;
+}
+
+export async function createCategory(values) {
+  const { data, error } = await supabase.from('categories').insert(values).select().maybeSingle();
+  if (error) throw error;
+  return data;
 }
 
 // Backend origin helper (mirrors patterns used elsewhere in the app)

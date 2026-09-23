@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiUpload, FiFolder, FiRefreshCw, FiCheck, FiX, FiAlertCircle, FiFile, FiBook, FiFileText, FiClock, FiPause, FiPlay } from 'react-icons/fi';
-import { createBook, createBookSubmission } from '../api';
+import { createBook, createBookSubmission, fetchCategories } from '../api';
 import { getUniversitiesForDropdown, getFacultiesByUniversity, createPastPaper, createPastPaperSubmission, searchUnitFaculty, clearPastPapersCache, checkDuplicatePastPaper, logUploadHistory, extractPastPaperMetadataBackend, extractFirstPageMetadata, extractFirstPageMetadataBatch } from '../pastPapersApi';
 import { extractPastPaperMetadata, findMatchingUniversity, findMatchingFaculty, guessFacultyFromUnitCode } from '../utils/extractPastPaperMetadata';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -19,6 +19,8 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
   const [skippedCount, setSkippedCount] = useState(0);
   const [toast, setToast] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [canResume, setCanResume] = useState(false);
   const [resumeState, setResumeState] = useState(null);
   const [isResumingUpload, setIsResumingUpload] = useState(false);
@@ -52,6 +54,8 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
     if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
       pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
     }
+
+    fetchCategories().then(setCategories).catch(() => setCategories([]));
     
     // Check for incomplete uploads
     checkForIncompleteUpload();
@@ -540,15 +544,17 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
 
         // Extract metadata from PDF (including author, title, pages, etc.)
         const metadata = await extractMetadataFromPDF(file);
+        const categoryId = selectedCategoryId || null;
+        const metadataWithCategory = { ...metadata, category_id: categoryId };
 
         // Determine if user is admin
         const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'editor';
 
         // Upload
         if (isAdmin) {
-          await createBook({ metadata, pdfFile: file, coverFile: cover });
+          await createBook({ metadata: metadataWithCategory, pdfFile: file, coverFile: cover });
         } else {
-          await createBookSubmission({ metadata, pdfFile: file, coverFile: cover });
+          await createBookSubmission({ metadata: metadataWithCategory, pdfFile: file, coverFile: cover });
         }
 
         uploaded++;
@@ -834,6 +840,34 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
                 ))
               ) : null}
             </div>
+          </div>
+
+          <div style={{ marginBottom: '18px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', color: '#e9edef', fontSize: '13px', fontWeight: '600' }}>
+              Book Category
+            </label>
+            <select
+              value={selectedCategoryId}
+              onChange={(event) => setSelectedCategoryId(event.target.value)}
+              style={{
+                width: 'fit-content',
+                minWidth: '220px',
+                maxWidth: '420px',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                border: '1px solid #374151',
+                background: '#0b141a',
+                color: '#e9edef',
+                fontSize: '14px'
+              }}
+            >
+              <option value="">No category selected</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Progress */}

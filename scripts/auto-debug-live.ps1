@@ -7,7 +7,6 @@ if (-not (Test-Path $adb)) {
 }
 
 $liveHost = '127.0.0.1'
-$deviceIp = '192.168.100.33:5555'
 $serverUrl = "http://${liveHost}:3000"
 $serverCheckUrl = 'http://127.0.0.1:3000'
 $backendUrl = 'http://127.0.0.1:5000'
@@ -25,21 +24,25 @@ $env:REACT_APP_API_URL = $backendUrl
 
 Set-Location $projectRoot
 
-Write-Host "Connecting to device $deviceIp..."
-$connectErrorAction = $ErrorActionPreference
-try {
-    $ErrorActionPreference = 'Continue'
-    $connectOutput = & $adb connect $deviceIp 2>&1
+$deviceSelector = $env:ANDROID_DEVICE_SERIAL
+if (-not $deviceSelector) {
+    $deviceList = & $adb devices 2>$null
+    foreach ($line in $deviceList) {
+        if ($line -match '^\s*(\S+)\s+device\s*$') {
+            $deviceSelector = $matches[1]
+            break
+        }
+    }
 }
-finally {
-    $ErrorActionPreference = $connectErrorAction
+
+if (-not $deviceSelector) {
+    throw 'No Android device is connected via adb. Plug in the device or connect it with adb first.'
 }
-if ($LASTEXITCODE -ne 0) {
-    throw "ADB could not connect to $deviceIp. $($connectOutput -join ' ')"
-}
+
+Write-Host "Using connected device: $deviceSelector"
 & $adb devices
-& $adb -s $deviceIp reverse tcp:3000 tcp:3000
-& $adb -s $deviceIp reverse tcp:5000 tcp:5000
+& $adb -s $deviceSelector reverse tcp:3000 tcp:3000
+& $adb -s $deviceSelector reverse tcp:5000 tcp:5000
 
 Write-Host "Starting backend: $backendUrl"
 $backendProcess = $null
@@ -116,12 +119,12 @@ if (-not (Test-Path $apkPath)) {
 }
 
 Write-Host "Installing APK: $apkPath"
-& $adb -s $deviceIp install -r $apkPath
+& $adb -s $deviceSelector install -r $apkPath
 if ($LASTEXITCODE -ne 0) {
-    throw "APK installation failed on device $deviceIp"
+    throw "APK installation failed on device $deviceSelector"
 }
 
 Write-Host "Launching app..."
-& $adb -s $deviceIp shell am start -n com.somalux.app/com.somalux.app.MainActivity
+& $adb -s $deviceSelector shell am start -n com.somalux.app/com.somalux.app.MainActivity
 
 Write-Host "Live reload is active. App should load from $serverUrl"

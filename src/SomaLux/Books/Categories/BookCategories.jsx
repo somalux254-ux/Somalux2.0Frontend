@@ -19,6 +19,7 @@ import { API_URL } from '../../../config';
 import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { useAdminUI } from '../Admin/AdminUIContext';
+import { mergeBookCategories, seedDefaultBookCategories } from '../defaultBookCategories';
 
 const AdBanner = () => null;
 const cacheDB = {
@@ -59,8 +60,9 @@ export const BookCategories = () => {
           const cacheAge = parsed.timestamp ? Date.now() - parsed.timestamp : Infinity;
           if (cacheAge < 24 * 60 * 60 * 1000 && parsed.data?.length > 0) {
             console.log('⚡ Categories instant load from localStorage cache');
-            setCategories(parsed.data);
-            setDisplayedCategories(parsed.data.slice(0, visibleCount));
+            const cleaned = mergeBookCategories(parsed.data);
+            setCategories(cleaned);
+            setDisplayedCategories(cleaned.slice(0, visibleCount));
             setLoading(false);
             return;
           }
@@ -82,8 +84,9 @@ export const BookCategories = () => {
         const idbCategories = await cacheDB.loadCategories();
         if (idbCategories && idbCategories.length > 0) {
           console.log('⚡ Categories instant load from IndexedDB cache');
-          setCategories(idbCategories);
-          setDisplayedCategories(idbCategories.slice(0, visibleCount));
+          const cleaned = mergeBookCategories(idbCategories);
+          setCategories(cleaned);
+          setDisplayedCategories(cleaned.slice(0, visibleCount));
           setLoading(false);
         }
       } catch (e) {
@@ -184,6 +187,10 @@ export const BookCategories = () => {
     const cacheKey = 'categories_cache_v2';
     
     const fetchCategories = async () => {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(cacheKey);
+      }
+
       // ⚡ Check localStorage cache FIRST - instant load
       const cached = localStorage.getItem(cacheKey);
       const cachedData = cached ? JSON.parse(cached) : null;
@@ -236,7 +243,7 @@ export const BookCategories = () => {
             console.info('Used fallback category select (id,name)');
           } catch (fbErr) {
             console.error('Fallback categories query failed:', fbErr);
-            throw catsError;
+            catsData = [];
           }
         } else {
           console.debug('Fetched categories:', catsData);
@@ -266,7 +273,9 @@ export const BookCategories = () => {
           }
         }
 
-        let mapped = (catsData || []).map(cat => ({
+        const mergedCategories = mergeBookCategories(catsData || []);
+
+        let mapped = mergedCategories.map(cat => ({
           id: cat.id,
           name: cat.name || 'Unknown',
           description: cat.description || '',
@@ -417,6 +426,11 @@ export const BookCategories = () => {
       return;
     }
 
+    if (editingCategoryId && String(editingCategoryId).startsWith('default-')) {
+      showToast({ type: 'error', message: 'This default category cannot be edited from the admin dashboard. Seed it into the database first.' });
+      return;
+    }
+
     setSavingCategory(true);
     try {
       const payload = { name, description };
@@ -437,6 +451,11 @@ export const BookCategories = () => {
   };
 
   const removeCategory = async (category) => {
+    if (String(category.id).startsWith('default-')) {
+      showToast({ type: 'error', message: 'This default category cannot be deleted from the admin dashboard. Seed it into the database first.' });
+      return;
+    }
+
     const confirmed = await confirm({
       title: 'Delete category?',
       message: `Delete "${category.name}"? Books assigned to it may become uncategorized.`,

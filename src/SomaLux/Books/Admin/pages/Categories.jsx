@@ -3,6 +3,7 @@ import { FiEdit2, FiFolder, FiPlus, FiSearch, FiTrash2 } from 'react-icons/fi';
 import { useAdminUI } from '../AdminUIContext';
 import { supabase } from '../../supabaseClient';
 import { createCategory, deleteCategory, fetchCategories, updateCategory } from '../api';
+import { seedDefaultCategories } from '../../seedDefaultCategories';
 
 const Categories = () => {
   const { confirm, prompt, showToast } = useAdminUI();
@@ -47,6 +48,24 @@ const Categories = () => {
       row.name?.toLowerCase().includes(query)
     );
   }, [rows, searchTerm]);
+
+  const seedDefaults = async () => {
+    setSaving(true);
+    try {
+      const result = await seedDefaultCategories();
+      await load();
+      showToast({
+        type: 'success',
+        message: result.inserted > 0
+          ? `Seeded ${result.inserted} default categories.`
+          : 'Default categories are already present.'
+      });
+    } catch (error) {
+      showToast({ type: 'error', message: error?.message || 'Could not seed default categories.' });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const add = async (categoryName = adding.name) => {
     const name = categoryName.trim();
@@ -142,7 +161,10 @@ const Categories = () => {
             aria-label="Search categories"
           />
         </div>
-        <div className="category-add">
+        <div className="category-add" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="btn" onClick={seedDefaults} disabled={saving}>
+            Seed defaults
+          </button>
           <button className="btn primary" onClick={promptForCategory} disabled={saving}>
             Add category
           </button>

@@ -946,54 +946,73 @@ export async function getUploadHistoryStats() {
 export async function clearAllUploadHistory() {
   try {
     console.log('🔍 Starting clearAllUploadHistory...');
-    
-    // First, check how many records exist
+
     const { count: beforeCount, error: countError } = await supabase
       .from('past_papers_upload_history')
       .select('id', { count: 'exact', head: true });
-    
-    console.log('📊 Records before delete:', beforeCount);
-    
+
     if (countError) {
-      console.error('❌ Error counting records:', countError);
+      console.error('❌ Error counting records before delete:', countError);
+      throw countError;
     }
-    
-    // Try delete with verbose logging
-    console.log('🗑️ Attempting to delete all records...');
-    const { data, error, status, statusText } = await supabase
+
+    console.log('📊 Records before delete:', beforeCount);
+
+    if ((beforeCount || 0) === 0) {
+      return { success: true, deletedCount: 0, remainingCount: 0 };
+    }
+
+    const { data: idsData, error: idError } = await supabase
       .from('past_papers_upload_history')
-      .delete()
-      .gte('created_at', '1900-01-01')
       .select('id');
 
-    console.log('📤 Delete response status:', status, statusText);
-    console.log('📤 Delete response data:', data);
-    
-    if (error) {
-      console.error('❌ Error clearing upload history:', error);
-      console.error('❌ Error code:', error.code);
-      console.error('❌ Error message:', error.message);
-      console.error('❌ Full error:', JSON.stringify(error, null, 2));
-      throw error;
+    if (idError) {
+      console.error('❌ Error fetching record IDs for delete:', idError);
+      throw idError;
     }
 
-    // Verify deletion
+    const ids = (idsData || []).map(row => row.id).filter(Boolean);
+
+    let deletedCount = 0;
+
+    if (ids.length > 0) {
+      const { data, error } = await supabase
+        .from('past_papers_upload_history')
+        .delete()
+        .in('id', ids)
+        .select('id');
+
+      if (error) {
+        console.warn('⚠️ Direct delete failed, trying RPC fallback:', error);
+        try {
+          const { data: rpcData, error: rpcError } = await supabase.rpc('clear_past_papers_upload_history');
+          if (rpcError) throw rpcError;
+          deletedCount = Array.isArray(rpcData) ? rpcData.length : Number(rpcData || 0);
+        } catch (rpcFailure) {
+          console.error('❌ RPC fallback failed:', rpcFailure);
+          throw error;
+        }
+      } else {
+        deletedCount = data?.length || ids.length;
+      }
+    }
+
     const { count: afterCount, error: afterCountError } = await supabase
       .from('past_papers_upload_history')
       .select('id', { count: 'exact', head: true });
-    
-    console.log('📊 Records after delete:', afterCount);
-    
+
     if (afterCountError) {
       console.error('❌ Error counting after delete:', afterCountError);
+      throw afterCountError;
     }
 
-    if (afterCount > 0) {
-      console.warn('⚠️ WARNING: Records still exist after delete. May be RLS policy issue.');
+    if ((afterCount || 0) > 0) {
+      console.warn('⚠️ WARNING: Records still exist after delete. Check Supabase RLS or DB permissions.');
+      throw new Error(`Upload history could not be fully cleared. ${afterCount} rows remain.`);
     }
 
-    console.log('✅ Upload history clear command sent to database');
-    return { success: true, deletedCount: data?.length || 0, remainingCount: afterCount };
+    console.log('✅ Upload history cleared successfully:', { deletedCount, remainingCount: afterCount });
+    return { success: true, deletedCount, remainingCount: afterCount };
   } catch (err) {
     console.error('❌ Error in clearAllUploadHistory:', err);
     console.error('❌ Full error details:', JSON.stringify(err, null, 2));

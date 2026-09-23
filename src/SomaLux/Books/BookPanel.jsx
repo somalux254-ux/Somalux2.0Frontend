@@ -33,6 +33,7 @@ import { indexedDBCache } from './utils/indexedDBCache';
 import { fetchBooksOptimized } from './utils/optimizedQueries';
 import { getBookSignedUrl } from './Admin/api';
 import { popBackAction, pushBackAction } from '../services/backNavigation';
+import { mergeBookCategories } from './defaultBookCategories';
 const highlightSearchText = (text, searchText) => {
   const value = String(text || '');
   const query = String(searchText || '').trim();
@@ -136,9 +137,17 @@ export const BookPanel = ({ demoMode = false }) => {
       .order('name')
       .then(({ data, error }) => {
         if (error) throw error;
-        if (mounted) setCategories(data || []);
+        if (mounted) {
+          const merged = mergeBookCategories(data || []);
+          setCategories(merged);
+        }
       })
-      .catch((error) => console.warn('BookPanel: failed to load categories', error));
+      .catch((error) => {
+        console.warn('BookPanel: failed to load categories', error);
+        if (mounted) {
+          setCategories(mergeBookCategories([]));
+        }
+      });
 
     return () => { mounted = false; };
   }, []);
