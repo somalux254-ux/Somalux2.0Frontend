@@ -44,8 +44,8 @@ export async function getPastPaperSignedUrl(paperId) {
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-function makePastPapersCacheKey({ page, pageSize, search, universityId, faculty, sort }) {
-  return `pastPapers:${page}:${pageSize}:${search || ''}:${universityId || ''}:${faculty || ''}:${(sort?.col)||''}:${(sort?.dir)||''}`;
+function makePastPapersCacheKey({ page, pageSize, search, universityId, faculty, sort, columns }) {
+  return `pastPapers:${page}:${pageSize}:${search || ''}:${universityId || ''}:${faculty || ''}:${(sort?.col)||''}:${(sort?.dir)||''}:${columns || 'full'}`;
 }
 
 export async function fetchPastPapers({ 
@@ -55,14 +55,19 @@ export async function fetchPastPapers({
   universityId = null,
   faculty = null,
   sort = { col: 'created_at', dir: 'desc' },
-  forceRefresh = false
+  forceRefresh = false,
+  columns = `
+    id, unit_code, unit_name, faculty, file_url, year, semester, exam_type,
+    file_path, created_at, uploaded_by, title, university_id,
+    universities:university_id(id, name)
+  `
 }) {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
   
   console.log('📥 fetchPastPapers called with:', { page, pageSize, search, universityId, faculty, forceRefresh });
   
-  const cacheKey = makePastPapersCacheKey({ page, pageSize, search, universityId, faculty, sort });
+  const cacheKey = makePastPapersCacheKey({ page, pageSize, search, universityId, faculty, sort, columns });
   if (!forceRefresh) {
     try {
       const cached = localStorage.getItem(cacheKey);
@@ -83,22 +88,7 @@ export async function fetchPastPapers({
     
     let query = supabase
       .from('past_papers')
-      .select(`
-        id, 
-        unit_code, 
-        unit_name, 
-        faculty, 
-        file_url, 
-        year, 
-        semester,
-        exam_type,
-        file_path,
-        created_at, 
-        uploaded_by,
-        title,
-        university_id,
-        universities:university_id(id, name)
-      `, { count: 'exact' })
+      .select(columns, { count: 'exact' })
       .order(dbSortCol, { ascending: (sort.dir || 'desc') === 'asc' })
       .range(from, to);
 
@@ -168,21 +158,12 @@ export async function fetchPastPapers({
     const processedData = (data || []).map(paper => {
       let finalUrl = paper.file_url;
       
-      console.log('Processing paper:', {
-        id: paper.id,
-        title: paper.title,
-        file_path: paper.file_path,
-        file_url: paper.file_url,
-        universities: paper.universities
-      });
-      
       // Always regenerate from file_path to ensure correct URL
       if (paper.file_path) {
         try {
           const publicUrlData = supabase.storage.from(PAST_PAPERS_BUCKET).getPublicUrl(paper.file_path);
           if (publicUrlData?.data?.publicUrl) {
             finalUrl = publicUrlData.data.publicUrl;
-            console.log(`✓ Generated URL for ${paper.id}:`, finalUrl);
           }
         } catch (err) {
           console.warn(`⚠️ Failed to generate URL from file_path for paper ${paper.id}:`, err);
@@ -202,10 +183,7 @@ export async function fetchPastPapers({
     });
 
     const result = { data: processedData || [], count: count || 0 };
-    console.log('✅ Successfully fetched and processed papers:', {
-      count: processedData.length,
-      papers: processedData.map(p => ({ id: p.id, title: p.title, hasUrl: !!p.file_url }))
-    });
+    console.log(`✅ Successfully fetched ${processedData.length} past papers`);
     try {
       localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data: result.data, count: result.count }));
     } catch (e) {
@@ -415,6 +393,7 @@ export async function updatePastPaper(id, { updates, newPdfFile, oldFilePath }) 
   if (newPdfFile) {
     const uploaded = await uploadPastPaperFile(newPdfFile);
     patch.file_path = uploaded.path;
+    patch.file_url = uploaded.publicUrl;
     
     // Try to delete old file
     if (oldFilePath) {

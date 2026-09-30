@@ -90,22 +90,6 @@ table {
   }
 }
 
-*,
-*::before,
-*::after {
-  scrollbar-width: none !important;
-  -ms-overflow-style: none !important;
-}
-
-*::-webkit-scrollbar,
-*::-webkit-scrollbar-track,
-*::-webkit-scrollbar-thumb {
-  width: 0 !important;
-  height: 0 !important;
-  display: none !important;
-  background: transparent !important;
-}
-
 [data-theme="light"] .book-management,
 [data-theme="light"] .user-profile-container {
   background: var(--bg-main) !important;

@@ -8,14 +8,14 @@ const UNIVERSITY_COVERS_BUCKET = 'university-covers';
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-function makeUniversitiesCacheKey({ page, pageSize, search, sort }) {
-  return `universities:${page}:${pageSize}:${search || ''}:${(sort?.col)||''}:${(sort?.dir)||''}`;
+function makeUniversitiesCacheKey({ page, pageSize, search, sort, columns }) {
+  return `universities:${page}:${pageSize}:${search || ''}:${(sort?.col)||''}:${(sort?.dir)||''}:${columns}`;
 }
 
-export async function fetchUniversities({ page = 1, pageSize = 10, search = '', sort = { col: 'created_at', dir: 'desc' }, forceRefresh = false, includeCount = true }) {
+export async function fetchUniversities({ page = 1, pageSize = 10, search = '', sort = { col: 'created_at', dir: 'desc' }, forceRefresh = false, includeCount = true, columns = 'id, name, description, website_url, cover_image_url, location, established, student_count, created_at, uploaded_by' }) {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
-  const cacheKey = makeUniversitiesCacheKey({ page, pageSize, search, sort });
+  const cacheKey = makeUniversitiesCacheKey({ page, pageSize, search, sort, columns });
 
   if (!forceRefresh) {
     try {
@@ -36,10 +36,7 @@ export async function fetchUniversities({ page = 1, pageSize = 10, search = '', 
     
     let query = supabase
       .from('universities')
-      .select(
-        'id, name, description, website_url, cover_image_url, location, established, student_count, created_at, uploaded_by',
-        includeCount ? { count: 'exact' } : {}
-      )
+      .select(columns, includeCount ? { count: 'exact' } : {})
       .eq('status', 'approved')
       .order(dbSortCol, { ascending: (sort.dir || 'desc') === 'asc' })
       .range(from, to);

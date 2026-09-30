@@ -68,7 +68,7 @@
   gap: 12px;
 }
 
-button {
+.user-profile-container button {
   cursor: pointer;
   transition: var(--transition);
   font-weight: 500;

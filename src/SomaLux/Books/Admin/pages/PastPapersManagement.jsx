@@ -738,7 +738,16 @@ const PastPapersManagement = ({ userProfile }) => {
                   <td style={{ color: row.profiles?.full_name ? '#e9edef' : '#8696a0', fontSize: '13px' }}>{row.profiles?.full_name || row.profiles?.email || '—'}</td>
                   <td>
                     {editingId === row.id ? (
-                      <div style={{ display: 'flex', gap: '4px', flexDirection: 'column' }}>
+                      <div style={{ display: 'flex', gap: '6px', flexDirection: 'column', minWidth: '150px' }}>
+                        <label className="label" htmlFor={`past-paper-pdf-${row.id}`}>Replace PDF (optional)</label>
+                        <input
+                          id={`past-paper-pdf-${row.id}`}
+                          className="input"
+                          type="file"
+                          accept="application/pdf,.pdf"
+                          onChange={(event) => setNewPdf(event.target.files?.[0] || null)}
+                        />
+                        {newPdf && <span style={{ color: '#00a884', fontSize: '11px' }}>{newPdf.name}</span>}
                         <button className="btn primary" onClick={() => saveEdit(row)}>Save</button>
                         <button className="btn" onClick={cancelEdit}>Cancel</button>
                       </div>

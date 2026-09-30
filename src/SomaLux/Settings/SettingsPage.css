@@ -1456,7 +1456,8 @@
   .settings-stp-page-container {
     top: 30px;
     bottom: 20px;
-    height: auto;
+    height: auto !important;
+    min-height: 0;
   }
 
   .settings-privacy-policy-page,

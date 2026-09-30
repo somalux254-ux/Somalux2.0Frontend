@@ -397,6 +397,32 @@ body.book-page-no-scrollbar::-webkit-scrollbar {
   box-sizing: border-box;
 }
 
+/* The library route uses #root as its only vertical scroll container. Keep
+   short past-paper views from inheriting body-level elastic scroll movement. */
+html:has(.book-management),
+body:has(.book-management) {
+  overscroll-behavior-y: none;
+}
+
+#root:has(.book-management) {
+  overscroll-behavior-y: none;
+  overflow-anchor: none;
+  scroll-behavior: auto;
+}
+
+/* A single university card fits within the library viewport; don't let the
+   Android WebView treat that short grid as a vertically scrollable page. */
+#root:has(.university-gridpast > :only-child) {
+  overflow-y: hidden;
+}
+
+@media (max-width: 768px) {
+  .book-management .file-converter-content-convert[data-active-tab="pastpapers"] {
+    min-height: calc(100dvh - var(--library-tabs-top) - var(--library-tabs-height) - var(--library-content-gap));
+    overscroll-behavior-y: none;
+  }
+}
+
 html:has(.book-management),
 html:has(.book-management) body {
   scroll-behavior: smooth;

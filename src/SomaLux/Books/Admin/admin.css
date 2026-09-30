@@ -842,6 +842,12 @@ body:has(.admin-root)::-webkit-scrollbar-thumb {
 }
 
 .books-table-panel {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
     border-bottom: none !important;
 }
 
@@ -1857,14 +1863,14 @@ select option {
         position: fixed;
         left: 0;
         right: 0;
-        bottom: 5vh;
+        bottom: 0;
         height: 58px;
         width: 100vw;
         box-sizing: border-box;
         background: #0b1216 !important;
         background-color: #0b1216 !important;
         border-top: none;
-        padding: 4px 8px;
+        padding: 4px 8px calc(4px + env(safe-area-inset-bottom, 0px));
         z-index: 2000 !important;
         isolation: isolate;
         opacity: 1;

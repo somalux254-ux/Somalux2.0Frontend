@@ -89,6 +89,21 @@ class IndexedDBCache {
     }
   }
 
+  async clearBooks() {
+    if (!this.db) return;
+
+    try {
+      const tx = this.db.transaction([STORES.BOOKS], 'readwrite');
+      tx.objectStore(STORES.BOOKS).clear();
+      return new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (error) {
+      console.warn('Clear cached books error:', error);
+    }
+  }
+
   async loadBooks(page) {
     if (!this.db) return null;
 

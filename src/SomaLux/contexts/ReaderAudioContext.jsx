@@ -31,6 +31,7 @@ export const ReaderAudioProvider = ({ children }) => {
       {readerBook && (
         <SimpleScrollReader
           src={readerBook.downloadUrl}
+          readerClassName="ssr-book-reader"
           cacheKey={`book:${readerBook.id}`}
           title={readerBook.title}
           author={readerBook.author}

@@ -230,6 +230,7 @@ const Books = ({ userProfile }) => {
     setEditDraft({
       title: row.title || '',
       author: row.author || '',
+      description: row.description || '',
       year: row.year || '',
       language: row.language || '',
       isbn: row.isbn || '',
@@ -810,7 +811,7 @@ const Books = ({ userProfile }) => {
         )}
 
         <div className="panel books-table-panel" style={{ padding: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <table className="table books-management-table numbered-table" style={{ minWidth: '1100px' }}>
+          <table className="table books-management-table numbered-table" style={{ minWidth: '1450px' }}>
             <thead>
               <tr>
                 {showCheckboxes && (
@@ -827,9 +828,12 @@ const Books = ({ userProfile }) => {
                 <th style={{ width: '42px' }}>#</th>
                 <th style={{ width: '50px' }}>Cover</th>
                 <th className="book-title-column" style={{ width: '220px', cursor: 'pointer' }} onClick={() => toggleSort('title')}>Title {sort.col === 'title' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
+                <th style={{ width: '260px' }}>Description</th>
                 <th style={{ width: '150px', cursor: 'pointer' }} onClick={() => toggleSort('author')}>Author {sort.col === 'author' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
                 <th style={{ width: '220px' }}>Category</th>
                 <th style={{ width: '75px', cursor: 'pointer' }} onClick={() => toggleSort('year')}>Year {sort.col === 'year' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</th>
+                <th style={{ width: '120px' }}>Language</th>
+                <th style={{ width: '160px' }}>ISBN</th>
                 <th style={{ width: '70px' }}>Pages</th>
                 <th style={{ width: '140px' }}>Publisher</th>
                 <th style={{ width: '110px' }}>Date Added</th>
@@ -838,9 +842,9 @@ const Books = ({ userProfile }) => {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={showCheckboxes ? 12 : 11} style={{ color: '#8696a0', textAlign: 'center' }}>Loading...</td></tr>
+                <tr><td colSpan={showCheckboxes ? 14 : 13} style={{ color: '#8696a0', textAlign: 'center' }}>Loading...</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={showCheckboxes ? 12 : 11} style={{ color: '#8696a0', textAlign: 'center' }}>No data</td></tr>
+                <tr><td colSpan={showCheckboxes ? 14 : 13} style={{ color: '#8696a0', textAlign: 'center' }}>No data</td></tr>
               ) : rows.map((row, idx) => (
                 <tr key={row.id} style={{ background: selectedIds.has(row.id) ? 'rgba(0, 168, 132, 0.1)' : 'transparent' }}>
                   {showCheckboxes && (
@@ -860,6 +864,17 @@ const Books = ({ userProfile }) => {
                     {editingId === row.id ? (
                       <textarea className={`input book-edit-textarea${expandedEditFields.has('title') ? ' is-expanded' : ''}`} rows={expandedEditFields.has('title') ? 2 : 1} value={editDraft.title} onKeyDown={(e) => expandEditFieldOnEnter('title', e)} onChange={(e) => setEditDraft({ ...editDraft, title: e.target.value })} />
                     ) : highlightSearchText(row.title, search)}
+                  </td>
+                  <td>
+                    {editingId === row.id ? (
+                      <textarea
+                        className="input book-edit-textarea"
+                        rows={2}
+                        value={editDraft.description || ''}
+                        onChange={(e) => setEditDraft({ ...editDraft, description: e.target.value })}
+                        aria-label={`Description for ${row.title}`}
+                      />
+                    ) : (row.description || '—')}
                   </td>
                   <td className="books-actions-cell">
                     {editingId === row.id ? (
@@ -914,6 +929,16 @@ const Books = ({ userProfile }) => {
                     {editingId === row.id ? (
                       <input className="input" type="number" inputMode="numeric" value={editDraft.year} onChange={(e) => setEditDraft({ ...editDraft, year: e.target.value })} />
                     ) : (row.year || '—')}
+                  </td>
+                  <td>
+                    {editingId === row.id ? (
+                      <input className="input" value={editDraft.language || ''} onChange={(e) => setEditDraft({ ...editDraft, language: e.target.value })} aria-label={`Language for ${row.title}`} />
+                    ) : (row.language || '—')}
+                  </td>
+                  <td>
+                    {editingId === row.id ? (
+                      <input className="input" value={editDraft.isbn || ''} onChange={(e) => setEditDraft({ ...editDraft, isbn: e.target.value })} aria-label={`ISBN for ${row.title}`} />
+                    ) : (row.isbn || '—')}
                   </td>
                   <td>
                     {editingId === row.id ? (

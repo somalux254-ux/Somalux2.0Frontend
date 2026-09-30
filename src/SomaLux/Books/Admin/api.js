@@ -204,7 +204,7 @@ export async function fetchBooks({ page = 1, pageSize = 10, search = '', categor
     
     let query = supabase
       .from('books')
-      .select('id, title, author, description, category_id, cover_image_url, file_url, file_size, pages, uploaded_by, created_at, downloads_count', { count: 'exact' })
+      .select('id, title, author, description, category_id, cover_image_url, file_url, file_size, pages, year, language, isbn, publisher, uploaded_by, created_at, downloads_count', { count: 'exact' })
       .order(dbSortCol, { ascending: (sort.dir || 'desc') === 'asc' })
       .range(from, to);
 
@@ -230,11 +230,7 @@ export async function fetchBooks({ page = 1, pageSize = 10, search = '', categor
       ...book,
       cover_url: book.cover_image_url,
       file_path: book.file_url,
-      downloads: book.downloads_count,
-      year: null,
-      language: 'English',
-      isbn: null,
-      publisher: null
+      downloads: book.downloads_count
     }));
     
     return { data: mappedData, count: count || 0 };

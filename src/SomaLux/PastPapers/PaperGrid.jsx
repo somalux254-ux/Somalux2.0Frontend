@@ -24,8 +24,10 @@ export const PaperGrid = React.memo(({
   displayedPapers,
   filteredPapers,
   currentPage,
+  totalPages,
   setCurrentPage,
   onNextPage,
+  isLoadingMore = false,
   pageSize,
   showFilters,
   activeFilter,
@@ -82,7 +84,7 @@ export const PaperGrid = React.memo(({
   return (
     <>
       {/* Search and Filter Controls */}
-      <div className="controlspast">
+      <div className="controlsBKP paper-search-controls">
         <button
           onClick={onBack}
           className="back-button-past"
@@ -92,8 +94,8 @@ export const PaperGrid = React.memo(({
           <FiChevronLeft size={20} aria-hidden="true" />
         </button>
 
-        <div className="search-containerpast">
-          <span className="search-iconpast" aria-hidden="true">
+        <div className="search-containerBKP paper-search-container">
+          <span className="search-iconBKP" aria-hidden="true">
             <FaSearch size={14} />
           </span>
           <input
@@ -117,7 +119,7 @@ export const PaperGrid = React.memo(({
                 e.currentTarget.blur();
               }
             }}
-            className="search-inputpast"
+            className="search-inputBKP"
             autoComplete="off"
           />
           {searchTerm && (
@@ -125,7 +127,7 @@ export const PaperGrid = React.memo(({
               onClick={() => {
                 setSearchTerm('');
               }}
-              className="clear-buttonpast"
+              className="clear-buttonBKP"
             >
               <FiX size={16} />
             </button>
@@ -212,7 +214,7 @@ export const PaperGrid = React.memo(({
       </div>
 
       {/* Stats Summary */}
-      <div className="gridpast">
+      <div className="gridpast paper-results-gridpast">
             {displayedPapers.map((paper, index) => {
                 if (index < 0) {
                   return (
@@ -489,8 +491,19 @@ export const PaperGrid = React.memo(({
               })}
           </div>
 
+          {filteredPapers.length === 0 && (
+            <div className="empty-statepast paper-results-empty" role="status">
+              <p>No exam papers match the current search or filters.</p>
+              {searchTerm && (
+                <button type="button" className="reset-filterspast" onClick={() => setSearchTerm('')}>
+                  Clear search
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Pagination Controls */}
-          {(currentPage > 1 || displayedPapers.length >= pageSize) && (
+          {totalPages > 1 && (
             <div
               className="book-pagination-actions"
               style={{ marginTop: 10 }}
@@ -505,10 +518,10 @@ export const PaperGrid = React.memo(({
 
               <button
                 className="btn book-pagination-button"
-                disabled={currentPage >= Math.max(1, Math.ceil(filteredPapers.length / pageSize))}
+                disabled={currentPage >= totalPages || isLoadingMore}
                 onClick={onNextPage}
               >
-                Next <FiChevronRight size={16} aria-hidden="true" />
+                {isLoadingMore ? 'Loading…' : 'Next'} <FiChevronRight size={16} aria-hidden="true" />
               </button>
             </div>
           )}

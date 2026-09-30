@@ -21,6 +21,7 @@ import loadingSvg from './loading.svg';
 import './SimpleScrollReader.css';
 
 const PersistentTts = registerPlugin('PersistentTts');
+const SystemBars = registerPlugin('SystemBars');
 
 // Verify worker is configured (set in pdfConfig.js at startup)
 let simpleReaderWorkerReady = false;
@@ -41,12 +42,32 @@ if (pdfjs.GlobalWorkerOptions.workerSrc) {
   }
 }
 
-const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleText, cacheKey, isOpen = true }) => {
+const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleText, cacheKey, isOpen = true, readerClassName = '' }) => {
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 1;
   const DEFAULT_ZOOM = MIN_ZOOM;
   const audioSentenceIndexRef = useRef(0);
   const useNativeTextToSpeech = Capacitor.isNativePlatform?.() === true;
+
+  useEffect(() => {
+    const readerClasses = readerClassName.split(/\s+/);
+    const shouldUseImmersiveMode = readerClasses.includes('ssr-past-paper-reader') || readerClasses.includes('ssr-book-reader');
+    if (!shouldUseImmersiveMode || !Capacitor.isNativePlatform?.()) return undefined;
+
+    let cancelled = false;
+    SystemBars.enterImmersiveReader().catch(error => {
+      console.warn('Could not enter immersive PDF reader:', error?.message || error);
+    });
+
+    return () => {
+      if (cancelled) return;
+      cancelled = true;
+      SystemBars.exitImmersiveReader().catch(error => {
+        console.warn('Could not restore system bars after PDF reader:', error?.message || error);
+      });
+    };
+  }, [readerClassName]);
+
   const nativeTtsLanguageRef = useRef(null);
   const nativeTtsInitPromiseRef = useRef(null);
 
@@ -1325,7 +1346,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
   }
 
   return (
-    <div className="ssr-overlay" style={{ pointerEvents: 'none' }}>
+    <div className={`ssr-overlay ${readerClassName}`.trim()} style={{ pointerEvents: 'none' }}>
       <div className="ssr-container" onClick={e => e.stopPropagation()} style={{ pointerEvents: 'auto' }}>
         {/* Header with page indicator */}
         <div className="ssr-header">

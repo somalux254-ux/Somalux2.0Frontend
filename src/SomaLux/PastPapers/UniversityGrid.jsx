@@ -31,22 +31,24 @@ const UniversityCard = React.memo(({
   searchTerm,
   onUniversitySelect,
 }) => (
-  <motion.div
-    key={uni.id}
+  <motion.button
+    type="button"
     className="paper-cardpast university-cardpast"
     style={{ 
       cursor: 'pointer',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
-      position: 'relative'
+      position: 'relative',
+      appearance: 'none',
+      border: 0,
+      padding: 0,
+      color: 'inherit',
+      font: 'inherit',
+      textAlign: 'left',
+      touchAction: 'manipulation'
     }}
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
     exit={{ opacity: 0 }}
-    transition={{ duration: 0.3 }}
-    layout
-    whileHover={{ y: -5 }}
     onClick={() => onUniversitySelect(uni)}
   >
     {uni.cover_image_url && (
@@ -71,7 +73,7 @@ const UniversityCard = React.memo(({
         {highlightSearchText(uni.location, searchTerm)}
       </p>
     </div>
-  </motion.div>
+  </motion.button>
 ), (prevProps, nextProps) => {
   // Custom comparison for optimization
   return (

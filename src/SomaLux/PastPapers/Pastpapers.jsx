@@ -33,6 +33,31 @@ import { PulseLoader, InfiniteScrollLoader } from './PaperSkeleton';
 import { pushBackAction, popBackAction } from '../services/backNavigation';
 import './PaperPanel.css';
 
+const UNIVERSITY_EXAMS_CACHE_TTL = 24 * 60 * 60 * 1000;
+
+const getUniversityExamsCacheKey = (universityId) => `universityExamPapers:${universityId}`;
+
+const readUniversityExamsCache = (universityId) => {
+  try {
+    const cached = localStorage.getItem(getUniversityExamsCacheKey(universityId));
+    return cached ? JSON.parse(cached) : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeUniversityExamsCache = (universityId, papers, total) => {
+  try {
+    localStorage.setItem(getUniversityExamsCacheKey(universityId), JSON.stringify({
+      papers,
+      total,
+      cachedAt: Date.now()
+    }));
+  } catch (error) {
+    console.warn('Could not cache university exam papers:', error?.message || error);
+  }
+};
+
 export const PaperPanel = ({ demoMode = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -60,6 +85,8 @@ export const PaperPanel = ({ demoMode = false }) => {
   const [universities, setUniversities] = useState([]);
   const [faculties, setFaculties] = useState([]);
   const [loadingUniversityPapers, setLoadingUniversityPapers] = useState(false);
+  const [universityPapersError, setUniversityPapersError] = useState('');
+  const [loadingMoreUniversityPapers, setLoadingMoreUniversityPapers] = useState(false);
   const [universityPaperTotal, setUniversityPaperTotal] = useState(0);
   const [subscription, setSubscription] = useState(null);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
@@ -269,6 +296,7 @@ export const PaperPanel = ({ demoMode = false }) => {
       year: paper.year,
       semester: paper.semester,
       examType: paper.exam_type,
+      university_id: paper.university_id,
       downloads: paper.downloads_count || 0,
       downloads_count: paper.downloads_count || 0,
       file_url: paper.file_url,
@@ -277,27 +305,57 @@ export const PaperPanel = ({ demoMode = false }) => {
     }));
   }, []);
 
-  const loadUniversityPapers = useCallback(async (universityId) => {
+  const loadUniversityPapers = useCallback(async (universityId, { forceRefresh = false } = {}) => {
     if (!universityId) return;
 
-    setLoadingUniversityPapers(true);
+    const cached = forceRefresh ? null : readUniversityExamsCache(universityId);
+    const hasCachedPapers = Array.isArray(cached?.papers);
+    const cacheIsFresh = hasCachedPapers && Date.now() - (cached.cachedAt || 0) < UNIVERSITY_EXAMS_CACHE_TTL;
+
+    setUniversityPapersError('');
+    if (hasCachedPapers) {
+      setPapers(cached.papers);
+      setUniversityPaperTotal(Math.max(Number(cached.total) || 0, cached.papers.length));
+      setCurrentPage(1);
+      setLoadingUniversityPapers(false);
+    } else {
+      setLoadingUniversityPapers(true);
+      setUniversityPaperTotal(0);
+      setPapers([]);
+    }
+
+    if (cacheIsFresh) return;
+
     try {
       const firstPage = await fetchPastPapers({
         page: 1,
         pageSize,
         universityId,
-        forceRefresh: false
+        forceRefresh,
+        columns: 'id, unit_code, unit_name, faculty, file_url, year, semester, exam_type, created_at, title, university_id'
       });
-      setUniversityPaperTotal(firstPage.count || firstPage.data?.length || 0);
-      setPapers(transformData(firstPage.data || []));
-      setCurrentPage(1);
+      const fetchedCount = firstPage.data?.length || 0;
+      const total = Math.max(Number(firstPage.count) || 0, fetchedCount);
+      const transformedPapers = transformData(firstPage.data || []);
+      const refreshedPapers = hasCachedPapers
+        ? [...transformedPapers, ...cached.papers.slice(pageSize)]
+        : transformedPapers;
+      setUniversityPaperTotal(total);
+      setPapers(refreshedPapers);
+      writeUniversityExamsCache(universityId, refreshedPapers, total);
+      if (!hasCachedPapers) setCurrentPage(1);
     } catch (error) {
       console.error('Error loading university papers:', error);
-      setPapers([]);
+      if (!hasCachedPapers) {
+        setPapers([]);
+        setUniversityPapersError(error?.message || 'Could not load exam papers. Please try again.');
+      } else {
+        console.warn('Showing cached exam papers because refresh failed.');
+      }
     } finally {
       setLoadingUniversityPapers(false);
     }
-  }, [transformData]);
+  }, [pageSize, transformData]);
 
   const loadUniversities = useCallback(async () => {
     try {
@@ -329,7 +387,7 @@ export const PaperPanel = ({ demoMode = false }) => {
       console.error('Error loading universities:', error);
       setLoading(false);
     }
-  }, [user]);
+  }, []);
 
   const fetchAndUpdateUniversities = async () => {
     try {
@@ -341,7 +399,12 @@ export const PaperPanel = ({ demoMode = false }) => {
       // Load every page so the university search can match the full catalogue,
       // rather than only the first five universities.
       while (hasMore) {
-        const { data = [] } = await fetchUniversities({ page, pageSize, includeCount: false });
+        const { data = [] } = await fetchUniversities({
+          page,
+          pageSize,
+          includeCount: false,
+          columns: 'id, name, cover_image_url, location'
+        });
         allUniversities.push(...data);
 
         if (page === 1) {
@@ -576,10 +639,24 @@ export const PaperPanel = ({ demoMode = false }) => {
     console.log('Setting up real-time subscription for past papers');
     const subscription = subscribeToPastPapers((payload) => {
       console.log('Past paper change detected:', payload);
+      if (payload?.new?.university_id) {
+        try {
+          localStorage.removeItem(getUniversityExamsCacheKey(payload.new.university_id));
+        } catch {}
+      }
+      if (payload?.old?.university_id) {
+        try {
+          localStorage.removeItem(getUniversityExamsCacheKey(payload.old.university_id));
+        } catch {}
+      }
       // Reload papers with a debounce to prevent multiple rapid reloads
       if (reloadTimeoutRef.current) clearTimeout(reloadTimeoutRef.current);
       reloadTimeoutRef.current = setTimeout(() => {
-        loadPastPapers();
+        if (selectedUniversity?.id && universityFilter) {
+          loadUniversityPapers(selectedUniversity.id, { forceRefresh: true });
+        } else {
+          loadPastPapers();
+        }
       }, 1000);
     });
 
@@ -587,7 +664,7 @@ export const PaperPanel = ({ demoMode = false }) => {
       subscription?.unsubscribe();
       if (reloadTimeoutRef.current) clearTimeout(reloadTimeoutRef.current);
     };
-  }, [loadPastPapers]);
+  }, [loadPastPapers, loadUniversityPapers, selectedUniversity?.id, universityFilter]);
 
   // Handle university filter from navigation
   useEffect(() => {
@@ -759,9 +836,12 @@ export const PaperPanel = ({ demoMode = false }) => {
      
     // ALWAYS apply university filter if one is selected - papers are university-specific
     if (uniFilterLower) {
-      result = result.filter(paper => 
-        paper.university?.toLowerCase() === uniFilterLower
-      );
+      result = result.filter(paper => {
+        if (selectedUniversity?.id && paper.university_id) {
+          return String(paper.university_id) === String(selectedUniversity.id);
+        }
+        return paper.university?.toLowerCase() === uniFilterLower;
+      });
     }
     
     // Apply faculty filter if one is selected
@@ -836,7 +916,7 @@ export const PaperPanel = ({ demoMode = false }) => {
     }
     
     return result;
-  }, [papers, debouncedSearchTerm, activeFilter, sortBy, universityFilter, facultyFilter]);
+  }, [papers, debouncedSearchTerm, activeFilter, sortBy, universityFilter, facultyFilter, selectedUniversity?.id]);
 
   const totalPages = useMemo(() => {
     if (universityFilter && universityPaperTotal > 0) {
@@ -930,31 +1010,35 @@ export const PaperPanel = ({ demoMode = false }) => {
   };
 
   const handleNextPage = async () => {
-    if (isAuthLoading) return;
-    if (!user) {
-      setAuthAction('next page');
-      setAuthModalOpen(true);
-      return;
-    }
-
     const nextPage = currentPage + 1;
-    if (nextPage > totalPages || loadingUniversityPapers) return;
+    if (nextPage > totalPages || loadingUniversityPapers || loadingMoreUniversityPapers) return;
 
     if (universityFilter && selectedUniversity?.id) {
-      setLoadingUniversityPapers(true);
+      if (papers.length >= nextPage * pageSize) {
+        setCurrentPage(nextPage);
+        return;
+      }
+
+      setLoadingMoreUniversityPapers(true);
       try {
         const nextPageData = await fetchPastPapers({
           page: nextPage,
           pageSize,
           universityId: selectedUniversity.id,
-          forceRefresh: false
+          forceRefresh: false,
+          columns: 'id, unit_code, unit_name, faculty, file_url, year, semester, exam_type, created_at, title, university_id'
         });
-        setPapers(previous => [...previous, ...transformData(nextPageData.data || [])]);
+        const nextPagePapers = transformData(nextPageData.data || []);
+        setPapers(previous => {
+          const combined = [...previous, ...nextPagePapers];
+          writeUniversityExamsCache(selectedUniversity.id, combined, universityPaperTotal);
+          return combined;
+        });
         setCurrentPage(nextPage);
       } catch (error) {
         console.error('Error loading next university exam page:', error);
       } finally {
-        setLoadingUniversityPapers(false);
+        setLoadingMoreUniversityPapers(false);
       }
       return;
     }
@@ -1255,8 +1339,6 @@ export const PaperPanel = ({ demoMode = false }) => {
           onAuthRequired={handleAuthRequired}
           papers={papers}
           onUniversitySelect={(uni) => {
-            if (!handleAuthRequired('view university')) return;
-
             setUniversities(prevUnis => 
               prevUnis.map(u => 
                 u.id === uni.id 
@@ -1292,14 +1374,27 @@ export const PaperPanel = ({ demoMode = false }) => {
             <div className="empty-statepast">
               <p>Loading exams...</p>
             </div>
+          ) : universityPapersError ? (
+            <div className="empty-statepast" role="alert">
+              <p>{universityPapersError}</p>
+              <button
+                type="button"
+                className="reset-filterspast"
+                onClick={() => selectedUniversity?.id && loadUniversityPapers(selectedUniversity.id, { forceRefresh: true })}
+              >
+                Retry
+              </button>
+            </div>
           ) : (
             <>
           {/* Search and Filter Controls - Matching BookPanel Layout */}
           <PaperGrid
             displayedPapers={displayedPapersMemo}
             currentPage={currentPage}
+            totalPages={totalPages}
             setCurrentPage={setCurrentPage}
             onNextPage={handleNextPage}
+            isLoadingMore={loadingMoreUniversityPapers}
             pageSize={pageSize}
             filteredPapers={filteredPapers}
             showFilters={showFilters}
@@ -1655,6 +1750,7 @@ export const PaperPanel = ({ demoMode = false }) => {
       {showReader && selectedPaper && readerUrl && (
         <SimpleScrollReader
           src={readerUrl}
+          readerClassName="ssr-past-paper-reader"
           cacheKey={`paper:${selectedPaper.id}`}
           title={selectedPaper.title}
           author={selectedPaper.courseCode || ''}
@@ -1752,12 +1848,13 @@ export const PaperPanel = ({ demoMode = false }) => {
               position: 'fixed',
               top: 0,
               right: 0,
-              width: '320px',
-              height: '100vh',
+              width: 'min(320px, 100vw)',
+              height: '100dvh',
+              boxSizing: 'border-box',
               background: '#0b1216',
               boxShadow: '-2px 0 10px rgba(0, 0, 0, 0.3)',
               zIndex: 1000,
-              padding: '20px',
+              padding: 'calc(16px + env(safe-area-inset-top, 0px)) 16px calc(16px + env(safe-area-inset-bottom, 0px))',
               overflowY: 'auto',
               borderLeft: '1px solid #2a3942'
             }}

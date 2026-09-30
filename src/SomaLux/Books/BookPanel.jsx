@@ -98,7 +98,7 @@ export const BookPanel = ({ demoMode = false }) => {
   const [bulkDownloadMode, setBulkDownloadMode] = useState(false);
   const [downloadingBooks, setDownloadingBooks] = useState({});
 
-  const CACHE_TTL_MS = 5 * 60 * 1000;
+  const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
   const withQueryTimeout = async (promise, timeoutMs = 15000, message = 'Query timed out') => {
     let timeoutId = null;
@@ -169,22 +169,25 @@ export const BookPanel = ({ demoMode = false }) => {
  * @returns {null|object[]} The cached page of books, or null if it does not exist or has expired.
  */
 /*******  4b59b5d0-5dd5-4852-b3b1-1400d5e8e97c  *******/
-  const getCachedPage = (page) => {
+  const getCachedPageEntry = (page) => {
     try {
       const raw = localStorage.getItem(`books_page_${page}`);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (!parsed || !parsed.data || !parsed.ts) return null;
-      if (Date.now() - parsed.ts > CACHE_TTL_MS) return null;
-      return parsed.data;
+      if (Date.now() - parsed.ts > CACHE_TTL_MS) {
+        localStorage.removeItem(`books_page_${page}`);
+        return null;
+      }
+      return parsed;
     } catch {
       return null;
     }
   };
 
-  const setCachedPage = (page, data) => {
+  const setCachedPage = (page, data, hasMore = data.length >= BOOKS_PER_PAGE) => {
     try {
-      localStorage.setItem(`books_page_${page}` , JSON.stringify({ ts: Date.now(), data }));
+      localStorage.setItem(`books_page_${page}`, JSON.stringify({ ts: Date.now(), data, hasMore }));
       const pages = JSON.parse(localStorage.getItem('books_pages_loaded') || '[]');
       if (!pages.includes(page)) {
         const next = [...pages, page].sort((a,b) => a-b);
@@ -195,26 +198,45 @@ export const BookPanel = ({ demoMode = false }) => {
     // setPageCacheStatus(prev => ({ ...prev, [page]: 'cached' }));
   };
 
-  const setSearchCachedPage = (term, page, data) => {
+  const getSearchCachedPage = (term, page) => {
     try {
-      const key = `search_cache_${term.toLowerCase()}_page_${page}`;
-      localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
-      // Cache status tracking removed
+      const key = `search_cache_${term.trim().toLowerCase()}_page_${page}`;
+      const cached = JSON.parse(localStorage.getItem(key) || 'null');
+      if (!cached?.ts || Date.now() - cached.ts > CACHE_TTL_MS) {
+        if (cached) localStorage.removeItem(key);
+        return null;
+      }
+      return cached;
+    } catch {
+      return null;
+    }
+  };
+
+  const setSearchCachedPage = (term, page, data, hasMore) => {
+    try {
+      const key = `search_cache_${term.trim().toLowerCase()}_page_${page}`;
+      localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data, hasMore }));
     } catch {}
   };
 
-  const clearBookCaches = () => {
+  const clearBookCaches = async () => {
     try {
       booksCache.clear();
     } catch (err) {
       console.warn('Failed to clear booksCache', err);
     }
     try {
+      perfOptimizer.clearAll();
+    } catch (err) {
+      console.warn('Failed to clear in-memory book cache', err);
+    }
+    await indexedDBCache.clearBooks?.();
+    try {
       const keysToRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (!key) continue;
-        if (key === 'books_pages_loaded' || key.startsWith('books_page_')) {
+        if (key === 'books_pages_loaded' || key.startsWith('books_page_') || key.startsWith('search_cache_')) {
           keysToRemove.push(key);
         }
       }
@@ -316,6 +338,17 @@ export const BookPanel = ({ demoMode = false }) => {
           return;
         }
 
+        // Persistent local cache is checked before IndexedDB so repeat visits
+        // can paint synchronously without waiting for the database to open.
+        const localEntry = getCachedPageEntry(page);
+        if (localEntry) {
+          console.log('🔥 Persistent book-page cache hit!');
+          setBooks(page === 1 ? localEntry.data : prev => [...prev, ...localEntry.data]);
+          setHasMore(localEntry.hasMore ?? localEntry.data.length >= BOOKS_PER_PAGE);
+          setLoading(false);
+          return;
+        }
+
         // Layer 2: IndexedDB cache (very fast)
         const idbBooks = await indexedDBCache.loadBooks(page);
         if (idbBooks && idbBooks.length > 0) {
@@ -326,14 +359,6 @@ export const BookPanel = ({ demoMode = false }) => {
           return;
         }
 
-        // Layer 3: Browser localStorage cache (fast)
-        const localBooks = getCachedPage(page);
-        if (localBooks) {
-          console.log('🔥 [Layer 3] LocalStorage cache hit!');
-          setBooks(page === 1 ? localBooks : prev => [...prev, ...localBooks]);
-          setLoading(false);
-          return;
-        }
       }
 
       // Keep the current catalogue visible while refreshing it in the background.
@@ -379,7 +404,7 @@ export const BookPanel = ({ demoMode = false }) => {
       await indexedDBCache.saveBooks(page, mapped, 24);
       
       // LocalStorage
-      setCachedPage(page, mapped);
+      setCachedPage(page, mapped, nextHasMore);
 
 
       console.log(`✅ Loaded page ${page}: ${mapped.length} books`);
@@ -673,11 +698,10 @@ export const BookPanel = ({ demoMode = false }) => {
     try {
       channel = supabase
         .channel('public:books')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, (payload) => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, async (payload) => {
           console.log('📡 Real-time update: books table changed', payload.eventType);
-          // Invalidate cache and force refresh (DON'T reset page)
-          booksCache.remove('all_books_page_1');
-          booksCache.remove('total_books_count');
+          // Invalidate persistent caches and force refresh (DON'T reset page).
+          await clearBookCaches();
           fetchAll(true, currentPage);
         })
         .subscribe((status) => {
@@ -842,7 +866,9 @@ export const BookPanel = ({ demoMode = false }) => {
       result = result.filter(book =>
         (book.title || '').toLowerCase().includes(query) ||
         (book.author || '').toLowerCase().includes(query) ||
-        (book.description || '').toLowerCase().includes(query)
+        (book.description || '').toLowerCase().includes(query) ||
+        (book.genre || '').toLowerCase().includes(query) ||
+        (categories.find(category => String(category.id) === String(book.categoryId))?.name || '').toLowerCase().includes(query)
       );
     }
 
@@ -861,7 +887,7 @@ export const BookPanel = ({ demoMode = false }) => {
     }
 
     return result;
-  }, [books, filteredByCategory, debouncedSearchTerm, activeFilter, sortBy, wishlist, categoryFilterId, focusedBookId]);
+  }, [books, filteredByCategory, debouncedSearchTerm, activeFilter, sortBy, wishlist, categoryFilterId, focusedBookId, categories]);
 
   const displayedBooks = useMemo(() => {
     const start = (currentPage - 1) * BOOKS_PER_PAGE;
@@ -871,6 +897,17 @@ export const BookPanel = ({ demoMode = false }) => {
   // Server-side search fetch (paginated) to provide accurate results when searching
   const fetchSearch = async (term, page = 1) => {
     try {
+      const cachedSearch = getSearchCachedPage(term, page);
+      if (cachedSearch?.data) {
+        console.log('🔥 Persistent book-search cache hit!');
+        setBooks(page === 1 ? cachedSearch.data : prev => [...prev, ...cachedSearch.data]);
+        setHasMore(cachedSearch.hasMore ?? cachedSearch.data.length >= BOOKS_PER_PAGE);
+        setCurrentPage(page);
+        setLoading(false);
+        setPageLoading(false);
+        return;
+      }
+
       setPageLoading(page !== 1);
       setLoading(page === 1);
 
@@ -878,13 +915,32 @@ export const BookPanel = ({ demoMode = false }) => {
       const to = from + BOOKS_PER_PAGE - 1;
       const q = term.trim();
 
-      const { data: rows } = await supabase
+      const searchFields = 'id, title, author, description, category_id, year, language, isbn, cover_image_url, file_url, created_at, downloads_count, pages, publisher, rating, rating_count';
+      const categoryIds = categories
+        .filter(category => (category.name || '').toLowerCase().includes(q.toLowerCase()))
+        .map(category => category.id);
+      // Fetch through one extra row so pagination can reliably detect remaining matches.
+      const endRange = to + 1;
+
+      const [textSearchResult, categorySearchResult] = await Promise.all([
+        supabase
         .from('books')
-        .select('id, title, author, description, year, language, isbn, cover_image_url, file_url, created_at, downloads_count, pages, publisher, rating, rating_count')
+        .select(searchFields)
         .or(`title.ilike.%${q}%,author.ilike.%${q}%,description.ilike.%${q}%,isbn.ilike.%${q}%`)
-        .range(from, to + 1);
+        .range(0, endRange),
+        categoryIds.length
+          ? supabase.from('books').select(searchFields).in('category_id', categoryIds).order('created_at', { ascending: false }).range(0, endRange)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+      if (textSearchResult.error) throw textSearchResult.error;
+      if (categorySearchResult.error) throw categorySearchResult.error;
+
+      const allRows = [...(textSearchResult.data || []), ...(categorySearchResult.data || [])];
+      const uniqueRows = Array.from(new Map(allRows.map(row => [row.id, row])).values())
+        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      const rows = uniqueRows.slice(from, to + 1);
       
-      const mapped = (rows || []).slice(0, BOOKS_PER_PAGE).map(r => mapRowToUi(r));
+      const mapped = rows.slice(0, BOOKS_PER_PAGE).map(r => mapRowToUi(r));
 
       // Replace books with search results (only pages loaded)
       if (page === 1) {
@@ -898,9 +954,9 @@ export const BookPanel = ({ demoMode = false }) => {
         });
       }
 
-      setHasMore((rows || []).length > BOOKS_PER_PAGE);
+      setHasMore(uniqueRows.length > to + 1);
       setCurrentPage(page);
-      setCachedPage(page, mapped);
+      setSearchCachedPage(term, page, mapped, uniqueRows.length > to + 1);
 
     } catch (err) {
       console.error('Search fetch failed', err);
@@ -931,7 +987,7 @@ export const BookPanel = ({ demoMode = false }) => {
     }, 300);
 
     return () => clearTimeout(id);
-  }, [searchTerm, user]);
+  }, [searchTerm, user, categories]);
 
   // Background search fetch that stores results in cache without touching UI state
   const fetchSearchBackground = async (term, page = 1) => {
@@ -964,7 +1020,7 @@ export const BookPanel = ({ demoMode = false }) => {
         // If searching, fetch the page using search
         await fetchSearch(searchTerm.trim(), page);
       } else {
-        const cached = getCachedPage(page);
+        const cached = getCachedPageEntry(page);
         if (!cached) {
           setPageLoading(true);
           await fetchAll(false, page);
@@ -973,9 +1029,10 @@ export const BookPanel = ({ demoMode = false }) => {
           setBooks(prev => {
             // merge cached page into prev if not present
             const ids = new Set(prev.map(b => b.id));
-            const toAdd = cached.filter(b => !ids.has(b.id));
+            const toAdd = cached.data.filter(b => !ids.has(b.id));
             return [...prev, ...toAdd];
           });
+          setHasMore(cached.hasMore ?? cached.data.length >= BOOKS_PER_PAGE);
         }
       }
     } catch (err) {
@@ -1153,7 +1210,7 @@ export const BookPanel = ({ demoMode = false }) => {
                   setShowNetworkModal(false);
                   setLoading(true);
                   try {
-                    clearBookCaches();
+                    await clearBookCaches();
                     await fetchAll(true, networkRetryPage || 1);
                   } catch (err) {
                     console.error('Retry failed', err);
