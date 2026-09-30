@@ -111,7 +111,8 @@ body:has(.admin-root)::-webkit-scrollbar-thumb {
     padding: 8px;
     position: sticky;
     top: 0;
-    height: 100vh; /* full viewport height */
+    height: 100vh; /* legacy viewport fallback */
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     overflow-y: auto; /* allow sidebar to scroll when content overflows */
@@ -269,7 +270,7 @@ body:has(.admin-root)::-webkit-scrollbar-thumb {
     display: flex;
     flex-direction: column;
     min-width: 0;
-    width: calc(100% - 16px);
+    width: 100%;
     min-height: 100vh;
     min-height: 100dvh;
     max-width: none;
@@ -1549,6 +1550,7 @@ select option {
         left: 0;
         top: 0;
         height: 100vh;
+        height: 100dvh;
         transform: translateX(0);
         z-index: 5;
         width: 64px; /* collapsed width */
@@ -1761,10 +1763,9 @@ select option {
 
     .admin-summary-cards.MuiGrid-container {
         display: grid !important;
-        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-        grid-auto-flow: column !important;
-        overflow-x: hidden !important;
-        overflow-y: hidden !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        grid-auto-flow: row !important;
+        overflow: visible !important;
         width: 100%;
         max-width: 100%;
         margin: 0 !important;

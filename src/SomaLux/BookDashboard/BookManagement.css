@@ -21,12 +21,16 @@
 /* Wrapper */
 .book-management {
   min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   background: var(--bg-main);
   color: var(--text-main);
   font-family: "Inter", "Segoe UI", sans-serif;
   transition: background 0.3s ease;
   position: relative;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .book-management.auth-returning,
@@ -171,7 +175,10 @@ body.book-page-no-scrollbar::-webkit-scrollbar {
   background: rgba(12, 19, 23, 0.85);
   backdrop-filter: blur(14px);
   border-bottom: none;
-  padding: 10px 20px;
+  padding: 8px 20px;
+  box-sizing: border-box;
+  min-height: 48px;
+  gap: 12px;
 
   display: flex;
   align-items: center;
@@ -186,10 +193,12 @@ body.book-page-no-scrollbar::-webkit-scrollbar {
 
 .header-title {
   margin: 0;
-  font-size: 26px;
-  font-weight: 800;
+  font-size: clamp(20px, 2.8vw, 34px);
+  line-height: 1.1;
+  font-weight: 900;
   color: #b3bcc5;
-  letter-spacing: -0.6px;
+  letter-spacing: -0.4px;
+  -webkit-text-stroke: 0.25px currentColor;
 }
 
 .book-management-brand {
@@ -197,6 +206,8 @@ body.book-page-no-scrollbar::-webkit-scrollbar {
   align-items: flex-start;
   gap: 8px;
   padding-top: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .book-management-premium-badge {
@@ -219,7 +230,7 @@ body.book-page-no-scrollbar::-webkit-scrollbar {
 
 .tools-scroll-container-convert {
   position: fixed;
-  top: 50px;
+  top: 48px;
   left: 0;
   right: 0;
   z-index: 90;
@@ -228,13 +239,16 @@ body.book-page-no-scrollbar::-webkit-scrollbar {
   border-bottom: none;
   padding: 2px 0;
   overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .tool-group-convert {
   display: flex;
-  gap: 10px;
-  padding: 0 16px;
+  gap: clamp(8px, 1.5vw, 16px);
+  padding: 0 clamp(12px, 2vw, 24px);
   overflow-x: auto;
+  min-width: 0;
   scrollbar-width: none !important;
   scrollbar-color: transparent transparent !important;
   -ms-overflow-style: none !important;
@@ -254,13 +268,13 @@ body.book-page-no-scrollbar::-webkit-scrollbar {
 
 /* Buttons */
 .tool-button-convert {
-  padding: 8px 16px;
+  padding: 8px clamp(10px, 1.4vw, 16px);
   background: transparent;
   border: none;
   color: var(--text-muted);
   border-radius: 0;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: clamp(14px, 1.4vw, 17px);
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
   /* Prevent text selection during swipe */
@@ -291,12 +305,10 @@ body.book-page-no-scrollbar::-webkit-scrollbar {
 /* Hide header and tabs when in fullscreen chat */
 .book-management.fullscreen-chat {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   width: 100%;
-  height: 100%;
+  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   z-index: 200;
   margin: 0;
@@ -318,12 +330,14 @@ body.book-page-no-scrollbar::-webkit-scrollbar {
   left: 0;
   right: 0;
   bottom: 0;
-  width: 100vw;
+  width: 100%;
   height: 100vh;
+  height: 100dvh;
   margin: 0 !important;
   padding: 0 !important;
   min-height: 100vh !important;
-  min-width: 100vw !important;
+  min-height: 100dvh !important;
+  min-width: 0 !important;
   overflow: hidden;
   z-index: 200;
   background: #0c1317;
@@ -344,14 +358,16 @@ body.book-page-no-scrollbar::-webkit-scrollbar {
 @media (max-width: 768px) {
   .book-management.fullscreen-chat .file-converter-content-convert.fullscreen-chat-content {
     width: 100%;
-    height: 100%;
+    height: 100vh;
+    height: 100dvh;
   }
 }
 
 @media (min-width: 769px) {
   .book-management.fullscreen-chat .file-converter-content-convert.fullscreen-chat-content {
-    top: 30px;
+    inset: 0;
     height: 100vh;
+    height: 100dvh;
   }
 }
 
@@ -366,7 +382,8 @@ body.book-page-no-scrollbar::-webkit-scrollbar {
 .file-converter-content-convert {
   padding: 20px;
   min-height: calc(100vh - 150px);
-  margin-top: 90px;
+  min-height: calc(100dvh - 150px);
+  margin-top: 84px;
   animation: fadeIn 0.4s ease-in-out;
   /* Let the document own scrolling for a consistent mobile experience. */
   -webkit-overflow-scrolling: touch;
@@ -405,6 +422,7 @@ html:has(.book-management) body {
   right: 0;
   width: 100%;
   height: calc(100vh - 102px);
+  height: calc(100dvh - 102px);
   margin-top: 0;
   padding: 0;
   min-height: auto;
@@ -430,27 +448,38 @@ html:has(.book-management) body {
 /* ================= RESPONSIVE ================= */
 
 @media (max-width: 768px) {
+  .book-management {
+    --library-tabs-top: 46px;
+    --library-tabs-height: 40px;
+    --library-content-gap: 12px;
+  }
+
   .book-management-header {
-    top: 30px;
-    padding: 12px 16px;
+    /* Native Android already insets the WebView; apply CSS safe area only on web. */
+    top: 0;
+    padding: 8px clamp(10px, 3.5vw, 16px);
     background: var(--bg-main);
     backdrop-filter: none;
   }
 
   .header-title {
-    font-size: 22px;
+    font-size: clamp(18px, 6vw, 28px);
+    font-weight: 900;
   }
 
   .tools-scroll-container-convert {
-    top: 78px;
+    top: var(--library-tabs-top);
+    height: var(--library-tabs-height);
     background: var(--bg-main);
     backdrop-filter: none;
   }
 
   .tool-group-convert {
-    justify-content: space-around;
-    gap: 24px;
-    padding: 0 24px;
+    min-height: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(122px, calc(8vw + 74px), 146px);
+    padding: 0 clamp(16px, 4vw, 28px);
   }
 
   .tool-button-convert.active-convert {
@@ -459,7 +488,7 @@ html:has(.book-management) body {
 
   .file-converter-content-convert {
     padding: 10px 0;
-    margin-top: 100px;
+    margin-top: calc(var(--library-tabs-top) + var(--library-tabs-height) + var(--library-content-gap));
     min-height: auto;
     overflow: visible;
   }
@@ -467,11 +496,12 @@ html:has(.book-management) body {
   /* Fixed layout for ChatMe on mobile */
   .book-management .file-converter-content-convert[data-active-tab="chatme"] {
     position: absolute;
-    top: 98px;
+    top: calc(var(--library-tabs-top) + var(--library-tabs-height) + 12px);
     left: 0;
     right: 0;
     width: 100%;
-    height: calc(100vh - 98px);
+    height: calc(100vh - var(--library-tabs-top) - var(--library-tabs-height) - 12px);
+    height: calc(100dvh - var(--library-tabs-top) - var(--library-tabs-height) - 12px);
     margin-top: 0;
     padding: 0;
     min-height: 0;
@@ -492,7 +522,9 @@ html:has(.book-management) body {
   .tool-button-convert {
     /* Increase touch target size for mobile */
     min-width: 70px;
-    padding: 12px 16px;
+    padding: 10px clamp(10px, 3vw, 16px);
+    font-size: clamp(14px, 4vw, 16px);
+    font-weight: 700;
   }
 
   .file-converter-content-convert {
@@ -501,18 +533,48 @@ html:has(.book-management) body {
   }
 }
 
+@media (max-width: 360px) {
+  .book-management-header {
+    gap: 6px;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .book-management-brand {
+    gap: 5px;
+  }
+
+  .header-title {
+    font-size: 18px;
+  }
+
+  .book-management-header > div:last-child {
+    flex: 0 0 auto;
+  }
+}
+
 @media (max-width: 768px) {
   .web-platform .book-management-header {
-    top: 0;
+    top: env(safe-area-inset-top, 0px);
   }
 
   .web-platform .tools-scroll-container-convert {
-    top: 48px;
+    top: calc(env(safe-area-inset-top, 0px) + 46px);
   }
+
+  .web-platform .book-management .file-converter-content-convert[data-active-tab="chatme"] {
+    top: calc(var(--library-tabs-top) + var(--library-tabs-height) + 12px);
+    height: calc(100dvh - env(safe-area-inset-bottom, 0px) - var(--library-tabs-top) - var(--library-tabs-height) - 12px);
+  }
+
 }
 
 /* Further optimization for small phones */
 @media (max-width: 480px) {
+  .book-management {
+    --library-tabs-height: 46px;
+  }
+
   .book-management,
   .book-management * {
     scrollbar-width: none !important;
@@ -527,8 +589,8 @@ html:has(.book-management) body {
   }
 
   .tool-button-convert {
-    padding: 9px 14px;
-    font-size: 13px;
+    padding: 9px clamp(8px, 3vw, 14px);
+    font-size: clamp(13px, 4vw, 15px);
     border-radius: 10px;
     min-width: 60px;
   }
@@ -539,8 +601,9 @@ html:has(.book-management) body {
   }
 
   .tool-group-convert {
-    padding: 0 12px;
-    gap: 8px;
+    justify-content: center;
+    padding: 0 16px;
+    gap: min(clamp(62px, calc(14vw + 74px), 134px), calc(100vw - 152px));
   }
   .file-converter-content-convert {
     padding: 10px 0;
@@ -551,5 +614,11 @@ html:has(.book-management) body {
     touch-action: pan-y;
     /* Prevent bounce effect on iOS */
     overscroll-behavior: contain;
+  }
+}
+
+@media (max-width: 767px) {
+  .book-management .containerpast {
+    margin-top: -1rem !important;
   }
 }

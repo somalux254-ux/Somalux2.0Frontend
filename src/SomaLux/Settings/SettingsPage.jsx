@@ -64,6 +64,10 @@ function SettingsPage({ onBack, onLogout }) {
   const [selectedSubscriptionPlan, setSelectedSubscriptionPlan] = useState(null);
   const [, setSavedMessage] = useState(false); // eslint-disable-next-line no-unused-vars
 
+  useEffect(() => {
+    if (location.state?.openPremium) setShowPremiumPanel(true);
+  }, [location.state?.openPremium]);
+
   const handleLogout = useCallback(() => {
     setShowLogoutConfirm(false);
     document.documentElement.style.backgroundColor = 'var(--bg-primary, #f5f8f7)';

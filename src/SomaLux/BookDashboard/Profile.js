@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from 'react-router-dom';
-import { FiSettings, FiUser, FiShield } from 'react-icons/fi';
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useLocation, useNavigate } from 'react-router-dom';
+import { FiSettings, FiShield, FiChevronRight, FiStar, FiX } from 'react-icons/fi';
 import { userCache } from "../Books/utils/cacheManager";
 import { supabase } from "../Books/supabaseClient";
 import { ProfileAvatar, ProfilePlaceholder } from "./ProfileAvatar";
 import { AuthModals } from "../../auth/AuthModals";
 import { getCurrentUserProfile } from "../Books/Admin/api";
+import { pushBackAction, popBackAction } from '../services/backNavigation';
 import "./Profile.css";
 
 const readCachedProfile = () => {
@@ -36,6 +37,7 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
   });
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const [authUser, setAuthUser] = useState(readCachedSessionUser);
   const [currentUserTier, setCurrentUserTier] = useState('basic');
   const [showActionsGrid, setShowActionsGrid] = useState(false);
@@ -436,7 +438,11 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
     <>
       <div className="chrome-profile" ref={dropdownRef}>
       {/* Trigger */}
-      <button className="profile-trigger" onClick={() => setIsOpen(!isOpen)}>
+      <button
+        className="profile-trigger"
+        onClick={() => navigate('/profile', { state: { backgroundLocation: location } })}
+        aria-label="Open profile"
+      >
         {profileImage ? (
           <img
             src={profileImage}
@@ -677,4 +683,195 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
     </>
   );
 
+};
+
+export const ProfilePage = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [isVisible, setIsVisible] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const isClosingRef = useRef(false);
+  const closeTimeoutRef = useRef(null);
+  const [authUser, setAuthUser] = useState(readCachedSessionUser);
+  const [localUser, setLocalUser] = useState(readCachedProfile);
+  const [profileImage, setProfileImage] = useState(() => {
+    const profile = readCachedProfile();
+    return profile?.avatar_url || profile?.avatar || null;
+  });
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  useEffect(() => {
+    let secondFrame = 0;
+    const firstFrame = window.requestAnimationFrame(() => {
+      secondFrame = window.requestAnimationFrame(() => setIsVisible(true));
+    });
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
+  }, []);
+
+  const finishClose = useCallback(() => {
+    if (!isClosingRef.current) return;
+    if (closeTimeoutRef.current) window.clearTimeout(closeTimeoutRef.current);
+    if (location.state?.backgroundLocation) navigate(-1);
+    else navigate('/BookManagement');
+  }, [location.state, navigate]);
+
+  const closePage = useCallback(() => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+    setIsClosing(true);
+    closeTimeoutRef.current = window.setTimeout(finishClose, 560);
+  }, [finishClose]);
+
+  useEffect(() => {
+    pushBackAction(closePage);
+    return () => {
+      popBackAction(closePage);
+      if (closeTimeoutRef.current) window.clearTimeout(closeTimeoutRef.current);
+    };
+  }, [closePage]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const syncUser = async (user) => {
+      if (!isMounted) return;
+      setAuthUser(user || null);
+      if (!user) {
+        setLocalUser(null);
+        setProfileImage(null);
+        return;
+      }
+
+      try {
+        const profile = await getCurrentUserProfile();
+        if (!isMounted) return;
+        const cachedProfile = readCachedProfile();
+        const avatar = profile?.avatar_url || profile?.avatar || cachedProfile?.avatar_url || cachedProfile?.avatar ||
+          user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
+        const userProfile = {
+          ...profile,
+          name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          email: user.email,
+          avatar,
+          avatar_url: avatar,
+        };
+        setLocalUser(userProfile);
+        setProfileImage(avatar);
+      } catch (error) {
+        console.warn('Failed to load profile page data:', error);
+        const cached = readCachedProfile();
+        setLocalUser(cached);
+        setProfileImage(cached?.avatar_url || cached?.avatar || user.user_metadata?.avatar_url || null);
+      }
+    };
+
+    supabase.auth.getSession().then(({ data }) => {
+      void syncUser(data?.session?.user || null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      void syncUser(session?.user || null);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe?.();
+    };
+  }, []);
+
+  const displayedName = authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || localUser?.name || 'Get Started';
+  const displayedEmail = authUser?.email || localUser?.email || 'Sign in to your account';
+  const isAdmin = localUser?.role === 'admin' || localUser?.role === 'editor' ||
+    ['campuslives254@gmail.com', 'paltechsomalux@gmail.com', 'eliblearning@gmail.com'].includes(authUser?.email?.toLowerCase());
+
+  const openSettings = () => {
+    document.documentElement.style.backgroundColor = 'var(--bg-primary, #f5f8f7)';
+    document.body.style.backgroundColor = 'var(--bg-primary, #f5f8f7)';
+    navigate('/settings');
+  };
+
+  const openPremium = () => {
+    document.documentElement.style.backgroundColor = 'var(--bg-primary, #f5f8f7)';
+    document.body.style.backgroundColor = 'var(--bg-primary, #f5f8f7)';
+    navigate('/settings', { state: { openPremium: true } });
+  };
+
+  return (
+    <main
+      className={`profile-page${isVisible ? ' profile-page-visible' : ''}${isClosing ? ' profile-page-closing' : ''}`}
+      onTransitionEnd={(event) => {
+        if (event.target === event.currentTarget && event.propertyName === 'transform') finishClose();
+      }}
+    >
+      <div className="profile-page-content">
+        <header className="profile-page-header">
+          <div className="profile-page-account">
+            {authUser ? (
+              <ProfileAvatar
+                profileImage={profileImage}
+                setProfileImage={setProfileImage}
+                authUser={authUser}
+                size={56}
+                showUploadButton={true}
+              />
+            ) : (
+              <ProfilePlaceholder size={56} />
+            )}
+            <div className="profile-page-identity">
+              <h1>{displayedName}</h1>
+              <p>{displayedEmail}</p>
+            </div>
+          </div>
+          <button
+            className="profile-page-close"
+            onClick={closePage}
+            aria-label="Close profile"
+          >
+            <FiX />
+          </button>
+        </header>
+
+        <nav className="profile-page-menu" aria-label="Profile menu">
+          <button className="profile-page-menu-row" onClick={openSettings}>
+            <FiSettings className="profile-page-menu-icon" aria-hidden="true" />
+            <span>Settings</span>
+            <FiChevronRight className="profile-page-menu-chevron" aria-hidden="true" />
+          </button>
+          <button className="profile-page-menu-row" onClick={openPremium}>
+            <FiStar className="profile-page-menu-icon" aria-hidden="true" />
+            <span>Premium</span>
+            <FiChevronRight className="profile-page-menu-chevron" aria-hidden="true" />
+          </button>
+          {isAdmin && (
+            <button className="profile-page-menu-row" onClick={() => navigate('/books/admin')}>
+              <FiShield className="profile-page-menu-icon" aria-hidden="true" />
+              <span>{localUser?.role === 'editor' ? 'Editor dashboard' : 'Admin dashboard'}</span>
+              <FiChevronRight className="profile-page-menu-chevron" aria-hidden="true" />
+            </button>
+          )}
+        </nav>
+
+        {!authUser && (
+          <button
+            className="profile-page-signin"
+            onClick={() => setShowAuthModal(true)}
+          >
+            Sign in
+          </button>
+        )}
+      </div>
+
+      <AuthModals
+        showAuthModal={showAuthModal}
+        setShowAuthModal={setShowAuthModal}
+        showSignOutModal={false}
+        setShowSignOutModal={() => {}}
+        authUser={authUser}
+        setAuthUser={setAuthUser}
+        markProfileSignedOut={() => {}}
+      />
+    </main>
+  );
 };

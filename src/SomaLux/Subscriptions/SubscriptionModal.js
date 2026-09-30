@@ -184,7 +184,6 @@ const SubscriptionModal = ({
         className="subscription-modal-content"
         onClick={(e) => e.stopPropagation()}
         style={{
-          backgroundColor: '#111a20',
           opacity: 1,
           position: 'relative',
           zIndex: 1,

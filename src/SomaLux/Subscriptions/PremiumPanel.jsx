@@ -84,7 +84,6 @@ function PremiumPanel({ onClose, onSelectPlan, onBack }) {
       <div
         className="premium-panel"
         onClick={(e) => e.stopPropagation()}
-        style={{ backgroundColor: '#111a20', opacity: 1 }}
       >
 
         <div className="premium-columns">

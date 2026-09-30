@@ -333,13 +333,29 @@ export const PaperPanel = ({ demoMode = false }) => {
 
   const fetchAndUpdateUniversities = async () => {
     try {
-      const { data } = await fetchUniversities({ page: 1, pageSize: 5, includeCount: false });
-      // Cache universities IMMEDIATELY - don't wait for stats
-      if (data && data.length > 0) {
-        localStorage.setItem('cachedUniversities', JSON.stringify({ data, timestamp: Date.now() }));
-        setUniversities(data || []);
-        setLoading(false); // UNBLOCK immediately!
+      const pageSize = 100;
+      const allUniversities = [];
+      let page = 1;
+      let hasMore = true;
+
+      // Load every page so the university search can match the full catalogue,
+      // rather than only the first five universities.
+      while (hasMore) {
+        const { data = [] } = await fetchUniversities({ page, pageSize, includeCount: false });
+        allUniversities.push(...data);
+
+        if (page === 1) {
+          setUniversities(allUniversities.slice());
+          setLoading(false);
+        }
+
+        hasMore = data.length === pageSize;
+        page += 1;
       }
+
+      setUniversities(allUniversities);
+      localStorage.setItem('cachedUniversities', JSON.stringify({ data: allUniversities, timestamp: Date.now() }));
+      setLoading(false);
 
     } catch (error) {
       console.error('Error fetching universities:', error);
@@ -775,18 +791,15 @@ export const PaperPanel = ({ demoMode = false }) => {
         const title = (paper.title || '').toLowerCase();
         const course = (paper.course || '').toLowerCase();
         const code = (paper.courseCode || '').toLowerCase();
+        const faculty = (paper.faculty || '').toLowerCase();
+        const university = (paper.university || '').toLowerCase();
+        const examType = (paper.examType || '').toLowerCase();
         const yearStr = String(paper.year || '');
         const semesterStr = String(paper.semester || '').toLowerCase();
         
-        // Create a combined searchable field that includes both unit name and code
-        const combinedCourseField = `${course} ${code}`;
-
-        const textMatch =
-          title.includes(raw) ||
-          course.includes(raw) ||
-          code.includes(raw) ||
-          combinedCourseField.includes(raw) ||
-          yearStr.includes(raw);
+        const searchableText = [title, course, code, faculty, university, yearStr, semesterStr, examType]
+          .join(' ');
+        const textMatch = searchableText.includes(raw);
 
         const semesterMatch = semesterNumber
           ? semesterStr.includes(semesterNumber) || semesterStr.includes(`sem ${semesterNumber}`) || semesterStr.includes(`semester ${semesterNumber}`)

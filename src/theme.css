@@ -6,6 +6,90 @@ body,
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
+/* Shared layout guardrails for every routed feature page. */
+html,
+body,
+#root,
+.SomaLux {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+html,
+body {
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+#root {
+  min-height: 100%;
+  overflow-x: clip;
+}
+
+#root > *,
+.SomaLux > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+img,
+video,
+iframe,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+table {
+  max-width: 100%;
+}
+
+/* Full-screen feature pages size to the visible viewport, including mobile browser chrome. */
+.settings-stp-page-container,
+.settings-user-agreement-page,
+.settings-privacy-policy-page,
+.settings-usage-policy-page,
+.upload-page-container {
+  box-sizing: border-box;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-height: 100vh !important;
+  max-height: 100dvh !important;
+}
+
+.settings-stp-page-container,
+.settings-user-agreement-page,
+.settings-privacy-policy-page,
+.settings-usage-policy-page,
+.upload-page-container {
+  padding-top: env(safe-area-inset-top, 0px) !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+}
+
+.settings-stp-page-content,
+.settings-user-agreement-page > :last-child,
+.settings-privacy-policy-page > :last-child,
+.settings-usage-policy-page > :last-child,
+.upload-page-container > :last-child {
+  min-height: 0;
+}
+
+@media (max-width: 768px) {
+  #root {
+    overscroll-behavior-y: contain;
+  }
+
+  img,
+  video,
+  iframe,
+  canvas {
+    height: auto;
+  }
+}
+
 *,
 *::before,
 *::after {

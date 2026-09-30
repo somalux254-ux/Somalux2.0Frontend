@@ -41,8 +41,19 @@
   box-shadow: none;
 }
 
+[data-theme="light"] .subscription-modal-overlay {
+  background: #ffffff !important;
+}
+
+[data-theme="light"] .subscription-modal-backdrop {
+  background: #ffffff !important;
+  opacity: 1 !important;
+}
+
 [data-theme="light"] .subscription-modal-content {
-  background-color: #d1d5db;
+  background: #ffffff !important;
+  color: #172027;
+  border: 1px solid rgba(23, 32, 39, 0.14);
 }
 
 .subscription-close-btn {
@@ -74,7 +85,35 @@
 }
 
 [data-theme="light"] .subscription-header {
-  background-color: #d1d5db;
+  background: #f1f5f4;
+}
+
+[data-theme="light"] .subscription-header h2 {
+  color: #172027 !important;
+}
+
+[data-theme="light"] .subscription-header p,
+[data-theme="light"] .payment-label {
+  color: #52616b;
+}
+
+[data-theme="light"] .subscription-plan-card {
+  background: #ffffff;
+  border-color: rgba(23, 32, 39, 0.2);
+}
+
+[data-theme="light"] .subscription-plan-card.selected {
+  background: rgba(0, 168, 132, 0.1);
+  border-color: #008f70;
+}
+
+[data-theme="light"] .plan-label {
+  color: #172027;
+}
+
+[data-theme="light"] .subscription-phone-field {
+  background: #ffffff;
+  color: #172027;
 }
 
 .subscription-header h2 {

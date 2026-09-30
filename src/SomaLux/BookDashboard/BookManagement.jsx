@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { BookPanel } from "../Books/BookPanel";
 import { PaperPanel } from "../PastPapers/Pastpapers";
@@ -13,6 +13,7 @@ export const BookManagement = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [currentUserTier, setCurrentUserTier] = useState('basic');
   const [isChatSelected, setIsChatSelected] = useState(false);
+  const tabSwipeStartRef = useRef(null);
 
   // Determine active tab from URL path
   const getActiveTabFromPath = () => {
@@ -29,6 +30,7 @@ export const BookManagement = () => {
   };
 
   const activeTab = getActiveTabFromPath();
+  const isBooksOrExamsPage = /^\/BookManagement(?:\/pastpapers)?\/?$/i.test(location.pathname);
 
   // Render only the active tab component to avoid rendering all at once
   const renderActiveComponent = () => {
@@ -77,6 +79,32 @@ export const BookManagement = () => {
     const basePath = '/BookManagement';
     const tabPath = tabId === 'books' ? '' : `/${tabId}`;
     navigate(`${basePath}${tabPath}`, { replace: false });
+  };
+
+  const handleTabSwipeStart = (event) => {
+    if (!isBooksOrExamsPage || event.touches.length !== 1) {
+      tabSwipeStartRef.current = null;
+      return;
+    }
+    if (event.target.closest('input, textarea, select, button, a, [data-disable-tab-swipe]')) {
+      tabSwipeStartRef.current = null;
+      return;
+    }
+    const { clientX, clientY } = event.touches[0];
+    tabSwipeStartRef.current = { x: clientX, y: clientY };
+  };
+
+  const handleTabSwipeEnd = (event) => {
+    const start = tabSwipeStartRef.current;
+    tabSwipeStartRef.current = null;
+    if (!start || !event.changedTouches.length) return;
+
+    const { clientX, clientY } = event.changedTouches[0];
+    const deltaX = clientX - start.x;
+    const deltaY = clientY - start.y;
+    if (Math.abs(deltaX) < 60 || Math.abs(deltaX) < Math.abs(deltaY) * 1.4) return;
+
+    navigateToTab(deltaX < 0 ? 'pastpapers' : 'books');
   };
 
   useEffect(() => {
@@ -197,6 +225,8 @@ export const BookManagement = () => {
       <div
         className="file-converter-content-convert"
         data-active-tab={activeTab}
+        onTouchStart={handleTabSwipeStart}
+        onTouchEnd={handleTabSwipeEnd}
       >
         {renderActiveComponent()}
       </div>

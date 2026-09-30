@@ -39,21 +39,40 @@
   box-shadow: none;
 }
 
+[data-theme="light"] .premium-panel-wrapper {
+  background-color: #ffffff !important;
+}
+
+[data-theme="light"] .premium-panel-backdrop {
+  background: #ffffff !important;
+  opacity: 1 !important;
+}
+
 [data-theme="light"] .premium-panel {
-  background-color: #d1d5db;
+  background: #f5f8f7 !important;
+  color: #172027;
+  border: 1px solid rgba(23, 32, 39, 0.12);
+}
+
+[data-theme="light"] .close-panel-btn {
+  color: #172027 !important;
+}
+
+[data-theme="light"] .close-panel-btn:hover {
+  background: rgba(23, 32, 39, 0.08) !important;
 }
 
 .close-panel-btn {
   position: absolute !important;
-  top: 82px !important;
-  right: 10px !important;
+  top: calc(var(--safe-top, 0px) + 2px) !important;
+  right: calc(var(--safe-right, 0px) + 8px) !important;
   background: transparent !important;
   border: none !important;
   font-size: 14px !important;
   color: #ffffff !important;
   cursor: pointer !important;
-  width: 36px !important;
-  height: 36px !important;
+  width: 44px !important;
+  height: 44px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -95,7 +114,15 @@
 }
 
 [data-theme="light"] .plan-column {
-  background-color: #d1d5db;
+  background: #ffffff;
+  border-color: rgba(23, 32, 39, 0.18);
+}
+
+[data-theme="light"] .plan-column:hover,
+[data-theme="light"] .plan-column:focus-visible,
+[data-theme="light"] .plan-column:active {
+  background: #ffffff;
+  border-color: rgba(23, 32, 39, 0.24);
 }
 
 .plan-column:hover,
@@ -363,4 +390,26 @@
   .price-number {
     font-size: 24px;
   }
+}
+
+[data-theme="light"] .plan-column.selected {
+  border-width: 2px;
+  box-shadow: none !important;
+  filter: none !important;
+  -webkit-box-reflect: none !important;
+}
+
+[data-theme="light"] .premium-column.selected {
+  background: #d9f3f7 !important;
+  border-color: #008da8 !important;
+}
+
+[data-theme="light"] .basic-column.selected {
+  background: #e4f4e4 !important;
+  border-color: #4a9b4a !important;
+}
+
+[data-theme="light"] .pro-column.selected {
+  background: #fff4cc !important;
+  border-color: #c79500 !important;
 }

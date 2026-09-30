@@ -1245,7 +1245,12 @@ export const BookPanel = ({ demoMode = false }) => {
             </button>
             {categoryMenuOpen && (
               <div className="category-filter-menuBKP" role="menu">
-                <button type="button" role="menuitem" onClick={() => handleCategoryFilterChange({ target: { value: '' } })}>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={!categoryFilterId ? 'is-selected' : ''}
+                  onClick={() => handleCategoryFilterChange({ target: { value: '' } })}
+                >
                   <span>All</span>
                   {!categoryFilterId && <FiCheck size={14} />}
                 </button>
@@ -1253,6 +1258,7 @@ export const BookPanel = ({ demoMode = false }) => {
                   <button
                     type="button"
                     role="menuitem"
+                    className={String(categoryFilterId) === String(category.id) ? 'is-selected' : ''}
                     key={category.id}
                     onClick={() => handleCategoryFilterChange({ target: { value: String(category.id) } })}
                   >

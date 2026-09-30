@@ -37,7 +37,7 @@ export const AgreementTab = ({ onBack, initialSection, pageTitle = 'User Agreeme
   // Render full-screen, edge-to-edge overlay when used as full page
   if (isFullPage) {
     return (
-      <div className="settings-user-agreement-page" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', maxWidth: '100%', background: 'var(--bg-primary)', zIndex: 1200, display: 'flex', flexDirection: 'column', margin: 0, padding: 0, color: 'var(--text-primary)', overflowX: 'hidden' }}>
+      <div className="settings-user-agreement-page" style={{ position: 'fixed', inset: 0, maxWidth: '100%', background: 'var(--bg-primary)', zIndex: 1200, display: 'flex', flexDirection: 'column', margin: 0, padding: 0, color: 'var(--text-primary)', overflowX: 'hidden' }}>
         <div className="settings-stp-page-header fullpage" style={{ background: 'var(--bg-primary)' }}>
           <button className="settings-stp-back-btn" onClick={onBack} style={{ marginRight: 12 }}>
             <FiChevronLeft />
@@ -432,7 +432,7 @@ export const AgreementTab = ({ onBack, initialSection, pageTitle = 'User Agreeme
       {isExpanded && (
         <div
           className={isFullPage ? 'settings-agreement-fullpage' : 'settings-agreement-content'}
-          style={isFullPage ? { height: 'calc(100vh - 140px)', overflowY: 'auto', padding: '16px' } : { maxHeight: '60vh', overflowY: 'auto', padding: '16px' }}
+          style={isFullPage ? { flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px' } : { maxHeight: '60vh', overflowY: 'auto', padding: '16px' }}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="agreement-text" style={{}}>

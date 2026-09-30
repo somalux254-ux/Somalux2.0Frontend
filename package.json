@@ -48,6 +48,7 @@
     "start:5173": "VITE_PORT=5173 react-scripts start",
     "build": "react-scripts build && node scripts/create-live-update.js",
     "build:android": "cross-env REACT_APP_ANDROID_BUILD=true npm run build && npx cap sync android",
+    "debug:apk": "npm run build:android && node scripts/build-android-debug.js",
     "deploy:netlify": "npm run build",
     "mobile:release": "npm run android:release",
     "deploy:all": "npm run deploy:netlify && npm run mobile:release",

@@ -686,7 +686,8 @@
 .gridpast {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
+  min-width: 0;
+  gap: clamp(8px, 2vw, 12px);
   justify-content: start;
   margin-bottom: 1.5rem;
   margin-left: 0;
@@ -696,13 +697,20 @@
   background: transparent;
 }
 
+@media (min-width: 520px) {
+  .gridpast {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, clamp(148px, 22vw, 188px)), 1fr));
+    gap: clamp(10px, 1.8vw, 16px);
+  }
+}
+
 .faculty-header-past {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   width: 100%;
   margin-top: -0.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
   padding-bottom: 0.75rem;
 }
 
@@ -805,8 +813,8 @@
 /* Tablets */
 @media (min-width: 768px) {
   .gridpast {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 180px));
-    gap: 1.2rem;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, clamp(156px, 16vw, 188px)), 1fr));
+    gap: clamp(12px, 1.5vw, 20px);
     margin-left: 0;
     margin-right: 0;
     padding-left: 0;
@@ -817,16 +825,9 @@
   }
 }
 
-/* Desktop wide */
-@media (min-width: 1024px) {
+@media (max-width: 320px) {
   .gridpast {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 180px));
-  }
-}
-
-@media (min-width: 1280px) {
-  .gridpast {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 180px));
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -843,19 +844,28 @@
   position: relative;
   height: auto;
   padding: 0;
-  width: 80%;
-  justify-self: center;
+  width: 100%;
+  min-width: 0;
 }
 
 @media (max-width: 767px) {
   .paper-cardpast {
-    width: 90%;
+    width: 100%;
   }
 }
 
 .paper-cardpast:hover {
   box-shadow: none;
   transform: none;
+}
+
+.university-cardpast,
+.university-cardpast:hover,
+[data-theme="light"] .university-cardpast,
+[data-theme="light"] .university-cardpast:hover {
+  box-shadow: none !important;
+  filter: none !important;
+  -webkit-box-reflect: none !important;
 }
 
 .paper-stats-footerpast {
@@ -1141,7 +1151,7 @@
 .paper-descpast {
   color: var(--text-light);
   font-size: 0.7rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 1rem;
   line-height: 1.4;
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -3127,6 +3137,13 @@
   color: #172027 !important;
 }
 
+[data-theme="light"] .paper-cardpast.university-cardpast,
+[data-theme="light"] .paper-cardpast.university-cardpast:hover {
+  box-shadow: none !important;
+  filter: none !important;
+  -webkit-box-reflect: none !important;
+}
+
 [data-theme="light"] .paper-cardpast .paper-snapshotpast {
   background: #eef2f4 !important;
   color: #172027 !important;
@@ -3203,5 +3220,173 @@
 .university-search-rowpast {
   display: flex;
   width: 100%;
-  margin-bottom: 20px;
+  margin-bottom: 0;
+  justify-content: center;
+}
+
+@media (max-width: 767px) {
+  .university-search-rowpast {
+    margin-top: 0.25rem;
+  }
+}
+
+.university-search-rowpast + .gridpast {
+  margin-top: clamp(16px, 2.5vw, 22px);
+}
+
+.university-gridpast {
+  width: 100%;
+  padding-left: clamp(12px, 4vw, 28px);
+  padding-right: clamp(12px, 4vw, 28px);
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
+.university-search-rowpast .search-containerpast {
+  width: min(100%, 300px);
+  max-width: 300px;
+  flex: 0 1 300px;
+  min-height: 34px;
+  margin: 0;
+  background: #151f25 !important;
+  border: none !important;
+  border-radius: 999px;
+}
+
+[data-theme="light"] .book-management .containerpast .search-containerpast {
+  background-color: #d8e0e5 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+[data-theme="light"] .book-management .containerpast .search-inputpast {
+  color: #172027 !important;
+}
+
+[data-theme="light"] .book-management .containerpast .search-inputpast::placeholder {
+  color: #64748b !important;
+}
+
+/* Responsive safeguards for narrow phones, tablets, and dynamic mobile viewports. */
+.containerpast,
+.gridpast,
+.controlspast,
+.modal-contentpast,
+.upload-modal-container {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.gridpast > *,
+.paper-cardpast,
+.university-cardpast {
+  min-width: 0;
+}
+
+.university-cardpast h3,
+.university-cardpast p {
+  overflow-wrap: anywhere;
+}
+
+.modal-overlaypast,
+.upload-modal-overlay {
+  min-height: 100vh;
+  min-height: 100dvh;
+  box-sizing: border-box;
+}
+
+.modal-contentpast,
+.upload-modal-container {
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.upload-modal-container {
+  width: min(100%, 700px);
+}
+
+@media (max-width: 520px) {
+  .search-inputpast,
+  .faculty-search-input-past input,
+  .simple-input {
+    font-size: 16px;
+  }
+
+  .book-pagination-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 359px) {
+  .gridpast {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .controlspast:not(.university-search-rowpast) {
+    gap: 0.25rem;
+  }
+
+  .paper-filter-selectpast {
+    width: 54px;
+    max-width: 54px;
+  }
+
+  .modal-headerpast {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .modal-overlaypast {
+    padding: max(8px, env(safe-area-inset-top, 0px)) 0 0;
+    align-items: flex-end;
+    overflow-y: auto;
+  }
+
+  .modal-contentpast {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 8px);
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    overflow-y: auto;
+  }
+
+  .paper-previewpast {
+    min-height: min(500px, 60dvh) !important;
+    height: auto !important;
+  }
+
+  .modal-contentpast::after {
+    display: none;
+  }
+
+  .upload-modal-overlay {
+    padding: max(8px, env(safe-area-inset-top, 0px)) 8px env(safe-area-inset-bottom, 0px);
+    align-items: flex-end;
+    overflow-y: auto;
+  }
+
+  .upload-modal-container {
+    width: 100%;
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 16px);
+  }
+}
+
+@media (min-width: 768px) {
+  .university-search-rowpast .search-containerpast {
+    width: min(100%, 420px);
+    max-width: 420px;
+    flex-basis: 420px;
+  }
 }

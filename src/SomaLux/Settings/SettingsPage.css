@@ -662,12 +662,197 @@
 
 .settings-stp-app-install {
   margin-left: auto;
+  appearance: none;
   padding: 8px 12px;
   color: var(--text-primary);
+  background: transparent;
+  border: 0;
   font-size: 13px;
   font-weight: 500;
   text-decoration: none;
   white-space: nowrap;
+  cursor: pointer;
+}
+
+.settings-stp-app-install-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-stp-app-install-loading svg {
+  width: 14px;
+  height: 14px;
+  animation: settings-app-download-spin 0.9s linear infinite;
+}
+
+.settings-stp-app-install:hover,
+.settings-stp-app-install:focus-visible {
+  text-decoration: underline;
+}
+
+.settings-app-download-prompt {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 1300;
+  display: grid;
+  gap: 16px;
+  width: min(380px, calc(100vw - 32px));
+  padding: 20px;
+  color: var(--text-primary);
+  background: var(--bg-secondary, rgba(128, 142, 154, 0.26));
+  border: 0;
+  border-radius: 8px;
+  box-shadow: none;
+  transform: translate(-50%, -50%);
+  animation: settings-app-prompt-in 180ms ease-out;
+}
+
+[data-theme="light"] .settings-app-download-prompt {
+  background: #8fd3a2;
+}
+
+.settings-app-download-prompt-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-app-download-prompt-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  background: transparent;
+}
+
+.settings-app-download-prompt-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.settings-app-download-prompt-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.settings-app-download-prompt-copy strong {
+  font-size: 13px;
+}
+
+.settings-app-download-prompt-copy span {
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.settings-app-download-percent {
+  margin-left: auto;
+  color: #00a844;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.settings-app-download-progress-track {
+  width: 100%;
+  height: 2px;
+  overflow: hidden;
+  background: rgba(128, 142, 154, 0.22);
+  border-radius: 999px;
+}
+
+.settings-app-download-prompt-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.settings-app-download-progress-track span {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  background: #00a844;
+  border-radius: inherit;
+  transition: width 160ms ease;
+}
+
+.settings-app-download-prompt-cancel {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 8px 16px;
+  color: var(--text-primary);
+  background: none;
+  border: 0;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.settings-app-download-prompt-cancel svg {
+  width: 14px;
+  height: 14px;
+}
+
+.settings-stp-app-installed {
+  display: inline-flex;
+  align-items: center;
+  color: #00a844;
+  gap: 5px;
+  cursor: default;
+}
+
+.settings-stp-app-downloaded {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  color: #00a844;
+  cursor: default;
+}
+
+.settings-stp-app-downloaded + .settings-stp-app-install {
+  margin-left: 0;
+  padding-left: 0;
+}
+
+.settings-stp-app-downloaded {
+  padding-right: 0;
+}
+
+.settings-stp-app-downloaded svg {
+  width: 15px;
+  height: 15px;
+}
+
+.settings-stp-app-installed svg {
+  width: 15px;
+  height: 15px;
+}
+
+@keyframes settings-app-prompt-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 10px));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes settings-app-download-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .settings-stp-app-install:hover,
@@ -1465,6 +1650,130 @@
   }
 }
 
+/* Fluid settings layout for compact phones, tablets, desktops, and landscape. */
+.settings-stp-page-container,
+.settings-stp-page-container * {
+  box-sizing: border-box;
+}
+
+.settings-stp-page-container {
+  min-width: 0;
+  min-height: 0;
+}
+
+.settings-stp-page-container > .settings-stp-page-header {
+  min-width: 0;
+  padding-left: clamp(10px, 3vw, 24px) !important;
+  padding-right: clamp(10px, 3vw, 24px) !important;
+}
+
+.settings-stp-page-container > .settings-stp-page-content {
+  min-width: 0;
+  min-height: 0;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.settings-stp-tabs-cards-grid {
+  width: 100%;
+  min-width: 0;
+  padding-left: clamp(10px, 3vw, 28px);
+  padding-right: clamp(10px, 3vw, 28px);
+}
+
+.settings-stp-tab-card,
+.tab-card-left,
+.tab-card-content {
+  min-width: 0;
+}
+
+.settings-stp-tab-card {
+  min-height: clamp(56px, 8vh, 76px);
+}
+
+.tab-card-label,
+.tab-card-description {
+  overflow-wrap: anywhere;
+}
+
+.settings-stp-page-footer {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (min-width: 769px) {
+  .settings-stp-page-container {
+    padding-left: max(0px, env(safe-area-inset-left, 0px));
+    padding-right: max(0px, env(safe-area-inset-right, 0px));
+  }
+
+  .settings-stp-page-content {
+    width: min(100%, 960px);
+    align-self: center;
+  }
+
+  .settings-stp-page-footer {
+    padding-left: clamp(24px, 5vw, 64px);
+    padding-right: clamp(24px, 5vw, 64px);
+  }
+}
+
+@media (max-width: 380px) {
+  .settings-stp-page-container > .settings-stp-page-header {
+    gap: 4px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .settings-main-header {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important;
+  }
+
+  .settings-stp-header-upgrade-btn {
+    width: auto;
+    max-width: 76px;
+    gap: 3px;
+    font-size: 10px;
+  }
+
+  .settings-stp-page-title {
+    font-size: clamp(0.9rem, 4vw, 1rem) !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .settings-stp-tabs-cards-grid {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .settings-stp-tab-card {
+    gap: 8px !important;
+    padding: 12px 6px !important;
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .settings-stp-page-container > .settings-stp-page-header {
+    margin-top: 4px !important;
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+  }
+
+  .settings-stp-page-title {
+    font-size: clamp(0.9rem, 3vh, 1.2rem) !important;
+  }
+
+  .settings-stp-page-container > .settings-stp-page-content {
+    overflow-y: auto;
+  }
+
+  .settings-stp-page-footer {
+    padding-top: 4px;
+  }
+}
+
 @media (max-width: 480px) {
   .settings-stp-page-header {
     padding: 4px 12px !important;
@@ -2246,5 +2555,84 @@
   [data-theme="dark"] .settings-stp-tab-card {
     width: 95% !important;
     margin: 0 auto !important;
+  }
+}
+
+/* Keep settings and policy pages flush to the viewport on mobile, with
+   responsive safe-area spacing and compact header alignment. */
+@media (max-width: 768px) {
+  .settings-stp-page-container,
+  .settings-privacy-policy-page,
+  .settings-user-agreement-page,
+  .settings-usage-policy-page {
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+  }
+
+  .settings-stp-page-container > .settings-stp-page-header,
+  .settings-privacy-policy-page > .settings-stp-page-header,
+  .settings-user-agreement-page > .settings-stp-page-header,
+  .settings-usage-policy-page > .settings-stp-page-header {
+    gap: clamp(6px, 2vw, 12px) !important;
+    padding-top: 0 !important;
+    padding-right: clamp(12px, 3vw, 20px) !important;
+    padding-left: clamp(12px, 3vw, 20px) !important;
+    margin-top: -4px !important;
+  }
+
+  .settings-stp-page-title {
+    font-size: clamp(1rem, 4vw, 1.3rem) !important;
+    line-height: 1.2 !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .settings-stp-page-header,
+  .settings-privacy-policy-page > .settings-stp-page-header,
+  .settings-user-agreement-page > .settings-stp-page-header,
+  .settings-usage-policy-page > .settings-stp-page-header {
+    padding-right: 8px !important;
+    padding-left: 8px !important;
+  }
+}
+
+/* On phones, let the settings sheet fill the viewport: header near the top,
+   scrollable content in the middle, and footer at the bottom safe area. */
+@media (max-width: 768px) {
+  .settings-stp-page-container.settings-stp-page-container {
+    top: 0 !important;
+    bottom: 0 !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    box-sizing: border-box !important;
+    background: var(--bg-primary) !important;
+  }
+
+  .settings-stp-page-container > .settings-stp-page-header {
+    margin-top: clamp(10px, 2.5vh, 18px) !important;
+    padding-top: clamp(2px, 0.8vh, 6px) !important;
+    min-height: 0 !important;
+  }
+
+  .settings-stp-page-container > .settings-stp-page-content {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .settings-stp-page-container > .settings-stp-page-footer {
+    flex: 0 0 auto;
+    margin-top: auto;
+    background: var(--bg-primary) !important;
+    padding-bottom: 0 !important;
+    transform: none !important;
   }
 }

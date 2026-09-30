@@ -82,24 +82,19 @@ const UniversityCard = React.memo(({
 });
 
 export const UniversityGrid = React.memo(({ universities, universitySearchTerm, setUniversitySearchTerm, onUniversitySelect, onAuthRequired, user }) => {
-  const filteredUniversities = universities.filter(uni =>
-    !universitySearchTerm ||
-    uni.name?.toLowerCase().includes(universitySearchTerm.toLowerCase()) ||
-    uni.location?.toLowerCase().includes(universitySearchTerm.toLowerCase())
-  );
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = React.useState(universitySearchTerm);
 
-  if (filteredUniversities.length === 0) {
-    return (
-      <div className="empty-statepast">
-        <FiMapPin size={48} />
-        <h3>No universities found</h3>
-        <p>Try adjusting your search</p>
-        <button className="reset-filterspast" onClick={() => setUniversitySearchTerm('')}>
-          Clear Search
-        </button>
-      </div>
-    );
-  }
+  React.useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearchTerm(universitySearchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [universitySearchTerm]);
+
+  const normalizedSearchTerm = debouncedSearchTerm.trim().toLowerCase();
+  const filteredUniversities = React.useMemo(() => (universities || []).filter((uni) =>
+    !normalizedSearchTerm ||
+    uni.name?.toLowerCase().includes(normalizedSearchTerm) ||
+    uni.location?.toLowerCase().includes(normalizedSearchTerm)
+  ), [universities, normalizedSearchTerm]);
 
   return (
     <>
@@ -137,19 +132,33 @@ export const UniversityGrid = React.memo(({ universities, universitySearchTerm, 
               onClick={() => setUniversitySearchTerm('')}
               className="clear-buttonpast"
               aria-label="Clear university search"
+              title="Clear search"
             >
               <FiX size={16} />
             </button>
           )}
         </div>
       </div>
-      <div className="gridpast">
-        <AnimatePresence>
-          {filteredUniversities.map((uni) => (
-            <UniversityCard key={uni.id} uni={uni} searchTerm={universitySearchTerm} onUniversitySelect={onUniversitySelect} />
-          ))}
-        </AnimatePresence>
-      </div>
+      {filteredUniversities.length > 0 ? (
+        <div className="gridpast university-gridpast">
+          <AnimatePresence>
+            {filteredUniversities.map((uni) => (
+              <UniversityCard key={uni.id} uni={uni} searchTerm={debouncedSearchTerm} onUniversitySelect={onUniversitySelect} />
+            ))}
+          </AnimatePresence>
+        </div>
+      ) : (
+        <div className="empty-statepast">
+          <FiMapPin size={48} />
+          <h3>No universities found</h3>
+          <p>Try adjusting your search</p>
+          {universitySearchTerm && (
+            <button className="reset-filterspast" onClick={() => setUniversitySearchTerm('')}>
+              Clear Search
+            </button>
+          )}
+        </div>
+      )}
     </>
   );
 });

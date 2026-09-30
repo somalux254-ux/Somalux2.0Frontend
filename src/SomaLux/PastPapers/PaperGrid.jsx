@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { FiFileText, FiX, FiDownload, FiEye, FiBookmark, FiChevronLeft, FiChevronRight, FiChevronDown, FiCheck } from 'react-icons/fi';
 import { AiOutlineHeart, AiFillHeart } from 'react-icons/ai';
@@ -49,27 +49,7 @@ export const PaperGrid = React.memo(({
   facultyFilter = '',
   onFacultyClick
 }) => {
-  // Debounce search input to prevent excessive updates
-  const searchInputRef = useRef(null);
-  const searchDebounceRef = useRef(null);
-  const [localSearchValue, setLocalSearchValue] = useState(searchTerm);
   const [bubbles, setBubbles] = useState({});
-  
-  const handleSearchChange = useCallback((e) => {
-    if (!user) return;
-    const value = e.target.value;
-    setLocalSearchValue(value);
-    
-    // Clear previous debounce
-    if (searchDebounceRef.current) {
-      clearTimeout(searchDebounceRef.current);
-    }
-    
-    // Debounce the actual state update by 300ms
-    searchDebounceRef.current = setTimeout(() => {
-      setSearchTerm(value);
-    }, 300);
-  }, [setSearchTerm, user]);
 
   const createBubbles = useCallback((paperId) => {
     const newBubbles = [];
@@ -117,17 +97,18 @@ export const PaperGrid = React.memo(({
             <FaSearch size={14} />
           </span>
           <input
-            ref={searchInputRef}
             type="text"
             placeholder="Search papers by course, code or faculty..."
-            value={localSearchValue}
+            value={searchTerm}
             onFocus={(e) => {
               if (!user) {
                 e.currentTarget.blur();
                 onAuthRequired?.('search');
               }
             }}
-            onChange={handleSearchChange}
+            onChange={(event) => {
+              if (user) setSearchTerm(event.target.value);
+            }}
             inputMode="search"
             enterKeyHint="search"
             onKeyDown={(e) => {
@@ -139,10 +120,9 @@ export const PaperGrid = React.memo(({
             className="search-inputpast"
             autoComplete="off"
           />
-          {localSearchValue && (
+          {searchTerm && (
             <button
               onClick={() => {
-                setLocalSearchValue('');
                 setSearchTerm('');
               }}
               className="clear-buttonpast"

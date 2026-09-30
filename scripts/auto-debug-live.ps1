@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Continue'
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
@@ -26,8 +26,9 @@ Set-Location $projectRoot
 
 $deviceSelector = $env:ANDROID_DEVICE_SERIAL
 if (-not $deviceSelector) {
-    $deviceList = & $adb devices 2>$null
-    foreach ($line in $deviceList) {
+    & $adb start-server 2>$null | Out-Null
+    $deviceList = (& $adb devices 2>&1 | Out-String)
+    foreach ($line in ($deviceList -split "`r?`n")) {
         if ($line -match '^\s*(\S+)\s+device\s*$') {
             $deviceSelector = $matches[1]
             break

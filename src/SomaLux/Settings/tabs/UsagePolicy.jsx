@@ -113,7 +113,7 @@ export const UsagePolicy = ({ onBack }) => {
 
   if (isFullPage) {
     return (
-      <div className="settings-usage-policy-page" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', maxWidth: '100%', background: 'var(--bg-primary)', zIndex: 1200, display: 'flex', flexDirection: 'column', margin: 0, padding: 0, color: 'var(--text-primary)', overflowX: 'hidden' }}>
+      <div className="settings-usage-policy-page" style={{ position: 'fixed', inset: 0, maxWidth: '100%', background: 'var(--bg-primary)', zIndex: 1200, display: 'flex', flexDirection: 'column', margin: 0, padding: 0, color: 'var(--text-primary)', overflowX: 'hidden' }}>
         <div className="settings-stp-page-header fullpage" style={{ background: 'var(--bg-primary)' }}>
           <button className="settings-stp-back-btn" onClick={onBack} style={{ marginRight: 12 }}>
             <FiChevronLeft />
