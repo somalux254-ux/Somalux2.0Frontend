@@ -1859,12 +1859,12 @@ select option {
         display: flex;
         gap: 6px;
         align-items: center;
-        justify-content: flex-start;
+        justify-content: space-evenly;
         position: fixed;
         left: 0;
         right: 0;
         bottom: 0;
-        height: 58px;
+        height: 80px;
         width: 100vw;
         box-sizing: border-box;
         background: #0b1216 !important;
@@ -1878,6 +1878,8 @@ select option {
         overflow-x: auto;
         overflow-y: hidden;
         white-space: nowrap;
+        scroll-snap-type: x proximity;
+        touch-action: pan-x;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: none;
     }
@@ -1899,15 +1901,18 @@ select option {
         display: flex;
         flex-direction: column;
         align-items: center;
+        position: relative;
+        top: 20px !important;
         gap: 2px;
         color: #cfd8dc;
         text-decoration: none;
         font-size: 10px;
         padding: 3px 4px;
-        flex: 0 0 auto;
+        flex: 1 0 52px;
         min-width: 52px;
-        width: 52px;
+        width: auto;
         box-sizing: border-box;
+        scroll-snap-align: start;
     }
 
     .admin-bottombar .bottom-item svg { font-size: 14px; }
@@ -2376,7 +2381,7 @@ html[data-theme="light"] .admin-root::before,
 
 @media (max-width: 600px) {
     [data-theme="light"] .admin-bottombar {
-        bottom: 5vh;
+        bottom: 0;
         z-index: 10 !important;
     }
 

@@ -54,9 +54,11 @@ const Users = ({ isSuperAdmin }) => {
     try {
       let profiles = [];
       let uploadCounts = [];
+      const profilesPromise = fetchProfiles();
+      const uploadCountsPromise = fetchUploadCountsByUser();
 
       try {
-        profiles = await fetchProfiles();
+        profiles = await profilesPromise;
         console.log('[Users.load] fetchProfiles success:', profiles?.length || 0);
       } catch (e) {
         console.error('[Users.load] fetchProfiles error:', e?.message || e);
@@ -66,7 +68,7 @@ const Users = ({ isSuperAdmin }) => {
       }
 
       try {
-        uploadCounts = await fetchUploadCountsByUser();
+        uploadCounts = await uploadCountsPromise;
         console.log('[Users.load] fetchUploadCountsByUser success:', uploadCounts?.length || 0);
       } catch (e) {
         console.error('[Users.load] fetchUploadCountsByUser error:', e?.message || e);

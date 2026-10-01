@@ -1101,7 +1101,6 @@
   z-index: 1000;
   padding: 1rem;
   overflow-y: auto;
-  will-change: opacity;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -1126,9 +1125,6 @@
   display: flex;
   flex-direction: column;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  will-change: transform, opacity;
-  transform: translateZ(0);
-  backface-visibility: hidden;
 }
 
 /* Tablet - 90% width with padding */
@@ -2257,6 +2253,29 @@ div[style*="position: relative"] > .btn-readBKP:hover {
   .btn-action-primaryBKP {
     flex: 0 1 auto;
     min-width: auto;
+  }
+}
+
+/* Make the Mark and Read actions in the book details modal easy to tap. */
+.modal-actionsBKP .actions-primary-rowBKP > .btn-readBKP.btn-action-primaryBKP {
+  min-height: 48px;
+  padding: 12px 18px;
+  gap: 8px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.modal-actionsBKP .actions-primary-rowBKP > .btn-readBKP.btn-action-primaryBKP svg {
+  width: 20px;
+  height: 20px;
+}
+
+@media (max-width: 640px) {
+  .modal-actionsBKP .actions-primary-rowBKP > .btn-readBKP.btn-action-primaryBKP {
+    min-height: 46px;
+    padding: 10px 14px;
+    font-size: 0.95rem;
   }
 }
 

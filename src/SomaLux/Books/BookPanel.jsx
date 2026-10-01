@@ -1631,21 +1631,13 @@ export const BookPanel = ({ demoMode = false }) => {
         </>
       )}
 
-      <AnimatePresence initial={false}>
-        {selectedBook && (
-          <motion.div
+      {selectedBook && (
+          <div
             className="modal-overlayBKP"
-            initial={isMounted ? { opacity: 0 } : false}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
             onClick={closeDetails}
           >
-            <motion.div
+            <div
               className="modal-contentBKP"
-              initial={isMounted ? { scale: 0.98, opacity: 0 } : false}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.98, opacity: 0 }}
-              transition={{ type: 'tween', duration: 0.16 }}
               onClick={(e) => {
                 e.stopPropagation();
               }}
@@ -1797,10 +1789,9 @@ export const BookPanel = ({ demoMode = false }) => {
                   </button>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          </div>
+      )}
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}

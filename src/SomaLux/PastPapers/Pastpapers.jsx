@@ -970,7 +970,7 @@ export const PaperPanel = ({ demoMode = false }) => {
     const initialPreviewUrl = paper.file_url && /^https?:\/\//i.test(paper.file_url)
       ? paper.file_url
       : null;
-    setPreviewLoading(!initialPreviewUrl);
+    setPreviewLoading(true);
     setSelectedPaper({ ...paper, downloadUrl: initialPreviewUrl });
     setWelcomeMessage(false);
 
@@ -980,8 +980,10 @@ export const PaperPanel = ({ demoMode = false }) => {
       .then(signedUrl => {
         setSelectedPaper(prev => prev?.id === paper.id ? { ...prev, downloadUrl: signedUrl } : prev);
       })
-      .catch(error => console.warn('Failed to load past paper preview:', { paperId: paper.id, error: error.message }))
-      .finally(() => setPreviewLoading(false));
+      .catch(error => {
+        console.warn('Failed to load past paper preview:', { paperId: paper.id, error: error.message });
+        setPreviewLoading(false);
+      });
   };
 
   const viewPaperDetails = async (paper) => {
@@ -996,6 +998,7 @@ export const PaperPanel = ({ demoMode = false }) => {
     }
 
     const existingUrl = paper.downloadUrl || (paper.file_url && /^https?:\/\//i.test(paper.file_url) ? paper.file_url : null);
+    setPreviewLoading(true);
     setSelectedPaper({ ...paper, downloadUrl: existingUrl });
     setWelcomeMessage(false);
 
@@ -1004,7 +1007,10 @@ export const PaperPanel = ({ demoMode = false }) => {
         .then(signedUrl => {
           setSelectedPaper(prev => prev?.id === paper.id ? { ...prev, downloadUrl: signedUrl } : prev);
         })
-        .catch(error => console.warn('Failed to prewarm past paper URL:', { paperId: paper.id, error: error.message }));
+        .catch(error => {
+          console.warn('Failed to prewarm past paper URL:', { paperId: paper.id, error: error.message });
+          setPreviewLoading(false);
+        });
     }
     
   };
@@ -1425,20 +1431,13 @@ export const PaperPanel = ({ demoMode = false }) => {
       )}
 
       {/* Paper Details Modal */}
-      <AnimatePresence>
-        {selectedPaper && user && (
-          <motion.div
+      {selectedPaper && user && (
+          <div
             className="modal-overlaypast"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
             onClick={closeDetails}
           >
-            <motion.div
+            <div
               className="modal-contentpast"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
             >
               <button className="close-buttonpast" onClick={closeDetails} aria-label="Close">
@@ -1450,8 +1449,19 @@ export const PaperPanel = ({ demoMode = false }) => {
                   {selectedPaper.downloadUrl ? (
                     <div className="paper-previewpast" style={{ width: '100%', maxWidth: '400px', minHeight: '500px', display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative', borderRadius: '8px', overflow: 'hidden', background: '#121a1f', padding: '0.2rem' }}>
                       <Suspense fallback={<div style={{ width: '100%', minHeight: '600px' }} />}>
-                        <Document file={selectedPaper.downloadUrl} loading="">
-                          <Page pageNumber={1} width={380} renderTextLayer={false} renderAnnotationLayer={false} loading="" />
+                        <Document
+                          file={selectedPaper.downloadUrl}
+                          loading=""
+                          onLoadError={() => setPreviewLoading(false)}
+                        >
+                          <Page
+                            pageNumber={1}
+                            width={380}
+                            renderTextLayer={false}
+                            renderAnnotationLayer={false}
+                            loading=""
+                            onRenderSuccess={() => setPreviewLoading(false)}
+                          />
                         </Document>
                       </Suspense>
                       {previewLoading && (
@@ -1474,7 +1484,9 @@ export const PaperPanel = ({ demoMode = false }) => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         padding: '2rem',
-                        textAlign: 'center'
+                        textAlign: 'center',
+                        position: 'relative',
+                        overflow: 'hidden'
                       }}
                     >
                       <FiFileText size={80} style={{ color: '#6366f1', marginBottom: '1.5rem', opacity: 0.8 }} />
@@ -1490,6 +1502,11 @@ export const PaperPanel = ({ demoMode = false }) => {
                           ].filter(Boolean).join(' • ')
                         }
                       </div>
+                      {previewLoading && (
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8696a0', background: 'rgba(18, 26, 31, 0.9)' }}>
+                          Loading first-page preview...
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1506,10 +1523,9 @@ export const PaperPanel = ({ demoMode = false }) => {
                   </button>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          </div>
+      )}
 
       {/* Auth Modal */}
       <AuthModal

@@ -39,6 +39,23 @@ const UserDetails = React.lazy(() => import('./pages/UserDetails'));
 const UserSearchDetails = React.lazy(() => import('./pages/UserSearchDetails'));
 const SendEmails = React.lazy(() => import('./pages/SendEmails'));
 
+function preloadAdminRoute(pathname) {
+  if (pathname === '/books/admin' || pathname === '/books/admin/') return import('./pages/Dashboard');
+  if (pathname.startsWith('/books/admin/content')) return import('./pages/ContentManagement');
+  if (pathname.startsWith('/books/admin/categories')) return import('./pages/Categories');
+  if (pathname === '/books/admin/upload') return import('./pages/Upload');
+  if (pathname.startsWith('/books/admin/auto-upload')) return import('./pages/AutoUpload');
+  if (pathname.startsWith('/books/admin/auto-download')) return import('../../PastPapersDownloader/PastPapersAutoDownload');
+  if (pathname.startsWith('/books/admin/submissions')) return import('./pages/Submissions');
+  if (pathname.startsWith('/books/admin/send-emails')) return import('./pages/SendEmails');
+  if (pathname.includes('/search')) return import('./pages/UserSearchDetails');
+  if (/\/books\/admin\/users\/[^/]+/.test(pathname)) return import('./pages/UserDetails');
+  if (pathname.startsWith('/books/admin/users')) return import('./pages/Users');
+  if (pathname.startsWith('/books/admin/verify')) return import('./pages/Verify');
+  if (pathname.startsWith('/books/admin/settings')) return import('./pages/Settings');
+  return null;
+}
+
 export const BooksAdmin = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -48,14 +65,24 @@ export const BooksAdmin = () => {
   const [authUserEmail, setAuthUserEmail] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
+  // Start downloading the active page while the profile/access check runs.
+  useEffect(() => {
+    preloadAdminRoute(location.pathname)?.catch((error) => {
+      console.warn('Could not preload admin page:', error?.message || error);
+    });
+  }, [location.pathname]);
+
   // Load admin profile and auth user email
   useEffect(() => {
     (async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        // The persisted session is available locally; the profiles query below
+        // still verifies access without waiting on an extra auth endpoint call.
+        const { data: { session } = {} } = await supabase.auth.getSession();
+        const user = session?.user || null;
         setAuthUserEmail(user?.email);
 
-        const profile = await getCurrentUserProfile();
+        const profile = await getCurrentUserProfile(user);
         setUserProfile(profile);
       } catch (error) {
         console.error('Failed to load user profile:', error);

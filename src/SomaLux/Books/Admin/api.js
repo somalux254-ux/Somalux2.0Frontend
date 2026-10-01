@@ -555,50 +555,13 @@ export async function fetchStats() {
         uploads: 0,
       });
     }
+    const activityStart = new Date(now.getFullYear(), now.getMonth() - 11, 1).toISOString();
 
     console.log('[fetchStats] Starting data fetch...');
     
-    const [booksCountRes, usersDataRes, universitiesCountVal, pastPapersCountVal, apkDownloadsCountVal, recentRes, allBooksRes, allPastPapersRes] = await Promise.all([
+    const [booksCountRes, usersCountRes, universitiesCountVal, pastPapersCountVal, apkDownloadsCountVal, recentRes, allBooksRes, allPastPapersRes] = await Promise.all([
       supabase.from('books').select('id', { count: 'exact', head: true }),
-      (async () => {
-        try {
-          const authUsers = await fetchAuthenticatedUsers();
-          console.log('[fetchStats] fetchAuthenticatedUsers returned:', authUsers?.length || 0, 'users');
-          return authUsers || [];
-        } catch (e) {
-          console.warn('[fetchStats] fetchAuthenticatedUsers failed, falling back to profile pagination:', e?.message || e);
-          // Fallback: Paginate through all profiles to get accurate count
-          let allProfiles = [];
-          let pageSize = 1000;
-          let page = 0;
-          let hasMore = true;
-          
-          while (hasMore) {
-            const from = page * pageSize;
-            const to = from + pageSize - 1;
-            
-            const { data, error } = await supabase
-              .from('profiles')
-              .select('id')
-              .range(from, to);
-            
-            if (error) {
-              console.error('[fetchStats] Error fetching profiles on page', page, ':', error);
-              break;
-            }
-            
-            if (data && data.length > 0) {
-              allProfiles = allProfiles.concat(data);
-            }
-            
-            hasMore = data && data.length === pageSize;
-            page++;
-          }
-          
-          console.log('[fetchStats] Fallback: fetched', allProfiles.length, 'total profiles via pagination');
-          return allProfiles;
-        }
-      })(),
+      supabase.from('profiles').select('id', { count: 'exact', head: true }),
       (async () => { const { count } = await supabase.from('universities').select('id', { count: 'exact', head: true }); return count || 0; })(),
       (async () => { const { count } = await supabase.from('past_papers').select('id', { count: 'exact', head: true }); return count || 0; })(),
       (async () => {
@@ -610,12 +573,12 @@ export async function fetchStats() {
         return count || 0;
       })(),
       supabase.from('books').select('id, title, author, cover_image_url, created_at').order('created_at', { ascending: false }).limit(10),
-      supabase.from('books').select('id, created_at'),
-      supabase.from('past_papers').select('id, created_at'),
+      supabase.from('books').select('id, created_at').gte('created_at', activityStart),
+      supabase.from('past_papers').select('id, created_at').gte('created_at', activityStart),
     ]);
 
     const booksCount = booksCountRes?.count || 0;
-    const usersCount = Array.isArray(usersDataRes) ? usersDataRes.length : (usersDataRes?.count || 0);
+    const usersCount = usersCountRes?.count || 0;
     const universitiesCount = universitiesCountVal || 0;
     const pastPapersCount = pastPapersCountVal || 0;
 
@@ -665,32 +628,38 @@ export async function fetchStats() {
 
 export async function fetchProfiles() {
   try {
-    let allProfiles = [];
     const pageSize = 1000;
-    let page = 0;
-    let hasMore = true;
+    const { count, error: countError } = await supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true });
 
-    while (hasMore) {
-      const from = page * pageSize;
-      const to = from + pageSize - 1;
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, email, display_name, full_name, avatar_url, created_at, updated_at, last_active_at, subscription_tier, role')
-        .order('created_at', { ascending: false })
-        .range(from, to);
-      
-      if (error) {
-        console.error('[fetchProfiles] Supabase error on page', page, ':', error);
-        throw error;
-      }
-      
-      if (data && data.length > 0) {
-        allProfiles = allProfiles.concat(data);
-      }
-      
-      hasMore = data && data.length === pageSize;
-      page++;
+    if (countError) throw countError;
+
+    const pageCount = Math.ceil((count || 0) / pageSize);
+    const allProfiles = [];
+    const batchSize = 4;
+
+    for (let startPage = 0; startPage < pageCount; startPage += batchSize) {
+      const pages = Array.from(
+        { length: Math.min(batchSize, pageCount - startPage) },
+        (_, index) => startPage + index
+      );
+      const results = await Promise.all(pages.map(async (page) => {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, email, display_name, full_name, avatar_url, created_at, updated_at, last_active_at, subscription_tier, role')
+          .order('created_at', { ascending: false })
+          .range(from, to);
+
+        if (error) {
+          console.error('[fetchProfiles] Supabase error on page', page, ':', error);
+          throw error;
+        }
+        return data || [];
+      }));
+      allProfiles.push(...results.flat());
     }
     
     console.log('[fetchProfiles] Total profiles fetched:', allProfiles.length);
@@ -946,25 +915,28 @@ export async function getProfileByEmail(email) {
   return data;
 }
 
-export async function getCurrentUserProfile() {
+export async function getCurrentUserProfile(authenticatedUser = undefined) {
   console.log('🔍 [getCurrentUserProfile] Starting...');
   
   try {
-    // Step 1: Get auth user - with timeout
-    console.log('🔍 [getCurrentUserProfile] Getting auth user...');
-    let user;
-    try {
-      const authPromise = supabase.auth.getUser();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Auth getUser timeout')), 3000)
-      );
-      
-      const result = await Promise.race([authPromise, timeoutPromise]);
-      user = result?.data?.user || result?.user;
-      console.log('✓ [getCurrentUserProfile] Auth user retrieved:', user?.email || 'none');
-    } catch (authErr) {
-      console.error('❌ [getCurrentUserProfile] Auth getUser failed:', authErr?.message || authErr);
-      return null;
+    // Use a verified user supplied by the caller when available. Otherwise
+    // preserve the existing standalone behavior for other callers.
+    let user = authenticatedUser;
+    if (user === undefined) {
+      console.log('🔍 [getCurrentUserProfile] Getting auth user...');
+      try {
+        const authPromise = supabase.auth.getUser();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Auth getUser timeout')), 3000)
+        );
+        
+        const result = await Promise.race([authPromise, timeoutPromise]);
+        user = result?.data?.user || result?.user;
+        console.log('✓ [getCurrentUserProfile] Auth user retrieved:', user?.email || 'none');
+      } catch (authErr) {
+        console.error('❌ [getCurrentUserProfile] Auth getUser failed:', authErr?.message || authErr);
+        return null;
+      }
     }
     
     if (!user) {

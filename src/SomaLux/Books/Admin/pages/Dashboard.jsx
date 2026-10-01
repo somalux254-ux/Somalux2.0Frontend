@@ -17,16 +17,28 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
+const DASHBOARD_CACHE_KEY = 'somalux_admin_dashboard_stats';
+
+const readCachedDashboardStats = () => {
+  try {
+    const cached = JSON.parse(localStorage.getItem(DASHBOARD_CACHE_KEY) || 'null');
+    if (cached?.stats) return cached.stats;
+  } catch (error) {
+    // Ignore unavailable or invalid local cache data.
+  }
+  return null;
+};
 
 const Dashboard = () => {
-  const [stats, setStats] = useState({
+  const [cachedStats] = useState(readCachedDashboardStats);
+  const [stats, setStats] = useState(() => cachedStats || {
     counts: { books: 0, users: 0, downloads: 0, views: 0, universities: 0, pastPapers: 0, androidApkDownloads: 0 },
     monthly: [],
     top: [],
     topPastPapers: [],
     recent: [],
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !cachedStats);
   const [showViewsModal, setShowViewsModal] = useState(false);
   const [viewDetails, setViewDetails] = useState([]);
   const [loadingViews, setLoadingViews] = useState(false);
@@ -215,6 +227,11 @@ const Dashboard = () => {
         const data = await fetchStats();
         console.log('[Dashboard] fetchStats returned:', data);
         setStats(data);
+        try {
+          localStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify({ timestamp: Date.now(), stats: data }));
+        } catch (error) {
+          // Dashboard remains usable if storage is full or unavailable.
+        }
       } catch (error) {
         console.error('Error fetching stats:', error);
       } finally {
