@@ -1,13 +1,11 @@
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Routes, Route, NavLink, Navigate, useNavigate, useLocation, Link } from 'react-router-dom';
 import { 
   FiBarChart2, FiBookOpen, FiUpload, FiFolder,
   FiSettings, FiUsers, FiChevronLeft, FiChevronRight,
   FiRefreshCw, FiGrid, FiCheck, FiClock, FiDownload
 } from 'react-icons/fi';
-import { MdAdminPanelSettings } from "react-icons/md";
 import { BiSpeaker } from 'react-icons/bi';
-import { AiOutlineLineChart } from 'react-icons/ai';
 
 import { getCurrentUserProfile } from './api';
 import { API_URL } from '../../../config';

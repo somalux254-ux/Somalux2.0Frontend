@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { FiRefreshCw, FiBook, FiFileText, FiMapPin } from 'react-icons/fi';
 import { useAdminUI } from '../AdminUIContext';
 import SubmissionsList from './SubmissionsList';
@@ -26,30 +26,27 @@ const Submissions = ({ userProfile }) => {
     'x-actor-id': userProfile?.id || userProfile?.user_id || '' // Add user UUID if available
   }), [userProfile?.email, userProfile?.id, userProfile?.user_id]);
 
-  const getAuthHeaders = async () => {
+  const getAuthHeaders = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     return session?.access_token
       ? { ...headers, Authorization: `Bearer ${session.access_token}` }
       : headers;
-  };
+  }, [headers]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       // Use submissions endpoint for all types (books, past_papers, universities)
       // This endpoint queries the appropriate table and filters by status
       const url = `${API_BASE}/api/elib/submissions?status=${encodeURIComponent(filter)}&type=${encodeURIComponent(type)}`;
-      console.log(`[Submissions] Fetching ${type} with status=${filter}: ${url}`);
       
       const res = await fetch(url, { headers: await getAuthHeaders() });
       const json = await res.json();
-      console.log(`[Submissions] Response for ${type}:`, { status: res.status, count: json.submissions?.length, items: json.submissions });
       
       if (!res.ok) throw new Error(json?.error || `Failed to load ${type} submissions`);
       
       const items = Array.isArray(json.submissions) ? json.submissions : [];
-      console.log(`[Submissions] Loaded ${items.length} ${type} submissions with status=${filter}`);
       setItems(items);
     } catch (e) {
       console.error(`[Submissions] Error fetching ${type}:`, e);
@@ -57,9 +54,9 @@ const Submissions = ({ userProfile }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter, type, getAuthHeaders]);
 
-  const fetchSummary = async () => {
+  const fetchSummary = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/api/elib/submissions/summary`, { headers: await getAuthHeaders() });
       const json = await res.json();
@@ -73,16 +70,14 @@ const Submissions = ({ userProfile }) => {
     } catch (_) {
       // ignore summary errors in UI
     }
-  };
+  }, [getAuthHeaders]);
 
-  useEffect(() => { fetchData(); }, [filter, type]);
-  useEffect(() => { fetchSummary(); }, []);
+  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { fetchSummary(); }, [fetchSummary]);
 
   const approve = async (id) => {
-    console.log('Approve called with id:', id, 'type of id:', typeof id);
     
     const item = items.find((x) => x.id === id) || selected;
-    console.log('Found item:', item);
     
     const label = type === 'books'
       ? (item?.title || 'this book')
@@ -96,7 +91,6 @@ const Submissions = ({ userProfile }) => {
       console.error('Invalid submission ID format:', id);
       // If id is not valid but we have selected with valid id, use that
       if (selected?.id && uuidPattern.test(selected.id)) {
-        console.log('Recursing with selected.id:', selected.id);
         return approve(selected.id);
       }
       showToast({ type: 'error', message: 'Invalid submission ID format. Please refresh and try again.' });
@@ -154,10 +148,8 @@ const Submissions = ({ userProfile }) => {
 
   const reject = async (id) => {
     // Debug: log what was passed
-    console.log('Reject called with id:', id, 'type of id:', typeof id);
     
     const item = items.find((x) => x.id === id) || selected;
-    console.log('Found item:', item);
     
     const label = type === 'books'
       ? (item?.title || 'this book')
@@ -171,7 +163,6 @@ const Submissions = ({ userProfile }) => {
       console.error('Invalid submission ID format:', id);
       // If id is not valid but we have selected with valid id, use that
       if (selected?.id && uuidPattern.test(selected.id)) {
-        console.log('Recursing with selected.id:', selected.id);
         return reject(selected.id);
       }
       showToast({ type: 'error', message: 'Invalid submission ID format. Please refresh and try again.' });

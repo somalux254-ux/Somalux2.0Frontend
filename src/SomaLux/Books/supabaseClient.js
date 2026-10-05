@@ -6,8 +6,6 @@ const fallbackKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || fallbackUrl;
 const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY || fallbackKey;
 
-console.log('Supabase URL:', supabaseUrl);
-console.log('Supabase key starts with:', String(supabaseKey).slice(0, 16));
 
 export const supabase = createClient(String(supabaseUrl), String(supabaseKey), {
   auth: {

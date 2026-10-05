@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiSearch } from 'react-icons/fi';
 import { fetchUniversities, createUniversitySubmission, deleteUniversity, updateUniversity } from '../campusApi';
-import { autoFillUniversityData, getUniversityImages, deleteUniversityImage, searchUniversityNames } from '../universityPrefillApi';
+import { autoFillUniversityData, searchUniversityNames } from '../universityPrefillApi';
 import { getPastPaperCountByUniversity } from '../pastPapersApi';
 import { useAdminUI } from '../AdminUIContext';
 import { formatNumber } from '../../../PastPapers/formatNumber';
@@ -88,7 +88,7 @@ const UniversitiesManagement = ({ userProfile }) => {
     if (previewImage === imageUrl) setPreviewImage(null);
   };
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const { data, count: total } = await fetchUniversities({ page, pageSize, search, sort });
@@ -113,11 +113,13 @@ const UniversitiesManagement = ({ userProfile }) => {
         setPaperCounts(prevCounts => ({ ...prevCounts, ...counts }));
       }
     } finally { setLoading(false); }
-  };
+  }, [page, pageSize, search, sort]);
 
   useEffect(() => {
-    if (userProfile) load();
-  }, [page, search, sort.col, sort.dir, userProfile]);
+    if (userProfile) {
+      load();
+    }
+  }, [load, userProfile]);
 
   useEffect(() => {
     const query = newUniversity.name.trim();
@@ -399,7 +401,7 @@ const UniversitiesManagement = ({ userProfile }) => {
                   <div className="university-image-preview-grid">
                     {publicCoverImages.filter((imageUrl) => !failedPreviewImages.has(imageUrl)).map((imageUrl, index) => (
                       <div className="university-image-preview" key={`${imageUrl}-${index}`} role="button" tabIndex={0} onClick={() => setPreviewImage(imageUrl)} onKeyDown={(event) => event.key === 'Enter' && setPreviewImage(imageUrl)}>
-                        <img src={imageUrl} alt={`Official university image ${index + 1}`} onError={() => handlePreviewImageError(imageUrl)} />
+                        <img src={imageUrl} alt={`University cover ${index + 1}`} onError={() => handlePreviewImageError(imageUrl)} />
                         {index === 0 && <span>Primary</span>}
                       </div>
                     ))}
@@ -511,7 +513,7 @@ const UniversitiesManagement = ({ userProfile }) => {
         {previewImage && (
           <div className="university-image-lightbox" role="dialog" aria-modal="true" aria-label="University image preview" onClick={() => setPreviewImage(null)}>
             <button type="button" className="university-image-lightbox-close" onClick={() => setPreviewImage(null)} aria-label="Close image preview">×</button>
-            <img src={previewImage} alt="Full university image preview" onError={() => setPreviewImage(null)} onClick={(event) => event.stopPropagation()} />
+            <img src={previewImage} alt="University cover preview" onError={() => setPreviewImage(null)} onClick={(event) => event.stopPropagation()} />
           </div>
         )}
       </div>

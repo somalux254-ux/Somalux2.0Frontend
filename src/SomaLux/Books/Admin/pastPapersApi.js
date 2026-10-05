@@ -65,7 +65,6 @@ export async function fetchPastPapers({
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
   
-  console.log('📥 fetchPastPapers called with:', { page, pageSize, search, universityId, faculty, forceRefresh });
   
   const cacheKey = makePastPapersCacheKey({ page, pageSize, search, universityId, faculty, sort, columns });
   if (!forceRefresh) {
@@ -74,7 +73,6 @@ export async function fetchPastPapers({
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed?.timestamp && (Date.now() - parsed.timestamp) < CACHE_TTL_MS) {
-          console.log('📦 Returning cached papers');
           return { data: parsed.data || [], count: parsed.count || 0, fromCache: true };
         }
       }
@@ -95,11 +93,9 @@ export async function fetchPastPapers({
     if (search) {
       // Trim search input and handle spaces
       const trimmedSearch = search.trim();
-      console.log('🔍 Searching for:', trimmedSearch);
       
       // Split search into individual terms and search for each
       const searchTerms = trimmedSearch.split(/\s+/).filter(t => t.length > 0);
-      console.log('🔍 Search terms:', searchTerms);
       
       if (searchTerms.length > 0) {
         // Build OR conditions for full text search on all fields
@@ -121,7 +117,6 @@ export async function fetchPastPapers({
         // Remove duplicates
         searchConditions = [...new Set(searchConditions)];
         
-        console.log('🔍 Final search conditions:', searchConditions.join(' OR '));
         query = query.or(searchConditions.join(','));
       }
     }
@@ -138,20 +133,6 @@ export async function fetchPastPapers({
     if (error) {
       console.error('Supabase error fetching past papers:', error);
       throw new Error(`Failed to fetch past papers: ${error.message}`);
-    }
-
-    if (search) {
-      console.log(`🔍 Search results: Found ${count} papers`);
-      if (count === 0 && data.length === 0) {
-        console.log('⚠️ No results found. Showing sample data from database:');
-        const { data: sampleData } = await supabase
-          .from('past_papers')
-          .select('id, unit_code, unit_name, title')
-          .limit(3);
-        console.log('Sample database records:', sampleData);
-      } else {
-        console.log('Found papers:', data.map(p => ({ unit_code: p.unit_code, unit_name: p.unit_name, title: p.title })));
-      }
     }
 
     // Ensure file_url is properly generated from file_path for each paper
@@ -183,7 +164,6 @@ export async function fetchPastPapers({
     });
 
     const result = { data: processedData || [], count: count || 0 };
-    console.log(`✅ Successfully fetched ${processedData.length} past papers`);
     try {
       localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data: result.data, count: result.count }));
     } catch (e) {
@@ -266,25 +246,20 @@ export async function checkDuplicatePastPaper({ universityId, faculty, unitCode,
 
 export async function createPastPaper({ metadata, pdfFile }) {
   try {
-    console.log('🔍 createPastPaper START - metadata:', metadata);
     
     if (!pdfFile) {
       throw new Error('PDF file is required');
     }
 
     // Upload file directly to Supabase storage (bypasses backend base64 conversion)
-    console.log('📤 Uploading PDF file to Supabase storage...');
     const uploaded = await uploadPastPaperFile(pdfFile);
     const file_url = uploaded.publicUrl;
-    console.log('✅ PDF uploaded successfully:', { path: uploaded.path, url: file_url });
 
     // Generate title with fallbacks
     const title = metadata.title || `${metadata.unit_code} - ${metadata.unit_name}`;
 
     // Get current user
-    console.log('🔐 Getting current authenticated user...');
     const { data: { user } } = await supabase.auth.getUser();
-    console.log('👤 Current user:', { id: user?.id, email: user?.email });
     
     if (!user) {
       throw new Error('Not authenticated');
@@ -308,7 +283,6 @@ export async function createPastPaper({ metadata, pdfFile }) {
       updated_at: nowIso
     };
 
-    console.log('📝 Record prepared, attempting database insert:', JSON.stringify(pastPaperRecord, null, 2));
 
     const { data: pastPaper, error } = await supabase
       .from('past_papers')
@@ -316,14 +290,12 @@ export async function createPastPaper({ metadata, pdfFile }) {
       .select('*')
       .single();
 
-    console.log('📊 Supabase response:', { error: error?.message, data: pastPaper?.id });
     
     if (error) {
       console.error('💥 Database error:', { message: error.message, code: error.code, details: error.details, hint: error.hint });
       throw new Error(error.message || 'Failed to create past paper');
     }
 
-    console.log('✅ Successfully created past paper:', { id: pastPaper.id, title: pastPaper.title, university_id: pastPaper.university_id });
 
     // Clear cache so callers fetch fresh data
     try { clearPastPapersCache(); } catch (e) {}
@@ -716,7 +688,6 @@ export async function searchUnitFaculty(universityName, unitCode, unitName) {
     });
 
     const url = `${API_BASE}/api/elib/search-unit-faculty?${params.toString()}`;
-    console.log('🔍 Searching faculty via:', url);
 
     const response = await fetch(url, {
       method: 'GET',
@@ -730,7 +701,6 @@ export async function searchUnitFaculty(universityName, unitCode, unitName) {
     }
 
     const data = await response.json();
-    console.log(`✅ Faculty search result for ${universityName} ${unitCode}:`, data);
     
     return data; // Returns { faculty, source, fallback }
   } catch (error) {
@@ -778,7 +748,6 @@ export async function logUploadHistory({
       created_at: new Date().toISOString()
     };
 
-    console.log('📝 Logging upload history:', historyRecord);
 
     const { data, error } = await supabase
       .from('past_papers_upload_history')
@@ -796,7 +765,6 @@ export async function logUploadHistory({
       return null;
     }
 
-    console.log('✅ Upload history logged:', data?.id);
     return data;
   } catch (err) {
     console.error('❌ Error logging upload history:', err);
@@ -865,7 +833,6 @@ export async function fetchUploadHistory({
       throw error;
     }
 
-    console.log('✅ Fetched upload history:', { count, records: data?.length });
 
     return { 
       data: data || [], 
@@ -883,12 +850,7 @@ export async function getUploadHistoryStats() {
     today.setHours(0, 0, 0, 0);
     const todayISO = today.toISOString();
 
-    const [
-      { count: todayCount, error: todayError },
-      { count: totalCount, error: totalError },
-      { count: duplicatesCount, error: duplicatesError },
-      { count: failedCount, error: failedError }
-    ] = await Promise.all([
+    const results = await Promise.all([
       supabase
         .from('past_papers_upload_history')
         .select('id', { count: 'exact', head: true })
@@ -906,6 +868,16 @@ export async function getUploadHistoryStats() {
         .eq('status', 'failed')
     ]);
 
+    const queryError = results.find(({ error }) => error)?.error;
+    if (queryError) throw queryError;
+
+    const [
+      { count: todayCount },
+      { count: totalCount },
+      { count: duplicatesCount },
+      { count: failedCount }
+    ] = results;
+
     const stats = {
       today: todayCount || 0,
       total: totalCount || 0,
@@ -914,17 +886,15 @@ export async function getUploadHistoryStats() {
       successful: (totalCount || 0) - (duplicatesCount || 0) - (failedCount || 0)
     };
 
-    console.log('📊 Upload history stats:', stats);
     return stats;
   } catch (err) {
     console.error('❌ Error getting upload history stats:', err);
-    return { today: 0, total: 0, duplicates: 0, failed: 0, successful: 0 };
+    throw err;
   }
 }
 
 export async function clearAllUploadHistory() {
   try {
-    console.log('🔍 Starting clearAllUploadHistory...');
 
     const { count: beforeCount, error: countError } = await supabase
       .from('past_papers_upload_history')
@@ -935,7 +905,6 @@ export async function clearAllUploadHistory() {
       throw countError;
     }
 
-    console.log('📊 Records before delete:', beforeCount);
 
     if ((beforeCount || 0) === 0) {
       return { success: true, deletedCount: 0, remainingCount: 0 };
@@ -990,7 +959,6 @@ export async function clearAllUploadHistory() {
       throw new Error(`Upload history could not be fully cleared. ${afterCount} rows remain.`);
     }
 
-    console.log('✅ Upload history cleared successfully:', { deletedCount, remainingCount: afterCount });
     return { success: true, deletedCount, remainingCount: afterCount };
   } catch (err) {
     console.error('❌ Error in clearAllUploadHistory:', err);
@@ -1011,7 +979,6 @@ export async function clearAllUploadHistory() {
  */
 export async function extractPastPaperMetadataBackend(pdfFile) {
   try {
-    console.log('📤 [BACKEND-EXTRACT] Uploading PDF for extraction:', pdfFile.name);
     
     // Create FormData for multipart upload
     const formData = new FormData();
@@ -1035,12 +1002,6 @@ export async function extractPastPaperMetadataBackend(pdfFile) {
       throw new Error(result.message || 'Extraction failed');
     }
     
-    console.log('✅ [BACKEND-EXTRACT] Extraction successful:', {
-      unit_code: result.data.unit_code,
-      unit_name: result.data.unit_name,
-      year: result.data.year,
-      confidence: result.data.confidence
-    });
     
     return {
       unitCode: result.data.unit_code,
@@ -1083,7 +1044,6 @@ export async function extractPastPaperMetadataBackend(pdfFile) {
  */
 export async function extractFirstPageMetadata(pdfFile) {
   try {
-    console.log('📖 [FIRST-PAGE-API] Calling extraction API for:', pdfFile.name);
     
     const formData = new FormData();
     formData.append('pdf', pdfFile);
@@ -1093,7 +1053,6 @@ export async function extractFirstPageMetadata(pdfFile) {
       body: formData
     });
     
-    console.log('📡 [FIRST-PAGE-API] Response status:', response.status);
     
     if (!response.ok) {
       console.error('❌ [FIRST-PAGE-API] HTTP error:', response.status, response.statusText);
@@ -1101,7 +1060,6 @@ export async function extractFirstPageMetadata(pdfFile) {
     }
     
     const data = await response.json();
-    console.log('📦 [FIRST-PAGE-API] Response data:', data);
     
     if (!data.success) {
       console.warn('⚠️ [FIRST-PAGE-API] Extraction unsuccessful:', data);
@@ -1113,11 +1071,6 @@ export async function extractFirstPageMetadata(pdfFile) {
       return null;
     }
     
-    console.log('✅ [FIRST-PAGE-API] Success! Extracted:', { 
-      unitCode: data.unitCode, 
-      unitName: data.unitName, 
-      year: data.year 
-    });
     
     // Return normalized result - ONLY 3 fields
     const result = {
@@ -1131,7 +1084,6 @@ export async function extractFirstPageMetadata(pdfFile) {
       }
     };
     
-    console.log('📊 [FIRST-PAGE-API] Returning result:', result);
     return result;
     
   } catch (error) {
@@ -1148,7 +1100,6 @@ export async function extractFirstPageMetadata(pdfFile) {
  */
 export async function extractFirstPageMetadataBatch(pdfFiles) {
   try {
-    console.log('📦 [BATCH-FIRST-PAGE] Starting batch extraction for', pdfFiles.length, 'files...');
     
     const formData = new FormData();
     Array.from(pdfFiles).forEach(file => {
@@ -1166,8 +1117,6 @@ export async function extractFirstPageMetadataBatch(pdfFiles) {
     
     const data = await response.json();
     
-    console.log('✅ [BATCH-FIRST-PAGE] Batch extraction completed');
-    console.log('📊 [BATCH-FIRST-PAGE] Summary:', data.summary);
     
     // Normalize results
     const normalized = data.results.map(result => ({

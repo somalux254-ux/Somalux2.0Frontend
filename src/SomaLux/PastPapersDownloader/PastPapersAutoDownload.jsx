@@ -28,7 +28,6 @@ const PastPapersAutoDownload = ({ userProfile, asSubmission = false }) => {
   const [sortCol, setSortCol] = useState('filename');
   const [sortDir, setSortDir] = useState('asc');
   const [downloadedHashes, setDownloadedHashes] = useState(new Set());
-  const [duplicatesSkipped, setDuplicatesSkipped] = useState(0);
   const [downloadStats, setDownloadStats] = useState({ total: 0, downloaded: 0, skipped: 0 });
 
   // Cleanup interval on unmount
@@ -111,8 +110,6 @@ const PastPapersAutoDownload = ({ userProfile, asSubmission = false }) => {
       setDownloading(prev => ({ ...prev, [file.url]: true }));
       
       const folderPath = selectedFolder || 'Downloads';
-      console.log(`🗂️ [DOWNLOAD-SINGLE] Selected folder: "${selectedFolder}"`);
-      console.log(`🗂️ [DOWNLOAD-SINGLE] Folder path to send: "${folderPath}"`);
       
       // Use backend to download and save to specific folder
       const response = await fetch(`${API_BASE}/api/elib/download-file-to-folder`, {
@@ -194,9 +191,6 @@ const PastPapersAutoDownload = ({ userProfile, asSubmission = false }) => {
       // Use the selected folder directly, don't append collection name
       const folderPath = selectedFolder || 'Downloads';
       
-      console.log(`🗂️ [DOWNLOAD-BATCH] Starting download to folder: "${folderPath}"`);
-      console.log(`🗂️ [DOWNLOAD-BATCH] Selected folder value: "${selectedFolder}"`);
-      console.log(`🗂️ [DOWNLOAD-BATCH] Total files to download: ${filesToDownload.length}`);
 
       setDownloading(prev => {
         const newState = { ...prev };
@@ -212,7 +206,6 @@ const PastPapersAutoDownload = ({ userProfile, asSubmission = false }) => {
 
         // Check if file is duplicate
         if (downloadedHashes.has(fileHash)) {
-          console.log(`Skipping duplicate: ${file.filename}`);
           skipped++;
           continue;
         }
@@ -224,7 +217,6 @@ const PastPapersAutoDownload = ({ userProfile, asSubmission = false }) => {
             [file.url]: `${i + 1}/${filesToDownload.length}`
           }));
 
-          console.log(`📥 Downloading to folder: ${folderPath}`);
 
           // Call backend to download and save file to specific folder
           const response = await fetch(`${API_BASE}/api/elib/download-file-to-folder`, {
@@ -240,7 +232,6 @@ const PastPapersAutoDownload = ({ userProfile, asSubmission = false }) => {
           const result = await response.json();
           
           if (result.ok) {
-            console.log(`✅ Saved to: ${result.fullPath}`);
             // Mark file as downloaded
             newHashes.add(fileHash);
             downloaded++;

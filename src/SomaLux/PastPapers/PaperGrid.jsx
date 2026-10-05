@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { FiFileText, FiX, FiDownload, FiEye, FiBookmark, FiChevronLeft, FiChevronRight, FiChevronDown, FiCheck } from 'react-icons/fi';
 import { AiOutlineHeart, AiFillHeart } from 'react-icons/ai';

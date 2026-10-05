@@ -1,11 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiUpload, FiFolder, FiRefreshCw, FiCheck, FiX, FiAlertCircle, FiFile, FiBook, FiFileText, FiClock, FiPause, FiPlay } from 'react-icons/fi';
+import { FiUpload, FiFolder, FiRefreshCw, FiX, FiFile, FiBook, FiFileText, FiClock, FiPause, FiPlay } from 'react-icons/fi';
 import { createBook, createBookSubmission, fetchCategories } from '../api';
-import { getUniversitiesForDropdown, getFacultiesByUniversity, createPastPaper, createPastPaperSubmission, searchUnitFaculty, clearPastPapersCache, checkDuplicatePastPaper, logUploadHistory, extractPastPaperMetadataBackend, extractFirstPageMetadata, extractFirstPageMetadataBatch } from '../pastPapersApi';
-import { extractPastPaperMetadata, findMatchingUniversity, findMatchingFaculty, guessFacultyFromUnitCode } from '../utils/extractPastPaperMetadata';
+import { getUniversitiesForDropdown, getFacultiesByUniversity, createPastPaper, createPastPaperSubmission, searchUnitFaculty, clearPastPapersCache, checkDuplicatePastPaper, logUploadHistory, extractPastPaperMetadataBackend, extractFirstPageMetadata } from '../pastPapersApi';
+import { findMatchingUniversity, findMatchingFaculty, guessFacultyFromUnitCode } from '../utils/extractPastPaperMetadata';
 import * as pdfjsLib from 'pdfjs-dist';
-import { useAdminUI } from '../AdminUIContext';
 
 // Books Auto Upload Component
 const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
@@ -16,7 +15,6 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
   const [uploadedCount, setUploadedCount] = useState(0);
   const [failedCount, setFailedCount] = useState(0);
   const [duplicatesCount, setDuplicatesCount] = useState(0);
-  const [skippedCount, setSkippedCount] = useState(0);
   const [toast, setToast] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -28,9 +26,7 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
   const uploadAbortRef = useRef(false);
   const pauseRef = useRef(false);
   const resumeIndexRef = useRef(0);
-  const { showToast: uiShowToast } = useAdminUI();
 
-  console.log('📱 [RENDER] BooksAutoUploadContent component rendered. canResume:', canResume);
 
   // Check if we have a paused upload in localStorage (for immediate UI rendering before state updates)
   const savedUploadState = (() => {
@@ -39,7 +35,6 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
       if (saved) {
         const state = JSON.parse(saved);
         if (state.fileNames && state.fileNames.length > 0 && (state.paused || state.uploading)) {
-          console.log('⚡ [QUICK CHECK] Paused upload detected in localStorage: ' + state.fileNames.length + ' files');
           return state;
         }
       }
@@ -62,28 +57,15 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
   }, []);
 
   const checkForIncompleteUpload = () => {
-    console.log('🔍 [RESUME CHECK] Starting check for incomplete uploads...');
     
     const savedState = localStorage.getItem('booksUploadState');
-    console.log('🔍 [RESUME CHECK] localStorage.booksUploadState exists:', !!savedState);
     
     if (savedState) {
       try {
         const state = JSON.parse(savedState);
-        console.log('🔍 [RESUME CHECK] Parsed state:', {
-          fileNames: state.fileNames?.length || 0,
-          paused: state.paused,
-          uploading: state.uploading,
-          uploaded: state.uploaded,
-          failed: state.failed,
-          currentIndex: state.currentIndex,
-          total: state.total,
-          timestamp: new Date(state.timestamp).toLocaleString()
-        });
         
         // Check if upload was incomplete (paused or in progress)
         if (state.fileNames && state.fileNames.length > 0 && (state.paused || state.uploading)) {
-          console.log('✅ [RESUME CHECK] Incomplete upload found! Setting canResume = true');
           
           // RESTORE UI STATE FROM SAVED STATE
           setUploadProgress({ current: state.currentIndex + 1, total: state.total });
@@ -91,29 +73,20 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
           setFailedCount(state.failed);
           setDuplicatesCount(state.duplicates || 0);
           setUploading(true);  // ← SET THIS TO SHOW PROGRESS BAR AND PAUSE/RESUME BUTTONS
-          console.log('📊 [RESUME CHECK] Restored UI state: uploaded=' + state.uploaded + ', failed=' + state.failed + ', total=' + state.total);
           
           // CRITICAL: If the upload was paused, set the pause ref so it stays paused on resume
           if (state.paused) {
             pauseRef.current = true;
             setPaused(true);  // ← SET THE PAUSED STATE SO UI REFLECTS IT
-            console.log('🔒 [RESUME CHECK] Setting pauseRef.current = true AND paused state = true to keep upload paused');
           }
           setCanResume(true);
           setResumeState(state);
-        } else {
-          console.log('❌ [RESUME CHECK] No incomplete upload (condition not met)');
-          console.log('  - fileNames exists:', !!state.fileNames);
-          console.log('  - fileNames.length > 0:', state.fileNames?.length > 0);
-          console.log('  - paused or uploading:', state.paused || state.uploading);
-        }
+        } 
       } catch (e) {
         console.error('❌ [RESUME CHECK] Error parsing saved upload state:', e);
         localStorage.removeItem('booksUploadState');
       }
-    } else {
-      console.log('❌ [RESUME CHECK] No saved state in localStorage');
-    }
+    } 
   };
 
   const saveUploadState = (files, progress, uploaded, failed, dupes, paused, uploading) => {
@@ -129,18 +102,9 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
       timestamp: Date.now()
     };
     
-    console.log('💾 [SAVE STATE] Saving upload state:', {
-      files: state.fileNames.length,
-      currentIndex: state.currentIndex,
-      uploaded,
-      failed,
-      paused,
-      uploading
-    });
     
     try {
       localStorage.setItem('booksUploadState', JSON.stringify(state));
-      console.log('✅ [SAVE STATE] Successfully saved to localStorage');
     } catch (error) {
       console.error('❌ [SAVE STATE] Failed to save to localStorage:', error);
       if (error.name === 'QuotaExceededError') {
@@ -150,10 +114,8 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
   };
 
   const clearUploadState = () => {
-    console.log('🗑️ [CLEAR STATE] Clearing upload state from localStorage');
     try {
       localStorage.removeItem('booksUploadState');
-      console.log('✅ [CLEAR STATE] Successfully cleared');
     } catch (error) {
       console.error('❌ [CLEAR STATE] Failed to clear:', error);
     }
@@ -426,7 +388,6 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
       setSelectedFiles(matchedFiles);
       // SET THE RESUME INDEX FOR THE UPLOAD FUNCTION
       resumeIndexRef.current = resumeState.currentIndex + 1;
-      console.log('📁 [RESUME MODE] Setting resumeIndexRef to:', resumeIndexRef.current, 'from saved currentIndex:', resumeState.currentIndex);
       internalShowToast(`✅ Found ${matchedFiles.length} files to resume upload (${resumeState.currentIndex + 1}/${resumeState.total} already processed)`, 'success');
     } else {
       internalShowToast(`Found ${pdfFiles.length} PDF files`, 'success');
@@ -481,7 +442,6 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
       return;
     }
 
-    console.log('🚀 [UPLOAD START] Starting upload with', selectedFiles.length, 'files');
     setUploading(true);
     setPaused(false);
     uploadAbortRef.current = false;
@@ -493,7 +453,6 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
     const initialFailed = resumeState?.failed || 0;
     const initialDupes = resumeState?.duplicates || 0;
     
-    console.log('📊 [UPLOAD INIT] startFromIndex:', startFromIndex, 'initialUploaded:', initialUploaded);
     
     // Only reset progress if not resuming
     if (startFromIndex === 0) {
@@ -501,7 +460,6 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
       setUploadedCount(0);
       setFailedCount(0);
       setDuplicatesCount(0);
-      setSkippedCount(0);
     } else {
       // Resuming: restore previous progress
       setUploadProgress({ current: startFromIndex, total: selectedFiles.length });
@@ -514,8 +472,6 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
     let uploaded = initialUploaded;
     let failed = initialFailed;
     let duplicates = initialDupes;
-    let skipped = 0;
-
     for (let i = startFromIndex; i < selectedFiles.length; i++) {
       // Check if upload was aborted
       if (uploadAbortRef.current) {
@@ -533,7 +489,6 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
       }
 
       const file = selectedFiles[i];
-      console.log(`📄 [FILE ${i + 1}/${selectedFiles.length}] Starting upload of: ${file.name}`);
       setUploadProgress({ current: i + 1, total: selectedFiles.length });
       // Save progress
       saveUploadState(selectedFiles, { current: i + 1, total: selectedFiles.length }, uploaded, failed, duplicates, false, true);
@@ -558,21 +513,18 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
         }
 
         uploaded++;
-        console.log(`✅ [FILE DONE] Uploaded: ${file.name} (${uploaded}/${selectedFiles.length})`);
         setUploadedCount(uploaded);
         // SAVE PROGRESS AFTER EACH FILE COMPLETES
         saveUploadState(selectedFiles, { current: i + 1, total: selectedFiles.length }, uploaded, failed, duplicates, false, true);
       } catch (error) {
         console.error(`❌ [FILE ERROR] Failed to upload ${file.name}:`, error);
         failed++;
-        console.log(`❌ [FILE FAILED] Total failed count: ${failed}`);
         setFailedCount(failed);
         // SAVE PROGRESS AFTER FAILURE TOO
         saveUploadState(selectedFiles, { current: i + 1, total: selectedFiles.length }, uploaded, failed, duplicates, false, true);
       }
     }
 
-    console.log('🏁 [UPLOAD COMPLETE] Total uploaded:', uploaded, 'Total failed:', failed);
     clearUploadState();
     resumeIndexRef.current = 0;
     setIsResumingUpload(false);
@@ -590,28 +542,22 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
   };
 
   const handlePause = () => {
-    console.log('⏸️ [PAUSE CLICKED] User clicked pause button');
-    console.log('📋 [PAUSE] Current state: uploaded=' + uploadedCount + ', failed=' + failedCount + ', progress=' + JSON.stringify(uploadProgress));
     pauseRef.current = true;
     setPaused(true);
     
     // CRITICAL: Save state immediately when pause is clicked
-    console.log('💾 [PAUSE] Forcing save of upload state to localStorage');
     saveUploadState(selectedFiles, uploadProgress, uploadedCount, failedCount, duplicatesCount, true, true);
     
     internalShowToast('Upload paused', 'info');
   };
 
   const handleResume = async () => {
-    console.log('▶️ [RESUME CLICKED] User clicked resume button');
-    console.log('🎯 [RESUME] Starting upload from index:', resumeIndexRef.current);
     
     pauseRef.current = false;
     setPaused(false);
     
     // CRITICAL: Call uploadFiles() again to continue from saved index
     if (selectedFiles && selectedFiles.length > 0) {
-      console.log('🚀 [RESUME] Calling uploadFiles() to continue from saved position');
       await uploadFiles(selectedFiles);
     }
     
@@ -619,7 +565,6 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
   };
 
   const handleCancel = () => {
-    console.log('❌ [CANCEL CLICKED] User clicked cancel button');
     uploadAbortRef.current = true;
     pauseRef.current = false;
     setUploading(false);
@@ -633,7 +578,6 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
     setUploadedCount(0);
     setFailedCount(0);
     setDuplicatesCount(0);
-    setSkippedCount(0);
     if (folderInputRef.current) {
       folderInputRef.current.value = '';
     }
@@ -1177,7 +1121,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
   const [useCustomFaculty, setUseCustomFaculty] = useState(false);
   const [universities, setUniversities] = useState([]);
   const [faculties, setFaculties] = useState([]);
-  const [showOverride, setShowOverride] = useState(false);
   const [extractedMetadata, setExtractedMetadata] = useState(null);
   const [canResumePastPapers, setCanResumePastPapers] = useState(false);
   const [resumeStatePastPapers, setResumeStatePastPapers] = useState(null);
@@ -1186,10 +1129,11 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
   const uploadAbortRef = useRef(false);
   const pauseRef = useRef(false);
   const resumeIndexRef = useRef(0);
+  const handleResumePastPapersRef = useRef(null);
 
-  const internalShowToast = (message, type = 'info') => {
+  const internalShowToast = useCallback((message, type = 'info') => {
     showToast(message, type);
-  };
+  }, [showToast]);
 
   // localStorage helper functions for past papers
   const savePastPapersUploadState = (files, progress, uploaded, failed, dupes, paused = false, uploading = false) => {
@@ -1203,7 +1147,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
         timestamp: Date.now()
       };
       localStorage.setItem('pastPapersUploadState', JSON.stringify(state));
-      console.log('✅ [SAVE PAST PAPERS] Successfully saved to localStorage');
     } catch (error) {
       console.error('❌ [SAVE PAST PAPERS] Failed to save:', error);
     }
@@ -1214,26 +1157,14 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
   };
 
   const checkForIncompletePastPapersUpload = () => {
-    console.log('🔍 [PAST PAPERS CHECK] Starting check for incomplete uploads...');
     const savedState = localStorage.getItem('pastPapersUploadState');
-    console.log('🔍 [PAST PAPERS CHECK] localStorage exists:', !!savedState);
     
     if (savedState) {
       try {
         const state = JSON.parse(savedState);
-        console.log('🔍 [PAST PAPERS CHECK] Parsed state:', {
-          fileNames: state.fileNames?.length || 0,
-          paused: state.paused,
-          uploading: state.uploading,
-          uploaded: state.uploaded,
-          failed: state.failed,
-          currentIndex: state.currentIndex,
-          total: state.total
-        });
         
         // Check if upload was incomplete (paused or in progress)
         if (state.fileNames && state.fileNames.length > 0 && (state.paused || state.uploading)) {
-          console.log('✅ [PAST PAPERS CHECK] Incomplete upload found!');
           
           // RESTORE UI STATE
           setUploadProgress({ current: state.currentIndex + 1, total: state.total });
@@ -1241,20 +1172,16 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           setFailedCount(state.failed);
           setDuplicatesCount(state.duplicates || 0);
           setUploading(true);
-          console.log('📊 [PAST PAPERS CHECK] Restored UI: uploaded=' + state.uploaded + ', failed=' + state.failed);
           
           // If paused, keep it paused
           if (state.paused) {
             pauseRef.current = true;
             setPaused(true);
-            console.log('🔒 [PAST PAPERS CHECK] Upload is paused, keeping paused');
           }
           
           setCanResumePastPapers(true);
           setResumeStatePastPapers(state);
-        } else {
-          console.log('❌ [PAST PAPERS CHECK] No incomplete upload found');
-        }
+        } 
       } catch (error) {
         console.error('❌ [PAST PAPERS CHECK] Error parsing state:', error);
       }
@@ -1265,9 +1192,7 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
   useEffect(() => {
     const loadUniversities = async () => {
       try {
-        console.log('🔄 Loading universities...');
         const unis = await getUniversitiesForDropdown();
-        console.log('✅ Universities loaded:', unis);
         setUniversities(unis);
       } catch (error) {
         console.error('❌ Failed to load universities:', error);
@@ -1282,9 +1207,7 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
     const loadFaculties = async () => {
       if (university) {
         try {
-          console.log('🔄 Loading faculties for university:', university);
           const facs = await getFacultiesByUniversity(university);
-          console.log('✅ Faculties loaded:', facs);
           setFaculties(facs || []);
           // Reset faculty selection when university changes
           setFaculty('');
@@ -1307,11 +1230,10 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
   // Auto-resume incomplete past papers upload
   useEffect(() => {
     if (canResumePastPapers && !uploading && !isResumingPastPapersUpload) {
-      console.log('🚀 [AUTO RESUME] Auto-triggering resume for past papers upload');
       setIsResumingPastPapersUpload(true);
-      handleResumePastPapers();
+      handleResumePastPapersRef.current?.();
     }
-  }, [canResumePastPapers]);
+  }, [canResumePastPapers, uploading, isResumingPastPapersUpload]);
 
   // Load faculties when university changes
   useEffect(() => {
@@ -1339,43 +1261,26 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
       }
     };
     loadFaculties();
-  }, [university, extractedMetadata?.faculty]);
+  }, [university, extractedMetadata?.faculty, internalShowToast]);
 
   // Auto-extract metadata from PDF (using first-page header extraction)
   const autoExtractMetadata = async (pdfFile, unisList = null) => {
     try {
-      console.log('📖 [AUTO-EXTRACT] Starting extraction for:', pdfFile.name);
       
       // STRATEGY 1: Try first-page academic header extraction (NEW - HIGH ACCURACY)
-      console.log('📍 [AUTO-EXTRACT] Strategy 1: Calling extractFirstPageMetadata...');
       let pdfMetadata = await extractFirstPageMetadata(pdfFile);
       
-      console.log('📊 [AUTO-EXTRACT] Strategy 1 result:', pdfMetadata);
       
       // If first-page extraction succeeded with good quality, use it
       if (pdfMetadata && pdfMetadata.validation && pdfMetadata.validation.quality !== 'poor') {
-        console.log('✅ [AUTO-EXTRACT] Using first-page extraction:', {
-          unitCode: pdfMetadata.unitCode,
-          unitName: pdfMetadata.unitName,
-          year: pdfMetadata.year,
-          quality: pdfMetadata.validation.quality
-        });
         setExtractedMetadata(pdfMetadata);
       } else {
-        console.log('⚠️ [AUTO-EXTRACT] Strategy 1 failed, trying Strategy 2 (backend extraction)...');
         
         // STRATEGY 2: Fallback to full-page backend extraction (OCR + Direct text)
-        console.log('📍 [AUTO-EXTRACT] Strategy 2: Calling extractPastPaperMetadataBackend...');
         pdfMetadata = await extractPastPaperMetadataBackend(pdfFile);
         
-        console.log('📊 [AUTO-EXTRACT] Strategy 2 result:', pdfMetadata);
         
         if (pdfMetadata) {
-          console.log('✅ [AUTO-EXTRACT] Using backend extraction:', {
-            unitCode: pdfMetadata.unitCode,
-            unitName: pdfMetadata.unitName,
-            year: pdfMetadata.year
-          });
           setExtractedMetadata(pdfMetadata);
         } else {
           console.warn('⚠️ [AUTO-EXTRACT] Both extraction strategies failed');
@@ -1388,7 +1293,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
       
       // Try to match university from PDF (if extraction succeeded)
       if (pdfMetadata && pdfMetadata.faculty && unis.length > 0) {
-        console.log('🔍 [AUTO-EXTRACT] Attempting to match university from faculty:', pdfMetadata.faculty);
         
         // Look for a university that has this faculty
         for (const uni of unis) {
@@ -1397,7 +1301,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
             if (facs.some(f => f.toLowerCase() === pdfMetadata.faculty.toLowerCase())) {
               setUniversity(uni.id);
               setFaculty(pdfMetadata.faculty);
-              console.log('✅ [AUTO-EXTRACT] Matched university and faculty:', uni.name, pdfMetadata.faculty);
               break;
             }
           } catch (e) {
@@ -1414,7 +1317,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
         source = 'PDF content via OCR';
       }
       
-      console.log('📄 [AUTO-EXTRACT] Extraction complete - Source:', source);
       internalShowToast(`✅ Metadata extracted from ${source}`, 'success');
       
     } catch (error) {
@@ -1436,7 +1338,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
 
     setSelectedFiles(pdfFiles);
     internalShowToast(`Found ${pdfFiles.length} PDF files`, 'success');
-    setShowOverride(false);
     
     // Ensure universities are loaded before extracting
     const performExtraction = async () => {
@@ -1444,10 +1345,8 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
       
       // If universities not yet loaded, wait and load them
       if (!unis || unis.length === 0) {
-        console.log('⏳ Universities not loaded yet, loading now...');
         try {
           unis = await getUniversitiesForDropdown({ forceRefresh: true });
-          console.log('✅ Universities loaded during extraction:', unis);
           setUniversities(unis);
         } catch (error) {
           console.error('❌ Failed to load universities during extraction:', error);
@@ -1502,7 +1401,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
 
     setSelectedFiles(files);
     internalShowToast(`Found ${files.length} PDF files`, 'success');
-    setShowOverride(false);
     
     // Ensure universities are loaded before extracting
     const performExtraction = async () => {
@@ -1510,10 +1408,8 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
       
       // If universities not yet loaded, wait and load them
       if (!unis || unis.length === 0) {
-        console.log('⏳ Universities not loaded yet, loading now...');
         try {
           unis = await getUniversitiesForDropdown({ forceRefresh: true });
-          console.log('✅ Universities loaded during extraction:', unis);
           setUniversities(unis);
         } catch (error) {
           console.error('❌ Failed to load universities during extraction:', error);
@@ -1587,7 +1483,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
       try {
         // ✅ PRIORITY 1: Use first-page extracted metadata (highest accuracy)
         if (fileExtractedMetadata && fileExtractedMetadata.source === 'first-page-extracted' && fileExtractedMetadata.validation.isValid) {
-          console.log('✅ [UPLOAD] Using FIRST-PAGE extracted metadata (quality: ' + fileExtractedMetadata.validation.quality + ')');
           
           unit_code = fileExtractedMetadata.unitCode || '';
           unit_name = fileExtractedMetadata.unitName || '';
@@ -1595,16 +1490,9 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           semester = fileExtractedMetadata.semester || '';
           exam_type = fileExtractedMetadata.examType || 'Main';
           
-          console.log('📖 [UPLOAD] First-page extracted:', { 
-            unit_code, 
-            unit_name, 
-            year, 
-            validationScore: fileExtractedMetadata.validation.score 
-          });
         }
         // ✅ PRIORITY 2: Use backend extracted metadata (OCR + direct text)
         else if (fileExtractedMetadata && fileExtractedMetadata.source === 'backend-extracted') {
-          console.log('✅ [UPLOAD] Using BACKEND extracted metadata from PDF');
           
           unit_code = fileExtractedMetadata.unitCode || '';
           unit_name = fileExtractedMetadata.unitName || '';
@@ -1612,18 +1500,15 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           semester = fileExtractedMetadata.semester || '';
           exam_type = fileExtractedMetadata.examType || 'Main';
           
-          console.log('📊 [UPLOAD] Backend extracted:', { unit_code, unit_name, year, semester, exam_type });
         } 
         // ⚠️ FALLBACK: Parse filename if no extraction available
         else {
-          console.log('⚠️ [UPLOAD] No PDF extraction available, falling back to filename parsing');
           
           const fileNameWithoutExt = file.name.replace('.pdf', '').trim();
           
           // Try underscore-separated format first
           let parts = fileNameWithoutExt.split('_');
           
-          console.log('📋 Parsing filename:', fileNameWithoutExt, 'Parts:', parts, 'Parts length:', parts.length);
           
           if (parts.length >= 2) {
             // Standard format: CODE_Name_Year_Sem_Type
@@ -1632,15 +1517,12 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
             year = parts[2] || '';
             semester = parts[3] || '';
             exam_type = parts[4] || '';
-            console.log('✅ Using underscore format - code:', unit_code, 'name:', unit_name, 'year:', year);
           } else {
             // Fallback: try to extract from space-separated filename: "CODE NUMBER MONTH YEAR" or "PREFIX CODE NUMBER MONTH YEAR"
-            console.log('🔄 Trying space-separated parsing...');
             try {
               // Extract year first (most reliable) - look for 4-digit year
               const yearMatch = fileNameWithoutExt.match(/\b(19|20)\d{2}\b/);
               year = yearMatch ? yearMatch[0] : '';
-              console.log('📅 Extracted year:', year);
               
               // Try to extract course code and numbers (handles DIP EDFO 0112, AGBM 0220, SOCI 104, etc.)
               // Matches: "DIP EDFO 0112", "AGBM 0220", "SOCI 104", "CODE123", etc.
@@ -1655,7 +1537,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
                 
                 unit_name = letters;
                 unit_code = numbers;
-                console.log('🔤 Extracted - Name:', unit_name, 'Code:', unit_code, 'from:', codeMatch[0]);
               } else {
                 // Try pattern with prefix: "DIP EDFO" where EDFO is the real code
                 codeMatch = fileNameWithoutExt.match(/\b([A-Z]{3})\s+([A-Z]{2,4})\s+(\d{3,4})\b/i);
@@ -1668,11 +1549,9 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
                   
                   unit_name = letters;
                   unit_code = numbers;
-                  console.log('🔤 Extracted with prefix - Prefix:', codeMatch[1], 'Name:', unit_name, 'Code:', unit_code, 'from:', codeMatch[0]);
                 } else {
                   // Last resort: just use the whole filename
                   unit_name = fileNameWithoutExt;
-                  console.log('⚠️ Could not extract code, using filename as name:', unit_name);
                 }
               }
             } catch (e) {
@@ -1681,7 +1560,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
             }
           }
           
-          console.log('📊 Final parsed metadata:', { unit_code, unit_name, year, semester, exam_type });
         }
         
         // EGERTON UNIVERSITY AUTO-DETECTION FOR PAPERS
@@ -1706,12 +1584,10 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           
           const unitPrefix = unit_name.replace(/\d+/g, '').toUpperCase().trim();
           if (egerton_codes.has(unitPrefix)) {
-            console.log('✅ Detected Egerton University from unit code:', unitPrefix);
             // Find Egerton University ID in the universities list
             const egerton = universities.find(u => u.name?.toLowerCase().includes('egerton'));
             if (egerton) {
               selectedUniversity = egerton.id;
-              console.log('✅ Auto-set Egerton University ID:', selectedUniversity);
             }
           }
         }
@@ -1719,9 +1595,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
         // Fallback: try extracted metadata university
         if (!selectedUniversity && fileExtractedMetadata?.university) {
           selectedUniversity = findMatchingUniversity(fileExtractedMetadata.university, universities);
-          if (selectedUniversity) {
-            console.log('✅ Using extracted university:', selectedUniversity);
-          }
         }
         
         // Egerton-specific unit code to faculty mapping
@@ -1741,7 +1614,7 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           
           // ========== 2. FACULTY OF ARTS & SOCIAL SCIENCES (FASS) - 18 codes ==========
           'ECON': 'FASS', 'BECO': 'FASS',
-          'STAT': 'FASS', 'LITL': 'FASS',
+          'LITL': 'FASS',
           'ENGL': 'FASS', 'KISW': 'FASS',
           'LINS': 'FASS', 'FREN': 'FASS',
           'GERM': 'FASS', 'CRSS': 'FASS',
@@ -1789,7 +1662,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           'PENG': 'FET',
           'TENG': 'FET',
           'MENG': 'FET',
-          'COMP': 'FET',
           'ICT': 'FET',
           'CSCI': 'FET',
           'DATA': 'FET',
@@ -1816,7 +1688,7 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           'NARE': 'FERD',
           
           // ========== 7. FACULTY OF HEALTH SCIENCES (FHS) - 21 codes ==========
-          'ANAT': 'Health Sciences', 'PHYS': 'Health Sciences',
+          'ANAT': 'Health Sciences',
           'PATH': 'Health Sciences', 'NURS': 'Health Sciences',
           'NUTR': 'Health Sciences', 'COMH': 'Health Sciences',
           'REPH': 'Health Sciences', 'PEDI': 'Health Sciences',
@@ -1824,7 +1696,7 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           'CLIN': 'Health Sciences', 'EPID': 'Health Sciences',
           'MICB': 'Health Sciences', 'MED': 'Health Sciences',
           'MEDS': 'Health Sciences', 'PHAR': 'Health Sciences',
-          'PHARM': 'Health Sciences', 'CHEM': 'Health Sciences',
+          'PHARM': 'Health Sciences',
           'DENT': 'Health Sciences', 'DRES': 'Health Sciences',
           'PUHE': 'Health Sciences',
           
@@ -1874,11 +1746,9 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           // ONLY EXACT MATCH
           const faculty = egerton_unit_mapping[unitPrefix];
           if (faculty) {
-            console.log('✅ Egerton verified: "' + unitPrefix + '" → ' + faculty);
             return faculty;
           }
           
-          console.log('❌ Unknown Egerton unit code: "' + unitPrefix + '"');
           return null;
         };
         
@@ -1891,15 +1761,11 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
             // Get university name from the universities list
             const universityObj = universities.find(u => u.id === selectedUniversity);
             if (universityObj?.name) {
-              console.log('🔍 Searching Google for faculty of', unit_code, 'at', universityObj.name);
               const searchResult = await searchUnitFaculty(universityObj.name, unit_code, unit_name);
               
               if (searchResult?.faculty) {
                 selectedFaculty = searchResult.faculty;
-                console.log('🌐 Found faculty via Google Search:', selectedFaculty);
-              } else {
-                console.log('ℹ️ Google Search did not find faculty, trying smart Egerton detection');
-              }
+              } 
             }
           } catch (error) {
             console.warn('⚠️ Google Search failed, trying smart Egerton detection:', error);
@@ -1911,17 +1777,11 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           const unitPrefix = unit_name.replace(/\d+/g, '').toUpperCase().trim();
           selectedFaculty = detectEgertonFaculty(unitPrefix);
           
-          if (!selectedFaculty) {
-            console.log('⚠️ Egerton strict mode: Unknown unit code "' + unitPrefix + '", marking for manual review');
-          }
         }
         
         // Fallback: Try to guess faculty from unit code/name - only if faculty not manually selected
         if (!faculty && !customFaculty && !selectedFaculty && unit_name) {
           selectedFaculty = guessFacultyFromUnitCode(unit_code, unit_name);
-          if (selectedFaculty) {
-            console.log('🎯 Guessed faculty from unit code:', selectedFaculty);
-          }
         }
         
         selectedFaculty = selectedFaculty || 'Unknown';
@@ -1933,11 +1793,9 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           const egerton = universities.find(u => u.name?.toLowerCase().includes('egerton'));
           if (egerton) {
             finalUniversity = egerton.id;
-            console.log('⚠️ No university detected, defaulting to Egerton:', egerton.id);
           } else {
             // If Egerton not found, use the first university in the list
             finalUniversity = universities[0]?.id;
-            console.log('⚠️ No university detected, using first available:', universities[0]?.name, finalUniversity);
           }
         }
         
@@ -1952,35 +1810,11 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           uploaded_by: userProfile?.id || userProfile?.uid || null
         };
 
-        console.log('📤 Uploading with metadata:', { 
-          fileName: file.name, 
-          universityId: metadata.university_id,
-          faculty: metadata.faculty,
-          unitCode: metadata.unit_code,
-          unitName: metadata.unit_name,
-          year: metadata.year,
-          semester: metadata.semester,
-          examType: metadata.exam_type
-        });
 
         // Use the proper API function instead of direct fetch
         // This ensures data is saved with correct field names to the database
-        console.log('📤 Using createPastPaper API to upload:', {
-          fileName: file.name,
-          metadata: {
-            title: `${metadata.unit_code} - ${metadata.unit_name}`,
-            university_id: metadata.university_id,
-            faculty: metadata.faculty,
-            unit_code: metadata.unit_code,
-            unit_name: metadata.unit_name,
-            year: metadata.year,
-            semester: metadata.semester,
-            exam_type: metadata.exam_type
-          }
-        });
 
         // CHECK FOR DUPLICATES BEFORE UPLOADING
-        console.log('🔍 Checking for duplicate papers...');
         const duplicateCheck = await checkDuplicatePastPaper({
           universityId: metadata.university_id,
           faculty: metadata.faculty,
@@ -1990,7 +1824,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
         });
 
         if (duplicateCheck.exists) {
-          console.log('⚠️ DUPLICATE DETECTED - Paper already exists!', duplicateCheck.paper);
           
           // Log duplicate to history
           await logUploadHistory({
@@ -2012,7 +1845,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           continue; // Skip to next file
         }
 
-        console.log('✅ No duplicate found, proceeding with upload...');
 
         const uploadFunction = asSubmission ? createPastPaperSubmission : createPastPaper;
         const pastPaperRecord = await uploadFunction({
@@ -2029,7 +1861,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           pdfFile: file
         });
 
-        console.log(`✅ Uploaded successfully:`, { fileName: file.name, pastPaperId: pastPaperRecord?.id });
 
         // Log successful upload to history
         await logUploadHistory({
@@ -2046,7 +1877,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
 
         uploaded++;
         setUploadedCount(uploaded);
-        console.log(`✅ Uploaded: ${file.name}`);
         
         // Save progress to localStorage
         savePastPapersUploadState(selectedFiles, { current: i + 1, total: selectedFiles.length }, uploaded, failed, duplicates);
@@ -2107,38 +1937,32 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
       setUseCustomFaculty(false);
       setFaculties([]);
       setExtractedMetadata(null);
-      setShowOverride(false);
     }, 2000);
   };
 
   const handlePausePastPapers = () => {
-    console.log('⏸️ [PAST PAPERS PAUSE] User clicked pause button');
-    console.log('📋 [PAST PAPERS PAUSE] Current state: uploaded=' + uploadedCount + ', failed=' + failedCount + ', progress=' + JSON.stringify(uploadProgress));
     pauseRef.current = true;
     setPaused(true);
     
     // CRITICAL: Save state immediately when pause is clicked
-    console.log('💾 [PAST PAPERS PAUSE] Forcing save of upload state to localStorage');
     savePastPapersUploadState(selectedFiles, uploadProgress, uploadedCount, failedCount, duplicatesCount, true, true);
     
     internalShowToast('Upload paused', 'info');
   };
 
   const handleResumePastPapers = async () => {
-    console.log('▶️ [PAST PAPERS RESUME] User clicked resume button');
-    console.log('🎯 [PAST PAPERS RESUME] Starting upload from index:', resumeIndexRef.current);
     
     pauseRef.current = false;
     setPaused(false);
     
     // CRITICAL: Call uploadFiles() again to continue from saved index
     if (selectedFiles && selectedFiles.length > 0) {
-      console.log('🚀 [PAST PAPERS RESUME] Calling uploadFiles() to continue');
       await uploadFiles();
     }
     
     internalShowToast('Upload resumed', 'info');
   };
+  handleResumePastPapersRef.current = handleResumePastPapers;
 
   const handleCancelPastPapers = () => {
     uploadAbortRef.current = true;
@@ -2159,7 +1983,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
     setUseCustomFaculty(false);
     setFaculties([]);
     setExtractedMetadata(null);
-    setShowOverride(false);
     if (folderInputRef.current) {
       folderInputRef.current.value = '';
     }
@@ -2172,7 +1995,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
       if (saved) {
         const state = JSON.parse(saved);
         if (state.fileNames && state.fileNames.length > 0 && (state.paused || state.uploading)) {
-          console.log('⚡ [PAST PAPERS QUICK CHECK] Paused upload detected: ' + state.fileNames.length + ' files');
           return state;
         }
       }

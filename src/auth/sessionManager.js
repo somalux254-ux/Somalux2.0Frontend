@@ -15,11 +15,9 @@ export const initializeSession = async (supabase) => {
     const { data: { session }, error } = await supabase.auth.getSession();
     
     if (error) {
-      console.error('❌ Supabase getSession error:', error);
       // If Supabase fails, use cache as fallback
       const cachedSession = getCachedSession();
       if (cachedSession && !isSessionExpired()) {
-        console.log('✓ Fallback to cached session');
         return cachedSession;
       }
       return null;
@@ -28,23 +26,19 @@ export const initializeSession = async (supabase) => {
     // 2. If Supabase has a session, cache it and return
     if (session) {
       cacheSession(session);
-      console.log('✓ Session from Supabase (cached)');
       return session;
     }
 
     // 3. No session in Supabase - check cache as fallback
     const cachedSession = getCachedSession();
     if (cachedSession && !isSessionExpired()) {
-      console.log('✓ Session from cache (Supabase empty)');
       return cachedSession;
     }
 
     // 4. No session anywhere
     clearSessionCache();
-    console.log('ℹ No active session found');
     return null;
-  } catch (err) {
-    console.error('❌ Session initialization error:', err);
+  } catch {
     // Last resort: try cache
     const cachedSession = getCachedSession();
     return cachedSession && !isSessionExpired() ? cachedSession : null;
@@ -75,9 +69,7 @@ export const cacheSession = (session) => {
       }));
     }
     
-    console.log('💾 Session cached successfully');
-  } catch (err) {
-    console.error('❌ Failed to cache session:', err);
+  } catch {
   }
 };
 
@@ -89,8 +81,7 @@ const getCachedSession = () => {
     
     const { session } = JSON.parse(cached);
     return session;
-  } catch (err) {
-    console.error('❌ Failed to retrieve cached session:', err);
+  } catch {
     return null;
   }
 };
@@ -104,9 +95,6 @@ const isSessionExpired = () => {
     const expiry = parseInt(expiryStr, 10);
     const isExpired = new Date().getTime() > expiry;
     
-    if (isExpired) {
-      console.log('⏰ Session cache expired');
-    }
     
     return isExpired;
   } catch (err) {
@@ -120,9 +108,7 @@ export const clearSessionCache = () => {
     localStorage.removeItem(SESSION_CACHE_KEY);
     localStorage.removeItem(SESSION_EXPIRY_KEY);
     localStorage.removeItem(USER_CACHE_KEY);
-    console.log('🗑️ Session cache cleared');
-  } catch (err) {
-    console.error('❌ Failed to clear session cache:', err);
+  } catch {
   }
 };
 
@@ -135,8 +121,7 @@ export const signOutCompletely = async (supabase) => {
     localStorage.removeItem('somalux_oauth_session');
     localStorage.removeItem('userProfile');
     sessionStorage.removeItem('oauth_tokens_from_url');
-  } catch (error) {
-    console.error('Failed to clear local auth data:', error);
+  } catch {
   }
   window.dispatchEvent(new CustomEvent('authChanged', { detail: { user: null } }));
 
@@ -155,12 +140,10 @@ export const signOutCompletely = async (supabase) => {
 // Setup auth state listener with automatic session refresh
 export const setupAuthListener = (supabase, onAuthChange) => {
   const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-    console.log('🔐 Auth event:', event, session ? '(with session)' : '(no session)');
     
     if (session && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION')) {
       // Always cache valid sessions on every auth event
       cacheSession(session);
-      console.log('✓ Session cached on auth event:', event);
       // Call callback with valid session
       if (onAuthChange) {
         onAuthChange(event, session);
@@ -186,17 +169,14 @@ export const refreshSessionIfNeeded = async (supabase) => {
     const { data: { session }, error } = await supabase.auth.getSession();
     
     if (error || !session) {
-      console.log('❌ Session invalid, clearing cache');
       clearSessionCache();
       return null;
     }
 
     // Cache the validated session
     cacheSession(session);
-    console.log('✓ Session validated and cached');
     return session;
-  } catch (err) {
-    console.error('❌ Session refresh error:', err);
+  } catch {
     clearSessionCache();
     return null;
   }

@@ -1,6 +1,6 @@
 import { supabase } from '../supabaseClient';
 import { API_URL } from '../../../config';
-import { mergeBookCategories, isSyntheticCategoryId, seedDefaultBookCategories } from '../defaultBookCategories';
+import { mergeBookCategories, isSyntheticCategoryId } from '../defaultBookCategories';
 
 const API_BASE = API_URL;
 const BOOKS_BUCKET = 'elib-books';
@@ -82,19 +82,15 @@ export async function getBookSignedUrl(bookId) {
 
   const cached = signedBookUrlCache.get(bookId);
   if (cached && cached.expiresAt > Date.now()) {
-    console.log('[signed-url] Client cache hit', { bookId });
     return cached.url;
   }
   if (cached?.request) {
-    console.log('[signed-url] Client request already in progress', { bookId });
     return cached.request;
   }
 
   const accessToken = await getValidAccessToken();
   if (!accessToken) throw new Error('Not authenticated');
 
-  const requestStartedAt = Date.now();
-  console.log('[signed-url] Client request started', { bookId });
   const request = fetch(`${getBackendOrigin()}/api/elib/books/${encodeURIComponent(bookId)}/signed-url`, {
     headers: { Authorization: `Bearer ${accessToken}` }
   }).then(async response => {
@@ -103,11 +99,6 @@ export async function getBookSignedUrl(bookId) {
       throw new Error(result.error || `Failed to get book URL (${response.status})`);
     }
 
-    console.log('[signed-url] Client request completed', {
-      bookId,
-      durationMs: Date.now() - requestStartedAt,
-      expiresIn: result.expiresIn || 600
-    });
     signedBookUrlCache.set(bookId, {
       url: result.signedUrl,
       expiresAt: Date.now() + Math.max((result.expiresIn || 600) - 30, 30) * 1000
@@ -178,7 +169,6 @@ export async function fetchAllUsers() {
       page++;
     }
     
-    console.log('[fetchAllUsers] Total users fetched:', allUsers.length);
     return allUsers;
   } catch (e) {
     console.error('Error fetching users for PDF:', e);
@@ -362,7 +352,6 @@ export async function createBook({ metadata, pdfFile, coverFile }) {
     cover_image_url,
     uploaded_by: metadata.uploaded_by || null,
     category_id: metadata.category_id || null,
-    category_id: metadata.category_id || null,
     file_size: pdfFile?.size || null
   };
   
@@ -413,14 +402,12 @@ export async function createBookSubmission({ metadata, pdfFile, coverFile }) {
       uploadedBy: payload.uploaded_by || null,
       itemTitle: payload.title || null,
     };
-    console.log('📤 [SUBMISSION] Sending admin notification:', notifyBody);
     const notifyResponse = await fetch(`${API_BASE}/api/elib/submissions/notify-admins`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(notifyBody),
     });
     const notifyJson = await notifyResponse.json();
-    console.log('📤 [SUBMISSION] Admin notification response:', notifyJson);
     if (!notifyResponse.ok) {
       console.warn('⚠️ [SUBMISSION] Admin notification failed:', notifyJson);
     }
@@ -430,7 +417,6 @@ export async function createBookSubmission({ metadata, pdfFile, coverFile }) {
 
   // Send submission confirmation email to uploader
   try {
-    console.log('📬 [SUBMISSION] Fetching uploader profile for confirmation email...');
     // Get the uploader's profile to send confirmation email
     if (payload.uploaded_by) {
       const { data: uploaderProfile, error: profileError } = await supabase
@@ -446,14 +432,12 @@ export async function createBookSubmission({ metadata, pdfFile, coverFile }) {
           uploaderName: uploaderProfile.full_name,
           itemTitle: payload.title,
         };
-        console.log('📬 [SUBMISSION] Sending uploader confirmation:', uploaderNotifyBody);
         const uploaderResponse = await fetch(`${API_BASE}/api/elib/submissions/notify-uploader`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(uploaderNotifyBody),
         });
         const uploaderJson = await uploaderResponse.json();
-        console.log('📬 [SUBMISSION] Uploader notification response:', uploaderJson);
         if (!uploaderResponse.ok) {
           console.warn('⚠️ [SUBMISSION] Uploader notification failed:', uploaderJson);
         }
@@ -557,7 +541,6 @@ export async function fetchStats() {
     }
     const activityStart = new Date(now.getFullYear(), now.getMonth() - 11, 1).toISOString();
 
-    console.log('[fetchStats] Starting data fetch...');
     
     const [booksCountRes, usersCountRes, universitiesCountVal, pastPapersCountVal, apkDownloadsCountVal, recentRes, allBooksRes, allPastPapersRes] = await Promise.all([
       supabase.from('books').select('id', { count: 'exact', head: true }),
@@ -662,7 +645,6 @@ export async function fetchProfiles() {
       allProfiles.push(...results.flat());
     }
     
-    console.log('[fetchProfiles] Total profiles fetched:', allProfiles.length);
     
     // Map full_name to display_name for compatibility with existing code
     return (allProfiles || []).map(p => ({
@@ -696,32 +678,22 @@ export function getAvatarPublicUrl(avatarPath) {
 // Fetch authenticated users via backend API endpoint
 export async function fetchAuthenticatedUsers() {
   const origin = getBackendOrigin();
-  console.log('[fetchAuthenticatedUsers] Fetching from:', origin + '/api/admin/authenticated-users');
-  
-  try {
-    const res = await fetch(`${origin}/api/admin/authenticated-users`);
-    console.log('[fetchAuthenticatedUsers] Response status:', res.status);
-    
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      console.error('[fetchAuthenticatedUsers] Response not OK:', text?.substring?.(0, 200));
-      throw new Error(text || `Failed to fetch authenticated users (status ${res.status})`);
-    }
-    
-    const payload = await res.json().catch(() => ({}));
-    console.log('[fetchAuthenticatedUsers] Payload received:', { ok: payload?.ok, usersCount: payload?.users?.length || 0 });
-    
-    return payload?.users || [];
-  } catch (e) {
-    console.error('[fetchAuthenticatedUsers] Error:', e?.message || e);
-    throw e;
+
+  const res = await fetch(`${origin}/api/admin/authenticated-users`);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(text || `Failed to fetch authenticated users (status ${res.status})`);
   }
+
+  const payload = await res.json().catch(() => ({}));
+
+  return payload?.users || [];
 }
 
 // Migrate avatars from storage bucket to profiles table
 export async function migrateAvatarsToProfilesTable() {
   try {
-    console.log('[migrateAvatarsToProfilesTable] Starting migration...');
     
     // List all files in user-avatars bucket
     const { data: avatarFiles, error: listError } = await supabase.storage
@@ -733,7 +705,6 @@ export async function migrateAvatarsToProfilesTable() {
       return { success: false, error: listError.message };
     }
     
-    console.log('[migrateAvatarsToProfilesTable] Found', avatarFiles?.length || 0, 'avatar files');
     
     if (!avatarFiles || avatarFiles.length === 0) {
       return { success: true, migrated: 0, message: 'No avatar files found' };
@@ -749,7 +720,6 @@ export async function migrateAvatarsToProfilesTable() {
       return { success: false, error: profileError.message };
     }
     
-    console.log('[migrateAvatarsToProfilesTable] Found', profiles?.length || 0, 'profiles');
     
     const migrateResults = {
       updated: [],
@@ -761,7 +731,6 @@ export async function migrateAvatarsToProfilesTable() {
     const validAvatarFiles = (avatarFiles || [])
       .filter(f => !f.id.startsWith('.') && f.name.match(/\.(jpg|jpeg|png|gif|webp)$/i));
     
-    console.log('[migrateAvatarsToProfilesTable] Valid avatar files:', validAvatarFiles.length);
     
     // For each profile without an avatar, assign next available avatar
     let fileIndex = 0;
@@ -770,13 +739,11 @@ export async function migrateAvatarsToProfilesTable() {
       // Skip profiles that already have avatars
       if (profile.avatar_url) {
         migrateResults.skipped.push(profile.id);
-        console.log(`[migrateAvatarsToProfilesTable] Profile ${profile.id} already has avatar_url, skipping`);
         continue;
       }
       
       // If no more files, stop
       if (fileIndex >= validAvatarFiles.length) {
-        console.log(`[migrateAvatarsToProfilesTable] No more avatar files for remaining profiles`);
         break;
       }
       
@@ -787,7 +754,6 @@ export async function migrateAvatarsToProfilesTable() {
         const { data } = supabase.storage.from('user-avatars').getPublicUrl(avatarFile.name);
         const publicUrl = data?.publicUrl;
         
-        console.log(`[migrateAvatarsToProfilesTable] Generated URL for ${avatarFile.name}: ${publicUrl}`);
         
         if (!publicUrl) {
           console.warn(`[migrateAvatarsToProfilesTable] Failed to generate public URL for ${avatarFile.name}`);
@@ -809,7 +775,6 @@ export async function migrateAvatarsToProfilesTable() {
           console.warn(`[migrateAvatarsToProfilesTable] Error updating profile ${profile.id}:`, updateError);
           migrateResults.errors.push({ id: profile.id, error: updateError.message });
         } else {
-          console.log(`[migrateAvatarsToProfilesTable] Updated profile ${profile.id} with ${avatarFile.name}`);
           migrateResults.updated.push({ 
             id: profile.id, 
             email: profile.email,
@@ -826,11 +791,6 @@ export async function migrateAvatarsToProfilesTable() {
       }
     }
     
-    console.log('[migrateAvatarsToProfilesTable] Migration complete:', {
-      updated: migrateResults.updated.length,
-      skipped: migrateResults.skipped.length,
-      errors: migrateResults.errors.length
-    });
     
     return {
       success: true,
@@ -916,14 +876,12 @@ export async function getProfileByEmail(email) {
 }
 
 export async function getCurrentUserProfile(authenticatedUser = undefined) {
-  console.log('🔍 [getCurrentUserProfile] Starting...');
   
   try {
     // Use a verified user supplied by the caller when available. Otherwise
     // preserve the existing standalone behavior for other callers.
     let user = authenticatedUser;
     if (user === undefined) {
-      console.log('🔍 [getCurrentUserProfile] Getting auth user...');
       try {
         const authPromise = supabase.auth.getUser();
         const timeoutPromise = new Promise((_, reject) => 
@@ -932,15 +890,12 @@ export async function getCurrentUserProfile(authenticatedUser = undefined) {
         
         const result = await Promise.race([authPromise, timeoutPromise]);
         user = result?.data?.user || result?.user;
-        console.log('✓ [getCurrentUserProfile] Auth user retrieved:', user?.email || 'none');
-      } catch (authErr) {
-        console.error('❌ [getCurrentUserProfile] Auth getUser failed:', authErr?.message || authErr);
+      } catch {
         return null;
       }
     }
     
     if (!user) {
-      console.log('❌ [getCurrentUserProfile] No auth user found');
       return null;
     }
 
@@ -949,7 +904,6 @@ export async function getCurrentUserProfile(authenticatedUser = undefined) {
     const isAdminEmail = ADMIN_EMAILS.includes(normalizedEmail);
 
     // Step 2: Fetch profile from database - with timeout
-    console.log('🔍 [getCurrentUserProfile] Querying profiles for user ID:', user.id);
     let data, error;
     try {
       const queryPromise = supabase
@@ -965,7 +919,6 @@ export async function getCurrentUserProfile(authenticatedUser = undefined) {
       const result = await Promise.race([queryPromise, timeoutPromise]);
       data = result?.data;
       error = result?.error;
-      console.log('✓ [getCurrentUserProfile] Profile query completed');
     } catch (queryErr) {
       console.error('❌ [getCurrentUserProfile] Profile query failed:', queryErr?.message || queryErr);
       return null;
@@ -975,7 +928,6 @@ export async function getCurrentUserProfile(authenticatedUser = undefined) {
 
     // Step 3: Handle missing profile - create it
     if (!data) {
-      console.log('⚠️ [getCurrentUserProfile] No profile row found, creating fallback');
       const fallbackProfile = {
         id: user.id,
         email: user.email,
@@ -1002,18 +954,12 @@ export async function getCurrentUserProfile(authenticatedUser = undefined) {
         console.warn('⚠️ [getCurrentUserProfile] Profile backfill failed:', upsertError);
       }
 
-      console.log('📤 [getCurrentUserProfile] Returning fallback profile:', {
-        email: fallbackProfile.email,
-        role: fallbackProfile.role,
-        avatar_url: fallbackProfile.avatar_url ? `[Present]` : '[NULL]'
-      });
       return fallbackProfile;
     }
 
     // Step 4: Promote admin if needed
     const normalizedRole = String(data.role || '').trim().toLowerCase();
     if (isAdminEmail && normalizedRole !== 'admin') {
-      console.log('⚠️ [getCurrentUserProfile] Promoting user to admin');
       const { error: roleError } = await supabase
         .from('profiles')
         .update({ role: 'admin', updated_at: new Date().toISOString() })
@@ -1025,12 +971,6 @@ export async function getCurrentUserProfile(authenticatedUser = undefined) {
     }
 
     const result = { ...data, role: data.role || (isAdminEmail ? 'admin' : 'user') };
-    console.log('📤 [getCurrentUserProfile] SUCCESS returning profile:', {
-      email: result.email,
-      role: result.role,
-      full_name: result.full_name,
-      avatar_url: result.avatar_url ? `[Present]` : '[NULL]'
-    });
     return result;
   } catch (err) {
     console.error('❌ [getCurrentUserProfile] FATAL Error:', err?.message || String(err));
@@ -1632,29 +1572,21 @@ export async function getAuthenticatedUserCount() {
   
   try {
     // First, try to get from backend endpoint (most reliable)
-    console.log('[getAuthenticatedUserCount] Calling backend endpoint:', endpoint);
     const res = await fetch(endpoint);
     if (res.ok) {
       const data = await res.json();
-      console.log('[getAuthenticatedUserCount] Backend response:', data);
       if (data.count) {
-        console.log('[getAuthenticatedUserCount] Authentic user count from backend:', data.count);
         return data.count;
       }
       if (data.users && Array.isArray(data.users)) {
-        console.log('[getAuthenticatedUserCount] User count from backend users array:', data.users.length);
         return data.users.length;
       }
-    } else {
-      console.warn('[getAuthenticatedUserCount] Backend response not ok, status:', res.status);
     }
-  } catch (err) {
-    console.warn('[getAuthenticatedUserCount] Backend endpoint unavailable:', err.message);
+  } catch {
   }
 
   // Fallback: Get from multiple tables to find all user references
   try {
-    console.log('[getAuthenticatedUserCount] Using fallback method');
     const stats = {};
 
     // Count profiles (most reliable table)
@@ -1662,7 +1594,6 @@ export async function getAuthenticatedUserCount() {
       .from('profiles')
       .select('*', { count: 'exact', head: true });
     stats.profiles = profilesCount || 0;
-    console.log('[getAuthenticatedUserCount] Profiles count:', stats.profiles);
 
     // Count unique uploaded_by in books table (with pagination)
     const { data: booksData, error: booksError } = await supabase
@@ -1674,10 +1605,8 @@ export async function getAuthenticatedUserCount() {
         booksData.map(b => b.uploaded_by).filter(Boolean)
       );
       stats.book_uploaders = uniqueBookUploaders.size;
-      console.log('[getAuthenticatedUserCount] Book uploaders count:', stats.book_uploaders);
     } else {
       stats.book_uploaders = 0;
-      console.warn('[getAuthenticatedUserCount] Error fetching books:', booksError?.message);
     }
 
     // Count unique uploaded_by in past_papers
@@ -1690,10 +1619,8 @@ export async function getAuthenticatedUserCount() {
         papersData.map(p => p.uploaded_by).filter(Boolean)
       );
       stats.paper_uploaders = uniquePaperUploaders.size;
-      console.log('[getAuthenticatedUserCount] Paper uploaders count:', stats.paper_uploaders);
     } else {
       stats.paper_uploaders = 0;
-      console.warn('[getAuthenticatedUserCount] Error fetching papers:', papersError?.message);
     }
 
     // Get max from all sources
@@ -1704,15 +1631,12 @@ export async function getAuthenticatedUserCount() {
       stats.paper_uploaders
     );
 
-    console.log('[getAuthenticatedUserCount] Fallback stats:', stats, 'Max count:', maxCount);
     return maxCount;
-  } catch (err) {
-    console.error('[getAuthenticatedUserCount] Error in fallback method:', err);
+  } catch {
     // Final fallback: just return profiles count
     const { count } = await supabase
       .from('profiles')
       .select('*', { count: 'exact', head: true });
-    console.log('[getAuthenticatedUserCount] Final fallback, profiles count:', count);
     return count || 0;
   }
 }
@@ -1725,7 +1649,6 @@ export async function getSystemStatistics() {
   const endpoint = `${origin}/api/admin/authenticated-users`;
   
   try {
-    console.log('[getSystemStatistics] Calling:', endpoint);
     const res = await fetch(endpoint);
     
     if (!res.ok) {
@@ -1734,7 +1657,6 @@ export async function getSystemStatistics() {
     }
     
     const data = await res.json();
-    console.log('[getSystemStatistics] Data received:', data);
     
     return {
       success: true,
@@ -1762,7 +1684,6 @@ export async function getUserStatistics() {
     // First try to get from backend system statistics (most accurate)
     const systemStats = await getSystemStatistics();
     if (systemStats.success && systemStats.total_authenticated_users > 0) {
-      console.log('[getUserStatistics] Using system statistics, authenticated users:', systemStats.total_authenticated_users);
       
       const stats = {
         authenticated_users: systemStats.total_authenticated_users,
@@ -1805,13 +1726,11 @@ export async function getUserStatistics() {
     }
 
     // Fallback: Get from database tables
-    console.log('[getUserStatistics] System stats unavailable, using fallback');
     const stats = {};
 
     // Get authenticated users count (from auth service or multiple sources)
     const authUserCount = await getAuthenticatedUserCount();
     stats.authenticated_users = authUserCount;
-    console.log('[getUserStatistics] Authenticated users:', stats.authenticated_users);
 
     // Get profiles count
     const { count: profilesCount } = await supabase

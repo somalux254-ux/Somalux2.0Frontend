@@ -1,39 +1,46 @@
 // Pastpapers.jsx - Updated with Auth and Real-time Data
 import React, { useState, useEffect, useMemo, useRef, useCallback, Suspense } from 'react';
 import { Document, Page } from 'react-pdf';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '../Books/supabaseClient';
 import {
   fetchPastPapers,
   subscribeToPastPapers,
   getFaculties,
-  getUniversitiesForDropdown,
   createPastPaperSubmission,
   getPastPaperSignedUrl
 } from '../Books/Admin/pastPapersApi';
-import {
-  fetchUniversities,
-  toggleUniversityLike
-} from '../Books/Admin/campusApi';
+import { fetchUniversities } from '../Books/Admin/campusApi';
 import { AuthModal } from '../../auth/AuthModal';
 import SubscriptionModal from '../Subscriptions/SubscriptionModal';
-import SecureReader from '../Books/SecureReader';
 import SimpleScrollReader from '../Books/SimpleScrollReader';
-import { FaSearch } from 'react-icons/fa';
-import { 
-  FiSearch, FiFileText, FiFilter, FiChevronRight, FiChevronLeft, FiX, 
-  FiTrendingUp, FiArrowLeft, FiEye, FiStar, FiMapPin, FiUpload, FiBook, FiBookmark
-} from 'react-icons/fi';
+import { FiFileText, FiX, FiUpload, FiBook, FiBookmark } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UniversityGrid } from './UniversityGrid';
 import { FacultyGridDisplay } from './FacultyGridDisplay';
-import { API_URL } from '../../config';
 import { PaperGrid } from './PaperGrid';
-import { PulseLoader, InfiniteScrollLoader } from './PaperSkeleton';
 import { pushBackAction, popBackAction } from '../services/backNavigation';
 import './PaperPanel.css';
 
 const UNIVERSITY_EXAMS_CACHE_TTL = 24 * 60 * 60 * 1000;
+
+const transformData = (papers) => (papers || []).map(paper => ({
+  id: paper.id,
+  title: paper.title || `${paper.unit_code || ''} - ${paper.unit_name || ''}`,
+  course: paper.unit_name || paper.title,
+  courseCode: paper.unit_code || '',
+  faculty: paper.faculty || 'Unknown',
+  university: paper.universities?.name || paper.university || 'Unknown',
+  year: paper.year,
+  semester: paper.semester,
+  examType: paper.exam_type,
+  university_id: paper.university_id,
+  downloads: paper.downloads_count || 0,
+  downloads_count: paper.downloads_count || 0,
+  file_url: paper.file_url,
+  downloadUrl: null,
+  created_at: paper.created_at
+}));
 
 const getUniversityExamsCacheKey = (universityId) => `universityExamPapers:${universityId}`;
 
@@ -58,9 +65,8 @@ const writeUniversityExamsCache = (universityId, papers, total) => {
   }
 };
 
-export const PaperPanel = ({ demoMode = false }) => {
+export const PaperPanel = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const reloadTimeoutRef = useRef(null);
   const [papers, setPapers] = useState([]);
   const [displayedPapers, setDisplayedPapers] = useState([]);
@@ -74,7 +80,6 @@ export const PaperPanel = ({ demoMode = false }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
   const [sortBy, setSortBy] = useState('default');
-  const [welcomeMessage, setWelcomeMessage] = useState(demoMode);
   const [universityFilter, setUniversityFilter] = useState(null);
   const [facultyFilter, setFacultyFilter] = useState(null);
   const [showFacultyGrid, setShowFacultyGrid] = useState(false);
@@ -88,44 +93,10 @@ export const PaperPanel = ({ demoMode = false }) => {
   const [universityPapersError, setUniversityPapersError] = useState('');
   const [loadingMoreUniversityPapers, setLoadingMoreUniversityPapers] = useState(false);
   const [universityPaperTotal, setUniversityPaperTotal] = useState(0);
-  const [subscription, setSubscription] = useState(null);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
-  const [checkingSubscription, setCheckingSubscription] = useState(false);
   const [showBookmarksPanel, setShowBookmarksPanel] = useState(false);
   const [selectedUniversity, setSelectedUniversity] = useState(null);
-  const [universityLikes, setUniversityLikes] = useState(() => {
-    try {
-      const saved = localStorage.getItem('universityLikes');
-      return saved ? JSON.parse(saved) : {};
-    } catch (e) {
-      return {};
-    }
-  });
-  const [universityLikesCounts, setUniversityLikesCounts] = useState(() => {
-    try {
-      const saved = localStorage.getItem('universityLikesCounts');
-      return saved ? JSON.parse(saved) : {};
-    } catch (e) {
-      return {};
-    }
-  });
-  const [paperLikes, setPaperLikes] = useState(() => {
-    try {
-      const saved = localStorage.getItem('paperLikes');
-      return saved ? JSON.parse(saved) : {};
-    } catch (e) {
-      return {};
-    }
-  });
-  const [paperLikesCounts, setPaperLikesCounts] = useState(() => {
-    try {
-      const saved = localStorage.getItem('paperLikesCounts');
-      return saved ? JSON.parse(saved) : {};
-    } catch (e) {
-      return {};
-    }
-  });
-  const [paperBookmarks, setPaperBookmarks] = useState(() => {
+  const [paperBookmarks] = useState(() => {
     try {
       const saved = localStorage.getItem('paperBookmarks');
       return saved ? JSON.parse(saved) : [];
@@ -157,14 +128,6 @@ export const PaperPanel = ({ demoMode = false }) => {
       return {};
     }
   });
-  const [paperBookmarksCounts, setpaperBookmarksCounts] = useState(() => {
-    try {
-      const saved = localStorage.getItem('paperBookmarksCounts');
-      return saved ? JSON.parse(saved) : {};
-    } catch (e) {
-      return {};
-    }
-  });
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadPdf, setUploadPdf] = useState(null);
@@ -178,16 +141,9 @@ export const PaperPanel = ({ demoMode = false }) => {
   });
   const [notification, setNotification] = useState(null);
 
-  const carouselRef = useRef(null);
-
   const [showReader, setShowReader] = useState(false);
   const [readerUrl, setReaderUrl] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-
-  const hasActiveSubscription = useMemo(() => {
-    if (!subscription || !subscription.end_at) return false;
-    return new Date(subscription.end_at) > new Date();
-  }, [subscription]);
 
   // Define data loading functions BEFORE useEffects that depend on them
   const loadPastPapers = useCallback(async () => {
@@ -203,14 +159,10 @@ export const PaperPanel = ({ demoMode = false }) => {
 
       while (hasMore && attempts < maxAttempts) {
         try {
-          console.log(`📄 Loading papers batch ${pageNum}...`);
           const { data } = await fetchPastPapers({ page: pageNum, pageSize: BATCH_SIZE });
           
           if (data && data.length > 0) {
             allPapers = allPapers.concat(data);
-            const totalLoaded = allPapers.length;
-            console.log(`✅ Loaded batch ${pageNum}: ${data.length} papers. Total: ${totalLoaded}`);
-            
             // Transform and display papers immediately after each batch
             const transformedData = transformData(allPapers);
             setPapers(transformedData);
@@ -219,7 +171,6 @@ export const PaperPanel = ({ demoMode = false }) => {
             if (!initialLoadDone) {
               setLoading(false);
               initialLoadDone = true;
-              console.log(`🚀 UI unblocked - first batch displayed`);
             }
             
             pageNum++;
@@ -231,7 +182,6 @@ export const PaperPanel = ({ demoMode = false }) => {
               await new Promise(resolve => setTimeout(resolve, 50));
             }
           } else {
-            console.log(`ℹ️ No more papers found. Total loaded: ${allPapers.length}`);
             hasMore = false;
           }
         } catch (batchError) {
@@ -243,7 +193,6 @@ export const PaperPanel = ({ demoMode = false }) => {
         }
       }
       
-      console.log(`✨ Finished loading ${allPapers.length} total papers`);
       
       // Final update with complete dataset
       const transformedData = transformData(allPapers);
@@ -254,7 +203,6 @@ export const PaperPanel = ({ demoMode = false }) => {
           data: transformedData,
           timestamp: Date.now()
         }));
-        console.log(`💾 Papers cached successfully`);
       } catch (e) {
         console.warn('Could not cache papers (storage full):', e.message);
       }
@@ -269,7 +217,6 @@ export const PaperPanel = ({ demoMode = false }) => {
         if (cached) {
           try {
             const { data } = JSON.parse(cached);
-            console.log(`📦 Loaded ${data.length} papers from cache`);
             setPapers(data);
             setLoading(false);
             return;
@@ -282,27 +229,6 @@ export const PaperPanel = ({ demoMode = false }) => {
       }
       setLoading(false);
     }
-  }, []);
-
-  // Helper function to transform raw paper data
-  const transformData = useCallback((papers) => {
-    return (papers || []).map(paper => ({
-      id: paper.id,
-      title: paper.title || `${paper.unit_code || ''} - ${paper.unit_name || ''}`,
-      course: paper.unit_name || paper.title,
-      courseCode: paper.unit_code || '',
-      faculty: paper.faculty || 'Unknown',
-      university: paper.universities?.name || paper.university || 'Unknown',
-      year: paper.year,
-      semester: paper.semester,
-      examType: paper.exam_type,
-      university_id: paper.university_id,
-      downloads: paper.downloads_count || 0,
-      downloads_count: paper.downloads_count || 0,
-      file_url: paper.file_url,
-      downloadUrl: null,
-      created_at: paper.created_at
-    }));
   }, []);
 
   const loadUniversityPapers = useCallback(async (universityId, { forceRefresh = false } = {}) => {
@@ -355,7 +281,7 @@ export const PaperPanel = ({ demoMode = false }) => {
     } finally {
       setLoadingUniversityPapers(false);
     }
-  }, [pageSize, transformData]);
+  }, [pageSize]);
 
   const loadUniversities = useCallback(async () => {
     try {
@@ -443,7 +369,7 @@ export const PaperPanel = ({ demoMode = false }) => {
         
         if (user) {
           // Fetch user profile to get subscription_tier and role
-          const { data: profile, error } = await supabase
+          const { data: profile } = await supabase
             .from('profiles')
             .select('subscription_tier, role, display_name, full_name')
             .eq('id', user.id)
@@ -459,8 +385,7 @@ export const PaperPanel = ({ demoMode = false }) => {
         } else {
           setUser(null);
         }
-      } catch (error) {
-        console.error('Error checking user auth:', error);
+      } catch {
         setUser(null);
       } finally {
         setIsAuthLoading(false);
@@ -472,7 +397,7 @@ export const PaperPanel = ({ demoMode = false }) => {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         // Fetch user profile to get subscription_tier and role
-        const { data: profile, error } = await supabase
+        const { data: profile } = await supabase
           .from('profiles')
           .select('subscription_tier, role, display_name, full_name')
           .eq('id', session.user.id)
@@ -507,7 +432,6 @@ export const PaperPanel = ({ demoMode = false }) => {
               filter: `id=eq.${currentUser.id}`
             },
             (payload) => {
-              console.log('[PastPapers] Profile updated:', payload);
               if (payload.new) {
                 setUser(prev => ({
                   ...prev,
@@ -615,12 +539,7 @@ export const PaperPanel = ({ demoMode = false }) => {
     };
 
     loadFacultyData();
-  }, [user?.id]);
-
-  const fetchSubscription = useCallback(async (currentUser) => {
-    setSubscription(null);
-    setCheckingSubscription(false);
-  }, []);
+  }, [user]);
 
   // Debounce search term to avoid excessive filtering
   useEffect(() => {
@@ -636,9 +555,7 @@ export const PaperPanel = ({ demoMode = false }) => {
   useEffect(() => {
     if (!subscribeToPastPapers) return;
     
-    console.log('Setting up real-time subscription for past papers');
     const subscription = subscribeToPastPapers((payload) => {
-      console.log('Past paper change detected:', payload);
       if (payload?.new?.university_id) {
         try {
           localStorage.removeItem(getUniversityExamsCacheKey(payload.new.university_id));
@@ -704,15 +621,6 @@ export const PaperPanel = ({ demoMode = false }) => {
     loadUniversities().catch(() => setLoading(false));
   }, [loadUniversities, loadFaculties]);
 
-  // Refresh subscription whenever user changes
-  useEffect(() => {
-    if (user) {
-      fetchSubscription(user);
-    } else {
-      setSubscription(null);
-    }
-  }, [user, fetchSubscription]);
-
   // Real-time subscription to universities changes (likes_count updates)
   useEffect(() => {
     const subscription = supabase
@@ -732,11 +640,6 @@ export const PaperPanel = ({ demoMode = false }) => {
               u.id === payload.new.id ? { ...u, likes_count: payload.new.likes_count } : u
             ));
             
-            // Update the counts state
-            setUniversityLikesCounts(counts => ({
-              ...counts,
-              [payload.new.id]: payload.new.likes_count
-            }));
           }
         }
       )
@@ -972,7 +875,6 @@ export const PaperPanel = ({ demoMode = false }) => {
       : null;
     setPreviewLoading(true);
     setSelectedPaper({ ...paper, downloadUrl: initialPreviewUrl });
-    setWelcomeMessage(false);
 
     if (initialPreviewUrl) return;
 
@@ -1000,7 +902,6 @@ export const PaperPanel = ({ demoMode = false }) => {
     const existingUrl = paper.downloadUrl || (paper.file_url && /^https?:\/\//i.test(paper.file_url) ? paper.file_url : null);
     setPreviewLoading(true);
     setSelectedPaper({ ...paper, downloadUrl: existingUrl });
-    setWelcomeMessage(false);
 
     if (!existingUrl) {
       void getPastPaperSignedUrl(paper.id)
@@ -1100,7 +1001,6 @@ export const PaperPanel = ({ demoMode = false }) => {
   const handleFilterChange = useCallback((filter) => {
     setActiveFilter(filter);
     setShowFilters(false);
-    setWelcomeMessage(false);
     
     // Clear university and faculty filters if changing to another filter
     if (filter !== 'university') {
@@ -1109,14 +1009,6 @@ export const PaperPanel = ({ demoMode = false }) => {
     if (filter !== 'faculty') {
       setFacultyFilter(null);
     }
-  }, []);
-
-  const handleFacultyClick = useCallback((faculty) => {
-    setFacultyFilter(faculty);
-    setActiveFilter('faculty');
-    setShowFilters(false);
-    setWelcomeMessage(false);
-    setShowFacultyGrid(false);
   }, []);
 
   const handleFacultyGridOpen = useCallback(() => {
@@ -1213,7 +1105,7 @@ export const PaperPanel = ({ demoMode = false }) => {
     setFacultyFilter(faculty);
     setShowFacultyGrid(false);
     setActiveFilter('faculty');
-  }, [user]);
+  }, [facultyViews, user]);
 
   const handleToggleFacultyLike = async (faculty) => {
     if (!user?.id) return; // Only authenticated users can like
@@ -1280,48 +1172,7 @@ export const PaperPanel = ({ demoMode = false }) => {
 
   const handleSortChange = useCallback((sortType) => {
     setSortBy(sortType);
-    setWelcomeMessage(false);
   }, []);
-
-  const handleToggleUniversityLike = async (uniId) => {
-    // Optimistic update - update UI immediately
-    setUniversityLikes(prev => {
-      const updated = { ...prev };
-      updated[uniId] = !updated[uniId];
-      localStorage.setItem('universityLikes', JSON.stringify(updated));
-      return updated;
-    });
-    
-    // Sync to database and get authoritative count
-    const userId = user?.id || 'anonymous-' + Math.random().toString(36).substr(2, 9);
-    try {
-      const result = await toggleUniversityLike(uniId, userId);
-      if (result) {
-        // Use the count from database (source of truth)
-        setUniversityLikesCounts(counts => {
-          const updatedCounts = { ...counts };
-          updatedCounts[uniId] = result.count;
-          localStorage.setItem('universityLikesCounts', JSON.stringify(updatedCounts));
-          return updatedCounts;
-        });
-        
-        // Update the university's likes_count in the universities list
-        setUniversities(prevUnis => prevUnis.map(u => 
-          u.id === uniId ? { ...u, likes_count: result.count } : u
-        ));
-      }
-    } catch (err) {
-      console.error('Failed to sync university like to database:', err);
-    }
-  };
-
-  const scrollCarousel = (direction) => {
-    const carousel = carouselRef.current;
-    if (carousel) {
-      const scrollAmount = direction === 'left' ? -100 : 100;
-      carousel.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    }
-  };
 
   // Show empty state only if truly loading (no cached data)
   if (loading && universities.length === 0 && papers.length === 0) {

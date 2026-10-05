@@ -55,31 +55,12 @@ const CACHE_CONFIG = {
 // UTILITY FUNCTIONS
 // ============================================================
 
-function logStatus(message, status = 'info') {
-  const icons = {
-    success: '✅',
-    error: '❌',
-    warning: '⚠️',
-    info: 'ℹ️',
-    loading: '⏳'
-  };
-  const icon = icons[status] || '•';
-  const style = {
-    success: 'color: #10b981; font-weight: bold;',
-    error: 'color: #ef4444; font-weight: bold;',
-    warning: 'color: #f59e0b; font-weight: bold;',
-    info: 'color: #3b82f6; font-weight: bold;',
-    loading: 'color: #8b5cf6; font-weight: bold;'
-  };
-  console.log(`%c${icon} ${message}`, style[status] || '');
-}
 
 // ============================================================
 // PART 1: CLEAR LOCAL STORAGE
 // ============================================================
 
 function clearLocalStorage() {
-  logStatus('Clearing localStorage...', 'loading');
   let cleared = 0;
   let errors = 0;
 
@@ -102,10 +83,8 @@ function clearLocalStorage() {
       }
     });
     
-    logStatus(`Cleared ${cleared} localStorage items`, 'success');
     return { cleared, errors };
   } catch (e) {
-    logStatus(`localStorage error: ${e.message}`, 'error');
     return { cleared: 0, errors: 1 };
   }
 }
@@ -115,14 +94,11 @@ function clearLocalStorage() {
 // ============================================================
 
 function clearSessionStorage() {
-  logStatus('Clearing sessionStorage...', 'loading');
   try {
     const itemCount = sessionStorage.length;
     sessionStorage.clear();
-    logStatus(`Cleared sessionStorage (${itemCount} items)`, 'success');
     return { cleared: itemCount, errors: 0 };
   } catch (e) {
-    logStatus(`sessionStorage error: ${e.message}`, 'error');
     return { cleared: 0, errors: 1 };
   }
 }
@@ -132,7 +108,6 @@ function clearSessionStorage() {
 // ============================================================
 
 async function clearIndexedDB() {
-  logStatus('Clearing IndexedDB...', 'loading');
   let deleted = 0;
   let errors = 0;
 
@@ -144,14 +119,11 @@ async function clearIndexedDB() {
         try {
           indexedDB.deleteDatabase(db.name);
           deleted++;
-          logStatus(`Deleted IndexedDB: ${db.name}`, 'success');
         } catch (e) {
           errors++;
-          logStatus(`Failed to delete ${db.name}: ${e.message}`, 'error');
         }
       }
     } catch (e) {
-      logStatus(`IndexedDB.databases() not supported: ${e.message}`, 'warning');
     }
   }
   
@@ -165,7 +137,6 @@ async function clearIndexedDB() {
     }
   }
 
-  logStatus(`IndexedDB cleanup processed`, 'success');
   return { deleted, errors };
 }
 
@@ -174,10 +145,8 @@ async function clearIndexedDB() {
 // ============================================================
 
 async function clearServiceWorkerCache() {
-  logStatus('Clearing Service Worker caches...', 'loading');
   
   if (!('caches' in window)) {
-    logStatus('Service Worker Cache API not available', 'warning');
     return { deleted: 0, errors: 0 };
   }
 
@@ -191,18 +160,14 @@ async function clearServiceWorkerCache() {
         const deleted_result = await caches.delete(cacheName);
         if (deleted_result) {
           deleted++;
-          logStatus(`Deleted cache: ${cacheName}`, 'success');
         }
       } catch (e) {
         errors++;
-        logStatus(`Failed to delete cache ${cacheName}: ${e.message}`, 'error');
       }
     }
 
-    logStatus(`Service Worker caches cleared (${deleted} caches)`, 'success');
     return { deleted, errors };
   } catch (e) {
-    logStatus(`Service Worker cache error: ${e.message}`, 'error');
     return { deleted: 0, errors: 1 };
   }
 }
@@ -212,7 +177,6 @@ async function clearServiceWorkerCache() {
 // ============================================================
 
 function clearCookies() {
-  logStatus('Clearing cookies...', 'loading');
   let cleared = 0;
 
   try {
@@ -227,10 +191,8 @@ function clearCookies() {
       }
     });
     
-    logStatus(`Cleared ${cleared} cookies`, 'success');
     return { cleared, errors: 0 };
   } catch (e) {
-    logStatus(`Cookies error: ${e.message}`, 'error');
     return { cleared: 0, errors: 1 };
   }
 }
@@ -240,11 +202,6 @@ function clearCookies() {
 // ============================================================
 
 async function clearAllCaches() {
-  console.clear();
-  logStatus('═══════════════════════════════════════════════════', 'info');
-  logStatus('CLEARING ALL UPLOAD HISTORY & SYSTEM CACHES', 'info');
-  logStatus('═══════════════════════════════════════════════════', 'info');
-  console.log('');
 
   const results = {
     localStorage: clearLocalStorage(),
@@ -256,33 +213,8 @@ async function clearAllCaches() {
   results.indexedDB = await clearIndexedDB();
   results.serviceWorkerCache = await clearServiceWorkerCache();
 
-  console.log('');
-  logStatus('═══════════════════════════════════════════════════', 'info');
-  logStatus('SUMMARY', 'info');
-  logStatus('═══════════════════════════════════════════════════', 'info');
 
-  console.table({
-    'localStorage': `${results.localStorage.cleared} items cleared`,
-    'sessionStorage': `${results.sessionStorage.cleared} items cleared`,
-    'Cookies': `${results.cookies.cleared} items cleared`,
-    'IndexedDB': `Processed`,
-    'Service Worker Cache': `${results.serviceWorkerCache.deleted} caches cleared`,
-  });
 
-  console.log('');
-  logStatus('✅ ALL CACHES CLEARED SUCCESSFULLY!', 'success');
-  logStatus('Next steps:', 'info');
-  console.log(`
-  1. Hard Refresh Browser:
-     • Windows/Linux: Ctrl + Shift + Delete
-     • Mac: Cmd + Shift + Delete or Cmd + Opt + E
-  
-  2. Or press Ctrl+F5 / Cmd+Shift+R for hard reload
-  
-  3. Log out and log back in if needed
-  
-  4. Check that upload history is now empty in admin panel
-  `);
 
   return results;
 }
@@ -292,11 +224,7 @@ async function clearAllCaches() {
 // ============================================================
 
 // Run the cache clearing
-clearAllCaches().then(results => {
-  logStatus('Cache clearing process complete!', 'success');
-  console.log('Results:', results);
-}).catch(error => {
-  logStatus(`Unexpected error: ${error.message}`, 'error');
+clearAllCaches().catch(error => {
   console.error(error);
 });
 
@@ -313,5 +241,3 @@ window.clearCaches = {
   cookies: clearCookies,
   all: clearAllCaches,
 };
-
-console.log('Cache clearing utilities available as window.clearCaches');

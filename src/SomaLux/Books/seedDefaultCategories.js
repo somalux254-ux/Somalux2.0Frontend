@@ -29,7 +29,6 @@ export async function seedDefaultCategories() {
     }
 
     if (missing.length === 0) {
-      console.log('Default categories already seeded.');
       return { inserted: 0, total: (existingRows || []).length };
     }
 
@@ -39,7 +38,6 @@ export async function seedDefaultCategories() {
 
     if (insertError) throw insertError;
 
-    console.log(`Seeded ${missing.length} default categories.`);
     return { inserted: missing.length, total: (existingRows || []).length + missing.length };
   } catch (error) {
     console.error('Failed to seed default categories:', error);

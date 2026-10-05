@@ -20,8 +20,7 @@ import {
   FiSearch,
   FiChevronLeft,
   FiDownload,
-  FiUnderline,
-  FiCheck
+  FiUnderline
 } from 'react-icons/fi';
 import { FaFilePdf, FaFileWord } from 'react-icons/fa';
 import { generateSummary, generateKeyPoints, getTextStats } from './utils/summarizeText';
@@ -50,19 +49,17 @@ const TextSelectionPanel = ({
 }) => {
   const [copiedFeedback, setCopiedFeedback] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [showToolbar, setShowToolbar] = useState(true); // Toggle between toolbar and feature menu
   const [expandedView, setExpandedView] = useState(null); // Track which feature is expanded (summarize, explain, etc)
   const panelRef = useRef(null);
   const [adjustedPos, setAdjustedPos] = useState(position);
   const [isMobile, setIsMobile] = useState(false);
   const feedbackTimeoutRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const dragPosRef = useRef({ x: 0, y: 0 });
   const dragRAFRef = useRef(null);
   const [savedNotes, setSavedNotes] = useState(new Map()); // Store array of notes for each selected text
   const [currentNoteText, setCurrentNoteText] = useState('');
-  const [noteSavedFeedback, setNoteSavedFeedback] = useState(false);
+  const [, setNoteSavedFeedback] = useState(false);
   const noteFeedbackTimeoutRef = useRef(null);
   const [editingNoteId, setEditingNoteId] = useState(null); // Track which note is being edited
   const [editingNoteText, setEditingNoteText] = useState(''); // Text of note being edited
@@ -186,7 +183,7 @@ const TextSelectionPanel = ({
         keyPoints: newKeyPoints
       }));
     }
-  }, [summaryLength]);
+  }, [summaryLength, expandedView, selectedText]);
 
   // STABLE: Handle copy with feedback and haptic
   const handleCopyClick = async () => {
@@ -271,7 +268,6 @@ const TextSelectionPanel = ({
   const handleExplain = async () => {
     if (isMobile && navigator.vibrate) navigator.vibrate(30);
     try {
-      console.log('🎯 Explain triggered for text:', selectedText.substring(0, 50) + '...');
       
       // Calculate stats from selected text
       const textWords = selectedText.split(/\s+/).filter(w => w.trim().length > 0);
@@ -299,19 +295,11 @@ const TextSelectionPanel = ({
       // Fetch explanation in background
       const result = await explainIntelligentText(selectedText);
       
-      console.log('📚 Explanation received from:', result.source);
-      console.log('✨ Processed text:', result.processed);
-      console.log('✅ Explanation length:', result.explanation?.length);
       
       // Build a ChatGPT-style detailed explanation (only show explanation, no text corrections)
       let formattedExplanation = `## ${result.title}\n\n`;
       formattedExplanation += result.explanation;
       
-      console.log('✅ Starting stream with stats:', {
-        words: textWords.length,
-        sentences: sentences.length,
-        charCount: selectedText.length
-      });
       
       // Show initial header
       setExpandedView({ 
@@ -346,10 +334,11 @@ const TextSelectionPanel = ({
         }
         
         displayedContent += formattedExplanation[i];
+        const contentSnapshot = displayedContent;
         
         setExpandedView(prev => ({
           ...prev,
-          content: displayedContent,
+          content: contentSnapshot,
           fullContent: formattedExplanation
         }));
         
@@ -2017,7 +2006,6 @@ const TextSelectionPanel = ({
                       key={option.action}
                       className="option-btn"
                       onClick={() => {
-                        console.log('Option selected:', option.action);
                         backToToolbar();
                       }}
                     >

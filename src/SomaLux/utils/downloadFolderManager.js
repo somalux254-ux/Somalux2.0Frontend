@@ -124,7 +124,6 @@ export const addCustomFolder = (folderPath, folderName = null) => {
     
     const updated = [...customFolders, newFolder];
     localStorage.setItem(CUSTOM_FOLDERS_KEY, JSON.stringify(updated));
-    console.log(`✓ Custom folder added: ${folderPath}`);
   } catch (err) {
     console.warn('Error adding custom folder:', err);
   }
@@ -139,7 +138,6 @@ export const removeCustomFolder = (folderPath) => {
     const customFolders = getCustomFolders();
     const filtered = customFolders.filter(f => f.path !== folderPath);
     localStorage.setItem(CUSTOM_FOLDERS_KEY, JSON.stringify(filtered));
-    console.log(`✓ Custom folder removed: ${folderPath}`);
   } catch (err) {
     console.warn('Error removing custom folder:', err);
   }

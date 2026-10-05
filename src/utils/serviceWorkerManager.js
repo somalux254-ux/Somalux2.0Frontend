@@ -8,7 +8,6 @@
  */
 export const registerServiceWorker = async () => {
   if (!('serviceWorker' in navigator)) {
-    console.log('Service Workers not supported');
     return;
   }
 
@@ -17,14 +16,12 @@ export const registerServiceWorker = async () => {
       scope: '/',
     });
 
-    console.log('Service Worker registered:', registration);
 
     // Don't check for updates automatically to avoid continuous reloading
     // Users can manually refresh to get updates
 
     // Listen for controller change
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      console.log('Service Worker controller changed - features refreshing');
       // Only notify, don't reload to avoid infinite loops
       if (window.__featureFlagsContext) {
         window.__featureFlagsContext.refreshFeatures?.();
@@ -43,7 +40,6 @@ export const registerServiceWorker = async () => {
  */
 function notifyNewVersionAvailable(registration) {
   // You can implement a toast notification here
-  console.log('New app version available');
   // Don't auto-update - let user manually refresh when ready
 }
 
@@ -87,7 +83,6 @@ export const listenForServiceWorkerMessages = (callback) => {
     const { type, data } = event.data;
 
     if (type === 'FEATURE_UPDATE') {
-      console.log('Feature update from service worker:', data);
       callback({ type, data });
     }
   });

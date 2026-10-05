@@ -34,7 +34,6 @@ class IndexedDBCache {
 
       request.onsuccess = () => {
         this.db = request.result;
-        console.log('✅ IndexedDB initialized');
         resolve(true);
       };
 
@@ -50,7 +49,6 @@ class IndexedDBCache {
           if (!db.objectStoreNames.contains(store)) {
             const objectStore = db.createObjectStore(store, { keyPath: 'id' });
             objectStore.createIndex('timestamp', 'timestamp', { unique: false });
-            console.log(`📦 Created store: ${store}`);
           }
         });
       };
@@ -79,7 +77,6 @@ class IndexedDBCache {
 
       return new Promise((resolve, reject) => {
         tx.oncomplete = () => {
-          console.log(`✅ Saved ${books.length} books for page ${page}`);
           resolve(true);
         };
         tx.onerror = () => reject(tx.error);
@@ -122,7 +119,6 @@ class IndexedDBCache {
             .map(item => item.book);
 
           if (results.length > 0) {
-            console.log(`🔥 Loaded ${results.length} books from IndexedDB page ${page}`);
             resolve(results);
           } else {
             resolve(null);
@@ -156,7 +152,6 @@ class IndexedDBCache {
 
       return new Promise((resolve, reject) => {
         tx.oncomplete = () => {
-          console.log(`✅ Saved search results for "${query}"`);
           resolve(true);
         };
         tx.onerror = () => reject(tx.error);
@@ -179,7 +174,6 @@ class IndexedDBCache {
         request.onsuccess = () => {
           const result = request.result;
           if (result && result.expiresAt > Date.now()) {
-            console.log(`🔥 Loaded search results from IndexedDB for "${query}"`);
             resolve(result.results);
           } else {
             resolve(null);
@@ -221,7 +215,6 @@ class IndexedDBCache {
       }
     });
 
-    console.log('🗑️ Cleared expired IndexedDB data');
   }
 
   async getStorageStats() {
@@ -272,7 +265,6 @@ class IndexedDBCache {
 
       return new Promise((resolve, reject) => {
         tx.oncomplete = () => {
-          console.log('🗑️ Cleared all IndexedDB data');
           resolve(true);
         };
         tx.onerror = () => reject(tx.error);

@@ -160,21 +160,6 @@ export const DeviceDetection = {
    * Log device information (for debugging)
    */
   logDeviceInfo() {
-    console.log('🔍 Device Detection:', {
-      userAgent: navigator.userAgent,
-      isMobile: this.isMobile(),
-      isTablet: this.isTablet(),
-      isDesktop: this.isDesktop(),
-      isTouch: this.isTouch(),
-      inputMethod: this.getInputMethod(),
-      deviceType: this.getDeviceType(),
-      isIOS: this.isIOS(),
-      isAndroid: this.isAndroid(),
-      screenSize: this.getScreenSize(),
-      supportsVibration: this.supportsVibration(),
-      windowSize: `${window.innerWidth}x${window.innerHeight}`,
-      gestureConfig: this.getGestureConfig(),
-    });
   }
 };
 

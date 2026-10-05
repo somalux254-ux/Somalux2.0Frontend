@@ -8,12 +8,10 @@ if (typeof window !== 'undefined') {
   if (typeof indexedDB !== 'undefined') {
     try {
       const request = indexedDB.deleteDatabase('cacheDB');
-      request.onsuccess = () => console.log('IndexedDB cleared');
       request.onerror = () => console.warn('Failed to clear IndexedDB');
     } catch (e) {
       console.warn('Could not clear IndexedDB:', e);
     }
   }
   
-  console.log('✅ Cache cleared - Authors will reload from fresh Supabase data');
 }

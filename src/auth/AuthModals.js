@@ -41,9 +41,7 @@ export const AuthModals = ({
       document.documentElement.style.backgroundColor = 'var(--bg-primary, #f5f8f7)';
       document.body.style.backgroundColor = 'var(--bg-primary, #f5f8f7)';
       navigate('/BookManagement', { replace: true, state: { reopenAuth: true, authAction: 'action' } });
-      void signOutCompletely(supabase).catch((error) => {
-        console.warn('Background sign out failed:', error?.message || error);
-      });
+      void signOutCompletely(supabase).catch(() => {});
 
       // Send feedback asynchronously (non-blocking) with timeout
       if (signOutReason.trim() && authUser?.email) {
@@ -59,7 +57,7 @@ export const AuthModals = ({
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 3000); // 3sec max
 
-            const response = await fetch(`${apiOrigin}/api/user/signout-feedback`, {
+            await fetch(`${apiOrigin}/api/user/signout-feedback`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -75,17 +73,12 @@ export const AuthModals = ({
 
             clearTimeout(timeoutId);
 
-            if (response.ok) {
-              console.log("Feedback sent successfully");
-            }
-          } catch (err) {
-            console.warn("Feedback failed (non-blocking):", err?.message);
+          } catch {
           }
         })();
       }
 
     } catch (err) {
-      console.error("Sign out error:", err);
       toast.error("Sign out failed: " + (err.message || "Try again"));
     }
   };

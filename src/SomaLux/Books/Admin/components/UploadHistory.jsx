@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FiDownload, FiFilter, FiX, FiTrendingUp, FiCheckCircle, FiAlertCircle, FiSkipBack, FiTrash2 } from 'react-icons/fi';
 import { fetchUploadHistory, getUploadHistoryStats, clearAllUploadHistory } from '../pastPapersApi';
 import '../styles/UploadHistory.css';
@@ -13,7 +13,7 @@ export const UploadHistory = ({ userProfile, onClose, reloadTrigger = 0 }) => {
   const [isClearing, setIsClearing] = useState(false);
   const pageSize = 20;
 
-  const loadHistory = async (pageNum = page, filterStatus = statusFilter) => {
+  const loadHistory = useCallback(async (pageNum = page, filterStatus = statusFilter) => {
     try {
       setLoading(true);
       const result = await fetchUploadHistory({
@@ -28,38 +28,31 @@ export const UploadHistory = ({ userProfile, onClose, reloadTrigger = 0 }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, statusFilter]);
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       const stats = await getUploadHistoryStats();
       setStats(stats);
     } catch (err) {
       console.error('Failed to load stats:', err);
     }
-  };
+  }, []);
 
   // Load data when page or filter changes
   useEffect(() => {
     loadHistory(page, statusFilter);
     loadStats();
-  }, [page, statusFilter]);
+  }, [page, statusFilter, loadHistory, loadStats]);
 
   // Reset and reload when reloadTrigger changes
   useEffect(() => {
-    console.log('Clearing history from UI');
     setHistory([]);
     setTotalCount(0);
     setStats({ today: 0, total: 0, duplicates: 0, failed: 0, successful: 0 });
     setPage(1);
     setStatusFilter(null);
   }, [reloadTrigger]);
-
-  // Initial load on mount
-  useEffect(() => {
-    loadHistory(1, null);
-    loadStats();
-  }, []);
 
   const getStatusBadge = (status) => {
     switch (status) {

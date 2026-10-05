@@ -1,6 +1,5 @@
 // src/BookPanel.jsx
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Directory, Filesystem } from '@capacitor/filesystem';
 import { supabase } from './supabaseClient';
 import { initializeSession, setupAuthListener } from '../../auth/sessionManager';
 import { Download } from './Download';
@@ -15,11 +14,7 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiX,
-  FiClock,
   FiBookmark,
-  FiThumbsUp,
-  FiMail,
-  FiInfo,
 } from 'react-icons/fi';
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -57,7 +52,6 @@ export const BookPanel = ({ demoMode = false }) => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageLoading, setPageLoading] = useState(false);
-  const [pageCacheStatus, setPageCacheStatus] = useState({}); // page -> 'cached'|'remote'|'loading'
   const [hasMore, setHasMore] = useState(true);
   const BOOKS_PER_PAGE = 20;
   const [selectedBook, setSelectedBook] = useState(null);
@@ -67,16 +61,12 @@ export const BookPanel = ({ demoMode = false }) => {
   const [showWishlist, setShowWishlist] = useState(false);
   const [welcomeMessage, setWelcomeMessage] = useState(demoMode);
   const [user, setUser] = useState(null);
-  const [subscription, setSubscription] = useState(null);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
-  const [checkingSubscription, setCheckingSubscription] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(() => Boolean(location.state?.reopenAuth));
   const [authAction, setAuthAction] = useState(() => location.state?.authAction || 'action');
   const [loadingUser, setLoadingUser] = useState(true);
   const [openingBookId, setOpeningBookId] = useState(null);
-  const [pendingAction, setPendingAction] = useState(null);
   const [focusedBookId, setFocusedBookId] = useState(null);
-  const [focusedBookLoading, setFocusedBookLoading] = useState(false);
   const [categoryFilterId, setCategoryFilterId] = useState(null);
   const [categoryFilterName, setCategoryFilterName] = useState(null);
   const [filteredByCategory, setFilteredByCategory] = useState(null);
@@ -92,15 +82,14 @@ export const BookPanel = ({ demoMode = false }) => {
   const [showNetworkModal, setShowNetworkModal] = useState(false);
   const [networkRetryPage, setNetworkRetryPage] = useState(1);
 
-  // Bulk download selection state
-  const [selectedBooksForDownload, setSelectedBooksForDownload] = useState(new Set());
-  const [selectAllBooks, setSelectAllBooks] = useState(false);
-  const [bulkDownloadMode, setBulkDownloadMode] = useState(false);
-  const [downloadingBooks, setDownloadingBooks] = useState({});
-
   const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
-  const withQueryTimeout = async (promise, timeoutMs = 15000, message = 'Query timed out') => {
+  const booksRef = useRef(books);
+  booksRef.current = books;
+  const currentPageRef = useRef(currentPage);
+  currentPageRef.current = currentPage;
+
+  const withQueryTimeout = useCallback(async (promise, timeoutMs = 15000, message = 'Query timed out') => {
     let timeoutId = null;
     const timeoutPromise = new Promise((_, reject) => {
       timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
@@ -111,7 +100,7 @@ export const BookPanel = ({ demoMode = false }) => {
     } finally {
       if (timeoutId) clearTimeout(timeoutId);
     }
-  };
+  }, []);
 
   // ⚡ Debounce search term to avoid excessive filtering on every keystroke
   useEffect(() => {
@@ -127,7 +116,7 @@ export const BookPanel = ({ demoMode = false }) => {
     }, 300); // 300ms debounce delay
 
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [searchTerm, user]);
 
   useEffect(() => {
     let mounted = true;
@@ -169,7 +158,7 @@ export const BookPanel = ({ demoMode = false }) => {
  * @returns {null|object[]} The cached page of books, or null if it does not exist or has expired.
  */
 /*******  4b59b5d0-5dd5-4852-b3b1-1400d5e8e97c  *******/
-  const getCachedPageEntry = (page) => {
+  const getCachedPageEntry = useCallback((page) => {
     try {
       const raw = localStorage.getItem(`books_page_${page}`);
       if (!raw) return null;
@@ -183,9 +172,9 @@ export const BookPanel = ({ demoMode = false }) => {
     } catch {
       return null;
     }
-  };
+  }, [CACHE_TTL_MS]);
 
-  const setCachedPage = (page, data, hasMore = data.length >= BOOKS_PER_PAGE) => {
+  const setCachedPage = useCallback((page, data, hasMore = data.length >= BOOKS_PER_PAGE) => {
     try {
       localStorage.setItem(`books_page_${page}`, JSON.stringify({ ts: Date.now(), data, hasMore }));
       const pages = JSON.parse(localStorage.getItem('books_pages_loaded') || '[]');
@@ -194,11 +183,9 @@ export const BookPanel = ({ demoMode = false }) => {
         localStorage.setItem('books_pages_loaded', JSON.stringify(next));
       }
     } catch {}
-    // mark page cached - tracking removed
-    // setPageCacheStatus(prev => ({ ...prev, [page]: 'cached' }));
-  };
+  }, [BOOKS_PER_PAGE]);
 
-  const getSearchCachedPage = (term, page) => {
+  const getSearchCachedPage = useCallback((term, page) => {
     try {
       const key = `search_cache_${term.trim().toLowerCase()}_page_${page}`;
       const cached = JSON.parse(localStorage.getItem(key) || 'null');
@@ -210,16 +197,16 @@ export const BookPanel = ({ demoMode = false }) => {
     } catch {
       return null;
     }
-  };
+  }, [CACHE_TTL_MS]);
 
-  const setSearchCachedPage = (term, page, data, hasMore) => {
+  const setSearchCachedPage = useCallback((term, page, data, hasMore) => {
     try {
       const key = `search_cache_${term.trim().toLowerCase()}_page_${page}`;
       localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data, hasMore }));
     } catch {}
-  };
+  }, []);
 
-  const clearBookCaches = async () => {
+  const clearBookCaches = useCallback(async () => {
     try {
       booksCache.clear();
     } catch (err) {
@@ -244,11 +231,7 @@ export const BookPanel = ({ demoMode = false }) => {
     } catch (err) {
       console.warn('Failed to clear page caches from localStorage', err);
     }
-    try {
-      setPageCacheStatus({});
-      // Cache tracking removed
-    } catch {}
-  };
+  }, []);
 
   const [wishlist, setWishlist] = useState(() => {
     try {
@@ -274,7 +257,7 @@ export const BookPanel = ({ demoMode = false }) => {
   }), []);
 
   // Map a Supabase row to current UI shape
-  const mapRowToUi = (row) => {
+  const mapRowToUi = useCallback((row) => {
     
     // Improved "New" badge logic
     const isNew = (() => {
@@ -316,9 +299,9 @@ export const BookPanel = ({ demoMode = false }) => {
   publisher: row.publisher || 'N/A',
 };
 
-  };
+  }, []);
 
-  const fetchAll = async (forceRefresh = false, page = 1, updatePage = true) => {
+  const fetchAll = useCallback(async (forceRefresh = false, page = 1, updatePage = true) => {
     const requestKey = `${forceRefresh ? 'refresh' : 'cached'}:${page}`;
     if (booksFetchesRef.current.has(requestKey)) {
       return booksFetchesRef.current.get(requestKey);
@@ -331,7 +314,6 @@ export const BookPanel = ({ demoMode = false }) => {
         // Layer 1: Memory cache (instant)
         const memCached = perfOptimizer.getMemoryCache(`books_page_${page}`);
         if (memCached) {
-          console.log('🔥 [Layer 1] Memory cache hit!');
           setBooks(page === 1 ? memCached.books : prev => [...prev, ...memCached.books]);
           setHasMore(memCached.hasMore ?? true);
           setLoading(false);
@@ -342,7 +324,6 @@ export const BookPanel = ({ demoMode = false }) => {
         // can paint synchronously without waiting for the database to open.
         const localEntry = getCachedPageEntry(page);
         if (localEntry) {
-          console.log('🔥 Persistent book-page cache hit!');
           setBooks(page === 1 ? localEntry.data : prev => [...prev, ...localEntry.data]);
           setHasMore(localEntry.hasMore ?? localEntry.data.length >= BOOKS_PER_PAGE);
           setLoading(false);
@@ -352,7 +333,6 @@ export const BookPanel = ({ demoMode = false }) => {
         // Layer 2: IndexedDB cache (very fast)
         const idbBooks = await indexedDBCache.loadBooks(page);
         if (idbBooks && idbBooks.length > 0) {
-          console.log('🔥 [Layer 2] IndexedDB cache hit!');
           setBooks(page === 1 ? idbBooks : prev => [...prev, ...idbBooks]);
           setHasMore(idbBooks.length >= BOOKS_PER_PAGE);
           setLoading(false);
@@ -362,12 +342,9 @@ export const BookPanel = ({ demoMode = false }) => {
       }
 
       // Keep the current catalogue visible while refreshing it in the background.
-      setLoading(page === 1 && books.length === 0);
+      setLoading(page === 1 && booksRef.current.length === 0);
 
       // 🚀 OPTIMIZED NETWORK FETCH (fastest queries)
-      console.log(`📡 Fetching page ${page} from network...`);
-      console.log('🔍 Supabase URL:', process.env.REACT_APP_SUPABASE_URL || 'using fallback');
-      console.log('🔑 Supabase Key available:', !!process.env.REACT_APP_SUPABASE_ANON_KEY);
       
       // Fetch ALL books sorted by engagement (downloads, views, likes)
       // This ensures books are displayed by highest engagement dynamically
@@ -407,7 +384,6 @@ export const BookPanel = ({ demoMode = false }) => {
       setCachedPage(page, mapped, nextHasMore);
 
 
-      console.log(`✅ Loaded page ${page}: ${mapped.length} books`);
       
     } catch (e) {
       console.error('Failed to fetch books:', e);
@@ -418,26 +394,6 @@ export const BookPanel = ({ demoMode = false }) => {
         stack: e.stack
       });
       
-      let errorMessage = 'Error loading books:\n\n';
-      if (e.message && e.message.includes('Failed to fetch')) {
-        errorMessage += '❌ Network Error: Cannot connect to database.\n\n';
-        errorMessage += 'Possible causes:\n';
-        errorMessage += '1. Supabase project is not accessible\n';
-        errorMessage += '2. Check your internet connection\n';
-        errorMessage += '3. Verify SUPABASE_URL in .env file\n';
-        errorMessage += '4. Check if Supabase project is paused\n\n';
-        errorMessage += 'Supabase URL: ' + (process.env.REACT_APP_SUPABASE_URL || 'Using fallback URL');
-      } else if (e.message && e.message.includes('JWT')) {
-        errorMessage += '❌ Authentication Error: Invalid Supabase key.\n\n';
-        errorMessage += 'Please check REACT_APP_SUPABASE_ANON_KEY in your .env file.';
-      } else if (e.message && e.message.includes('column')) {
-        errorMessage += '❌ Database Schema Error:\n\n';
-        errorMessage += e.message + '\n\n';
-        errorMessage += 'Please run the database migration scripts.';
-      } else {
-        errorMessage += e.message || 'Unknown error occurred';
-      }
-
       console.error('📊 Error Details:', {
         message: e.message,
         type: e.name,
@@ -465,12 +421,10 @@ export const BookPanel = ({ demoMode = false }) => {
     } finally {
       booksFetchesRef.current.delete(requestKey);
     }
-  };
+  }, [BOOKS_PER_PAGE, getCachedPageEntry, mapRowToUi, setCachedPage, withQueryTimeout]);
 
   // Auth state listener - optimized to prevent flickering
   useEffect(() => {
-    let userCache = null;
-
     const fetchUserWithRole = async (session) => {
       if (!session?.user) {
         setUser(null);
@@ -517,12 +471,7 @@ export const BookPanel = ({ demoMode = false }) => {
               last_active_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             }, { onConflict: 'id' })
-            .then(({ error: upsertError }) => {
-              if (upsertError) console.warn('Profile upsert failed in BookPanel:', upsertError);
-            })
-            .catch((upsertErr) => {
-              console.warn('Profile backfill error in BookPanel:', upsertErr);
-            });
+            .then(() => undefined, () => undefined);
         }
 
         const finalRole = String(profileWithFallback?.role || fallbackRole || 'user').trim().toLowerCase();
@@ -530,11 +479,10 @@ export const BookPanel = ({ demoMode = false }) => {
         const finalDisplayName = profileWithFallback?.full_name || profileWithFallback?.display_name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User';
 
         if (ADMIN_EMAILS.includes(userEmail) && finalRole !== 'admin') {
-          const { error: roleUpdateError } = await supabase
+          await supabase
             .from('profiles')
             .update({ role: 'admin', updated_at: new Date().toISOString() })
             .eq('id', session.user.id);
-          if (roleUpdateError) console.warn('Role update fallback failed:', roleUpdateError);
         }
 
         const userData = {
@@ -546,12 +494,9 @@ export const BookPanel = ({ demoMode = false }) => {
           avatar: finalAvatar,
           email: session.user.email,
         };
-        userCache = userData;
         setUser(userData);
-      } catch (error) {
-        console.error('Error fetching user role:', error);
+      } catch {
         const userData = { ...session.user, role: 'viewer' };
-        userCache = userData;
         setUser(userData);
       } finally {
         setLoadingUser(false);
@@ -564,14 +509,11 @@ export const BookPanel = ({ demoMode = false }) => {
         // Try to restore from cache instantly (no network call)
         const cachedSession = await initializeSession(supabase);
         if (cachedSession) {
-          console.log('✓ Session restored from cache (instant)');
           fetchUserWithRole(cachedSession);
         } else {
-          console.log('ℹ No cached session, user will be prompted to login');
           setLoadingUser(false);
         }
-      } catch (err) {
-        console.error('Session initialization failed:', err);
+      } catch {
         setLoadingUser(false);
       }
     })();
@@ -581,114 +523,49 @@ export const BookPanel = ({ demoMode = false }) => {
       fetchUserWithRole(session);
     });
 
-    // Setup realtime listener for profile changes (e.g., role updates)
-    let profileSubscription = null;
-    if (user?.id) {
-      profileSubscription = supabase
-        .channel(`public:profiles:id=eq.${user.id}`)
-        .on('postgres_changes', 
-          { 
-            event: 'UPDATE', 
-            schema: 'public', 
-            table: 'profiles',
-            filter: `id=eq.${user.id}`
-          },
-          (payload) => {
-            console.log('[BookPanel] Profile updated:', payload);
-            if (payload.new?.role) {
-              // Refresh user with new role data
-              setUser(prev => ({
-                ...prev,
-                role: payload.new.role,
-                subscription_tier: payload.new.subscription_tier || prev?.subscription_tier
-              }));
-              userCache = { ...userCache, role: payload.new.role, subscription_tier: payload.new.subscription_tier };
-            }
-          }
-        )
-        .subscribe();
-    }
-
     return () => {
       if (subscription?.unsubscribe && typeof subscription.unsubscribe === 'function') {
         try { subscription.unsubscribe(); } catch (e) {}
       }
-      if (profileSubscription?.unsubscribe && typeof profileSubscription.unsubscribe === 'function') {
-        try { profileSubscription.unsubscribe(); } catch (e) {}
-      }
     };
   }, []);
 
-  const fetchSubscription = useCallback(async (currentUser) => {
-    setSubscription(null);
-    setCheckingSubscription(false);
-  }, []);
+  useEffect(() => {
+    if (!user?.id) return undefined;
 
-  // Bulk download functions
-  const toggleBookSelection = (bookId) => {
-    const newSelected = new Set(selectedBooksForDownload);
-    if (newSelected.has(bookId)) {
-      newSelected.delete(bookId);
-    } else {
-      newSelected.add(bookId);
-    }
-    setSelectedBooksForDownload(newSelected);
-    setSelectAllBooks(newSelected.size === displayedBooks.length && displayedBooks.length > 0);
-  };
+    const profileSubscription = supabase
+      .channel(`public:profiles:id=eq.${user.id}`)
+      .on('postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`
+        },
+        (payload) => {
+          if (payload.new?.role) {
+            setUser(prev => ({
+              ...prev,
+              role: payload.new.role,
+              subscription_tier: payload.new.subscription_tier || prev?.subscription_tier
+            }));
+          }
+        }
+      )
+      .subscribe();
 
-  const toggleSelectAllBooks = () => {
-    if (selectAllBooks) {
-      setSelectedBooksForDownload(new Set());
-      setSelectAllBooks(false);
-    } else {
-      const allIds = new Set(displayedBooks.map(b => b.id));
-      setSelectedBooksForDownload(allIds);
-      setSelectAllBooks(true);
-    }
-  };
-
-  const downloadSelectedBooks = async () => {
-    if (selectedBooksForDownload.size === 0) return;
-
-    const booksToDownload = displayedBooks.filter(b => selectedBooksForDownload.has(b.id));
-    
-    for (const book of booksToDownload) {
-      // Use the existing Download component logic
-      setDownloadingBooks(prev => ({ ...prev, [book.id]: true }));
-      
-      try {
-        // Create a temporary download element
-        const link = document.createElement('a');
-        link.href = await getBookSignedUrl(book.id);
-        link.download = `${book.title.replace(/\s+/g, '_')}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch (error) {
-        console.error(`Failed to download ${book.title}:`, error);
-      } finally {
-        setDownloadingBooks(prev => ({ ...prev, [book.id]: false }));
-      }
-
-      // Add delay between downloads to avoid browser overload
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-  };
-
-  const cancelBulkDownload = () => {
-    setSelectedBooksForDownload(new Set());
-    setSelectAllBooks(false);
-    setBulkDownloadMode(false);
-  };
+    return () => {
+      supabase.removeChannel(profileSubscription);
+    };
+  }, [user?.id]);
 
   // The book catalogue is public, so load it independently of authentication.
   useEffect(() => {
     if (showAuthModal) return;
     if (initialBooksLoadRef.current) return;
     initialBooksLoadRef.current = true;
-    console.log('📚 Starting initial books load');
     fetchAll();
-  }, [showAuthModal]);
+  }, [showAuthModal, fetchAll]);
 
   // Initial load + realtime subscription with polling fallback
   useEffect(() => {
@@ -699,15 +576,12 @@ export const BookPanel = ({ demoMode = false }) => {
       channel = supabase
         .channel('public:books')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, async (payload) => {
-          console.log('📡 Real-time update: books table changed', payload.eventType);
           // Invalidate persistent caches and force refresh (DON'T reset page).
           await clearBookCaches();
-          fetchAll(true, currentPage);
+          fetchAll(true, currentPageRef.current);
         })
         .subscribe((status) => {
-          console.log('📡 Subscription status:', status);
           if (status === 'SUBSCRIBED') {
-            console.log('✅ Real-time subscription active');
             if (poller) { clearInterval(poller); poller = null; }
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
             console.warn('⚠️ Real-time subscription failed, using polling');
@@ -723,7 +597,7 @@ export const BookPanel = ({ demoMode = false }) => {
       if (channel) supabase.removeChannel(channel);
       if (poller) clearInterval(poller);
     };
-  }, [user?.id, loadingUser, showAuthModal]);
+  }, [user?.id, loadingUser, showAuthModal, fetchAll, clearBookCaches]);
 
   useEffect(() => {
     try {
@@ -736,12 +610,6 @@ export const BookPanel = ({ demoMode = false }) => {
       console.error('Failed to save wishlist to localStorage', error);
     }
   }, [wishlist]);
-
-  useEffect(() => {
-    if (user && !loadingUser) {
-      fetchSubscription(user);
-    }
-  }, [user, loadingUser, fetchSubscription]);
 
   // Disable initial animations until after first mount to prevent flicker
   const [isMounted, setIsMounted] = useState(false);
@@ -785,14 +653,12 @@ export const BookPanel = ({ demoMode = false }) => {
     if (!focusedBookId) return undefined;
     const alreadyLoaded = books.some(book => String(book.id) === String(focusedBookId));
     if (alreadyLoaded) {
-      setFocusedBookLoading(false);
       return undefined;
     }
 
     let mounted = true;
     (async () => {
       try {
-        setFocusedBookLoading(true);
         const { data: row, error } = await supabase
           .from('books')
           .select('id, title, author, description, year, language, isbn, cover_image_url, file_url, created_at, downloads_count, pages, publisher, rating, rating_count')
@@ -811,13 +677,11 @@ export const BookPanel = ({ demoMode = false }) => {
         });
       } catch (err) {
         console.error('BookPanel: error ensuring focused book is loaded', err);
-      } finally {
-        if (mounted) setFocusedBookLoading(false);
       }
     })();
 
     return () => { mounted = false; };
-  }, [focusedBookId, books]);
+  }, [focusedBookId, books, mapRowToUi]);
 
   // Load all books for a linked category, even when they are outside the current page cache.
   useEffect(() => {
@@ -842,7 +706,7 @@ export const BookPanel = ({ demoMode = false }) => {
     })();
 
     return () => { mounted = false; };
-  }, [categoryFilterId]);
+  }, [categoryFilterId, mapRowToUi]);
 
   const filteredBooks = useMemo(() => {
     const source = filteredByCategory !== null ? filteredByCategory : books;
@@ -895,11 +759,10 @@ export const BookPanel = ({ demoMode = false }) => {
   }, [filteredBooks, currentPage]);
 
   // Server-side search fetch (paginated) to provide accurate results when searching
-  const fetchSearch = async (term, page = 1) => {
+  const fetchSearch = useCallback(async (term, page = 1) => {
     try {
       const cachedSearch = getSearchCachedPage(term, page);
       if (cachedSearch?.data) {
-        console.log('🔥 Persistent book-search cache hit!');
         setBooks(page === 1 ? cachedSearch.data : prev => [...prev, ...cachedSearch.data]);
         setHasMore(cachedSearch.hasMore ?? cachedSearch.data.length >= BOOKS_PER_PAGE);
         setCurrentPage(page);
@@ -964,7 +827,7 @@ export const BookPanel = ({ demoMode = false }) => {
       setPageLoading(false);
       setLoading(false);
     }
-  };
+  }, [BOOKS_PER_PAGE, categories, getSearchCachedPage, mapRowToUi, setSearchCachedPage]);
 
   // Debounced search effect: when searchTerm changes, perform server-side search
   useEffect(() => {
@@ -987,27 +850,7 @@ export const BookPanel = ({ demoMode = false }) => {
     }, 300);
 
     return () => clearTimeout(id);
-  }, [searchTerm, user, categories]);
-
-  // Background search fetch that stores results in cache without touching UI state
-  const fetchSearchBackground = async (term, page = 1) => {
-    try {
-      const from = (page - 1) * BOOKS_PER_PAGE;
-      const q = term.trim();
-      // Use direct query search
-      const { data: rows } = await supabase
-        .from('books')
-        .select('id, title, author, description, year, language, isbn, cover_image_url, file_url, created_at, downloads_count, pages, publisher, rating, rating_count')
-        .or(`title.ilike.%${q}%,author.ilike.%${q}%,description.ilike.%${q}%,isbn.ilike.%${q}%`)
-        .range(from, from + BOOKS_PER_PAGE - 1);
-      
-      const mapped = (rows || []).map(r => mapRowToUi(r));
-      setSearchCachedPage(term, page, mapped);
-      return mapped;
-    } catch (err) {
-      return null;
-    }
-  };
+  }, [searchTerm, user, categories, fetchAll, fetchSearch]);
 
   const handlePageChange = async (page) => {
     if (page < 1) return;
@@ -1514,40 +1357,10 @@ export const BookPanel = ({ demoMode = false }) => {
                     >
                     <div
                       className="book-cardBKP"
-                      onClick={() => bulkDownloadMode ? toggleBookSelection(book.id) : viewBookDetails(book)}
+                      onClick={() => viewBookDetails(book)}
                       tabIndex={0}
                       style={{ position: 'relative' }}
                     >
-                      {/* Bulk Selection Checkbox */}
-                      {bulkDownloadMode && (
-                        <div style={{
-                          position: 'absolute',
-                          top: '8px',
-                          left: '8px',
-                          zIndex: 10,
-                          background: 'rgba(0, 0, 0, 0.7)',
-                          padding: '8px',
-                          borderRadius: '8px',
-                          border: selectedBooksForDownload.has(book.id) ? '3px solid #00a884' : '3px solid #374151',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <input
-                            type="checkbox"
-                            checked={selectedBooksForDownload.has(book.id)}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              toggleBookSelection(book.id);
-                            }}
-                            style={{ cursor: 'pointer', width: '22px', height: '22px', accentColor: '#00a884' }}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-                      )}
-
                       <div className="badge-containerBKP">
                       </div>
 
@@ -1689,7 +1502,7 @@ export const BookPanel = ({ demoMode = false }) => {
                             user_agent: navigator.userAgent || 'unknown'
                           };
 
-                          const { data, error } = await supabase
+                          const { error } = await supabase
                             .from('book_downloads')
                             .insert([downloadRecord])
                             .select();
@@ -1703,7 +1516,6 @@ export const BookPanel = ({ demoMode = false }) => {
                               context: { userId: user.id, bookId: selectedBook.id }
                             });
                         } else {
-                          console.log('✅ Download logged successfully:', data);
                           
                           // Increment count using the SQL function (bypasses RLS)
                           try {
@@ -1740,7 +1552,6 @@ export const BookPanel = ({ demoMode = false }) => {
                                   status: updateError.status
                                 });
                               } else {
-                                console.log(`✅ Count incremented (fallback): ${currentCount} → ${newCount}`);
                                 setSelectedBook(prev => ({
                                   ...prev,
                                   downloads_count: newCount
@@ -1748,7 +1559,6 @@ export const BookPanel = ({ demoMode = false }) => {
                               }
                             } else {
                               const newCount = result || (selectedBook.downloads_count || 0) + 1;
-                              console.log(`✅ Count incremented (RPC): ${selectedBook.downloads_count || 0} → ${newCount}`);
                               setSelectedBook(prev => ({
                                 ...prev,
                                 downloads_count: newCount
@@ -1804,8 +1614,7 @@ export const BookPanel = ({ demoMode = false }) => {
         onClose={() => setShowSubscriptionModal(false)}
         user={user}
         product="books"
-        onSubscribed={(sub) => {
-          setSubscription(sub);
+        onSubscribed={() => {
           setShowSubscriptionModal(false);
         }}
       />

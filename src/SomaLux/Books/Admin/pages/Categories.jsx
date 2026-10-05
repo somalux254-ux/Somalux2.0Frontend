@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FiEdit2, FiFolder, FiPlus, FiSearch, FiTrash2 } from 'react-icons/fi';
+import { FiEdit2, FiFolder, FiSearch, FiTrash2 } from 'react-icons/fi';
 import { useAdminUI } from '../AdminUIContext';
 import { supabase } from '../../supabaseClient';
 import { createCategory, deleteCategory, fetchCategories, updateCategory } from '../api';

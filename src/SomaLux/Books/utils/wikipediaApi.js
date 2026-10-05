@@ -24,7 +24,6 @@ const IMAGE_FETCH_TIMEOUT = 5000; // 5 seconds for image fetches
 const getCachedResult = (key) => {
   const cached = WIKIPEDIA_CACHE[key];
   if (cached && Date.now() - cached.timestamp < CACHE_EXPIRY) {
-    console.log('💾 Cache hit for:', key);
     return cached.data;
   }
   if (cached) delete WIKIPEDIA_CACHE[key];
@@ -96,7 +95,6 @@ const fetchWithRestApi = async (keyTerm) => {
   try {
     const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(keyTerm)}`;
     
-    console.log('🌐 REST API request for:', keyTerm);
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
@@ -124,7 +122,6 @@ const fetchWithRestApi = async (keyTerm) => {
       return { success: false };
     }
     
-    console.log('✅ REST API successful');
     
     return {
       title: data.title || keyTerm,
@@ -145,12 +142,10 @@ const fetchWithRestApi = async (keyTerm) => {
  */
 const fetchWithQueryApi = async (searchTerm) => {
   try {
-    console.log('📚 Trying Wikipedia query API for:', searchTerm);
     
     const keyTerm = extractKeyTerms(searchTerm);
     const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(keyTerm)}&prop=extracts|pageimages|info&pithumbsize=300&inprop=url&explaintext=true&format=json&origin=*`;
     
-    console.log('🔍 Query API request');
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
@@ -181,7 +176,6 @@ const fetchWithQueryApi = async (searchTerm) => {
       return { success: false };
     }
     
-    console.log('✅ Query API successful');
     
     return {
       title: page.title || keyTerm,
@@ -203,7 +197,6 @@ const fetchWithQueryApi = async (searchTerm) => {
  */
 const fetchWithSearchFallback = async (searchTerm) => {
   try {
-    console.log('🔎 Using search fallback for:', searchTerm);
     
     const keyTerm = extractKeyTerms(searchTerm);
     const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(keyTerm)}&srlimit=1&format=json&origin=*`;
@@ -257,7 +250,6 @@ const fetchWithSearchFallback = async (searchTerm) => {
       return { success: false };
     }
     
-    console.log('✅ Search fallback successful');
     
     return {
       title: page.title || bestMatch.title,
@@ -280,11 +272,9 @@ const fetchWithSearchFallback = async (searchTerm) => {
  */
 export const fetchWikipediaExplanation = async (searchTerm) => {
   try {
-    console.log('📚 Fetching Wikipedia explanation for:', searchTerm);
     
     // Extract key terms from the search term (handles multi-line selections)
     const keyTerm = extractKeyTerms(searchTerm);
-    console.log('🔍 Extracted key term:', keyTerm);
     
     // Check cache first
     const cacheKey = keyTerm.toLowerCase();
@@ -299,7 +289,6 @@ export const fetchWikipediaExplanation = async (searchTerm) => {
     }
     
     // Fallback to query API
-    console.log('📚 REST API failed, trying Query API...');
     result = await fetchWithQueryApi(keyTerm);
     if (result.success) {
       setCacheResult(cacheKey, result);
@@ -307,7 +296,6 @@ export const fetchWikipediaExplanation = async (searchTerm) => {
     }
     
     // Last resort: try search for disambiguation or related articles
-    console.log('📚 Query API failed, trying search fallback...');
     result = await fetchWithSearchFallback(keyTerm);
     if (result.success) {
       setCacheResult(cacheKey, result);
@@ -338,7 +326,6 @@ export const fetchWikipediaExplanation = async (searchTerm) => {
  */
 export const fetchWikipediaPage = async (searchTerm) => {
   try {
-    console.log('📄 Fetching Wikipedia page for:', searchTerm);
     
     const keyTerm = extractKeyTerms(searchTerm);
     const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(keyTerm)}&prop=extracts|info|pageimages&pithumbsize=500&inprop=url&explaintext=true&format=json&origin=*`;
@@ -374,7 +361,6 @@ export const fetchWikipediaPage = async (searchTerm) => {
     
     const page = pages[pageId];
     
-    console.log('✅ Page data received');
     
     return {
       title: page.title,
@@ -400,7 +386,6 @@ export const fetchWikipediaPage = async (searchTerm) => {
  */
 export const searchWikipedia = async (searchTerm, limit = 5) => {
   try {
-    console.log('🔎 Searching Wikipedia for:', searchTerm);
     
     const keyTerm = extractKeyTerms(searchTerm);
     const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(keyTerm)}&srlimit=${limit}&format=json&origin=*`;
@@ -424,7 +409,6 @@ export const searchWikipedia = async (searchTerm, limit = 5) => {
     
     const data = await response.json();
     
-    console.log('✅ Search results received:', data.query?.search?.length || 0);
     
     return data.query?.search || [];
   } catch (error) {
@@ -440,7 +424,6 @@ export const searchWikipedia = async (searchTerm, limit = 5) => {
  */
 export const getWikipediaDefinition = async (searchTerm) => {
   try {
-    console.log('📖 Getting Wikipedia definition for:', searchTerm);
     
     const result = await fetchWikipediaExplanation(searchTerm);
     
@@ -471,17 +454,14 @@ export const fetchAuthorImage = async (authorName) => {
   const cacheKey = `author_image_${authorName.toLowerCase()}`;
   const cached = getCachedResult(cacheKey);
   if (cached !== undefined) {
-    console.log(`💾 [${authorName}] From cache`);
     return cached;
   }
 
   try {
-    console.log(`🔍 [${authorName}] Fetching...`);
 
     // Strategy 1: Open Library API (has author photos built-in)
     let imageUrl = await fetchFromOpenLibrary(authorName);
     if (imageUrl) {
-      console.log(`✅ [${authorName}] OpenLibrary`);
       setCacheResult(cacheKey, imageUrl);
       return imageUrl;
     }
@@ -489,7 +469,6 @@ export const fetchAuthorImage = async (authorName) => {
     // Strategy 2: Gravatar search
     imageUrl = await fetchFromGravatar(authorName);
     if (imageUrl) {
-      console.log(`✅ [${authorName}] Gravatar`);
       setCacheResult(cacheKey, imageUrl);
       return imageUrl;
     }
@@ -497,12 +476,10 @@ export const fetchAuthorImage = async (authorName) => {
     // Strategy 3: Direct Wikipedia thumbnail
     imageUrl = await fetchWikipediaDirectImage(authorName);
     if (imageUrl) {
-      console.log(`✅ [${authorName}] Wikipedia Direct`);
       setCacheResult(cacheKey, imageUrl);
       return imageUrl;
     }
 
-    console.log(`⚠️ [${authorName}] No image found`);
     setCacheResult(cacheKey, null);
     return null;
   } catch (error) {
@@ -517,7 +494,6 @@ export const fetchAuthorImage = async (authorName) => {
  */
 const fetchFromOpenLibrary = async (authorName) => {
   try {
-    console.log(`  📚 [OpenLibrary] Searching: ${authorName}`);
     
     // Search for authors by name
     const searchUrl = `https://openlibrary.org/search/authors.json?q=${encodeURIComponent(authorName)}&limit=10`;
@@ -529,14 +505,12 @@ const fetchFromOpenLibrary = async (authorName) => {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      console.log(`    ⚠️ Search failed`);
       return null;
     }
 
     const data = await response.json();
     const docs = data.docs || [];
 
-    console.log(`    Found ${docs.length} results`);
 
     // Look for an author with a photo
     for (let i = 0; i < docs.length; i++) {
@@ -545,15 +519,12 @@ const fetchFromOpenLibrary = async (authorName) => {
       if (doc.has_remote_image) {
         // Use the Open Library image URL
         const imageUrl = `https://covers.openlibrary.org/a/id/${doc.id}-M.jpg`;
-        console.log(`    ✓ Image from result ${i + 1}`);
         return imageUrl;
       }
     }
 
-    console.log(`    ℹ️ No images found`);
     return null;
   } catch (error) {
-    console.log(`  ⚠️ Error: ${error.message}`);
     return null;
   }
 };
@@ -563,11 +534,8 @@ const fetchFromOpenLibrary = async (authorName) => {
  */
 const fetchFromGravatar = async (authorName) => {
   try {
-    console.log(`  👤 [Gravatar] Searching: ${authorName}`);
     
-    // Gravatar search is limited, so just try the hash of the name
-    const nameHash = authorName.toLowerCase().trim();
-    // Note: Gravatar would need email, so this is more limited
+    // Gravatar requires an email address, so an author name is insufficient.
     
     return null;
   } catch (error) {
@@ -580,7 +548,6 @@ const fetchFromGravatar = async (authorName) => {
  */
 const fetchWikipediaDirectImage = async (authorName) => {
   try {
-    console.log(`  📖 [Wikipedia] Direct search: ${authorName}`);
     
     const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(authorName)}&srnamespace=0&srlimit=5&format=json`;
     
@@ -591,7 +558,6 @@ const fetchWikipediaDirectImage = async (authorName) => {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      console.log(`    ⚠️ Search failed`);
       return null;
     }
 
@@ -599,7 +565,6 @@ const fetchWikipediaDirectImage = async (authorName) => {
     const results = data.query?.search || [];
 
     if (results.length === 0) {
-      console.log(`    ℹ️ No results`);
       return null;
     }
 
@@ -608,13 +573,11 @@ const fetchWikipediaDirectImage = async (authorName) => {
     const imageUrl = await getWikipediaPageImageDirect(pageTitle);
     
     if (imageUrl) {
-      console.log(`    ✓ Image from first result`);
       return imageUrl;
     }
 
     return null;
   } catch (error) {
-    console.log(`  ⚠️ Error: ${error.message}`);
     return null;
   }
 };
@@ -649,7 +612,6 @@ const getWikipediaPageImageDirect = async (pageTitle) => {
 
     return null;
   } catch (error) {
-    console.log(`Error getting Wikipedia image: ${error.message}`);
     return null;
   }
 };
@@ -675,5 +637,4 @@ export const fetchAuthorImages = async (authorNames) => {
 export const clearWikipediaCache = () => {
   const count = Object.keys(WIKIPEDIA_CACHE).length;
   Object.keys(WIKIPEDIA_CACHE).forEach(key => delete WIKIPEDIA_CACHE[key]);
-  console.log(`🗑️ Cleared ${count} cache entries`);
 };

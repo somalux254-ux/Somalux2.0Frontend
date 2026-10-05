@@ -2,7 +2,6 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiMapPin, FiX } from 'react-icons/fi';
 import { FaSearch } from 'react-icons/fa';
-import { formatNumber } from './formatNumber';
 import './PaperPanel.css';
 
 const formatUniversityName = (name) => String(name || '')

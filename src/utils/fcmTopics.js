@@ -7,7 +7,6 @@ export const subscribeToGroupTopic = async (groupId) => {
   try {
     const topic = getGroupTopic(groupId);
     // TODO: Implement via backend/Supabase instead of FCM
-    console.log(`📢 Group topic subscription: ${topic} (not yet implemented)`);
   } catch (error) {
     console.error('❌ Error subscribing to group topic:', error);
   }
@@ -18,7 +17,6 @@ export const subscribeToGroupTopic = async (groupId) => {
 export const unsubscribeFromGroupTopic = async (groupId) => {
   try {
     const topic = getGroupTopic(groupId);
-    console.log(`📢 Unsubscribe from group topic: ${topic}`);
   } catch (error) {
     console.error('❌ Error unsubscribing from group topic:', error);
   }

@@ -46,7 +46,6 @@ const Dashboard = () => {
   const [expandedViewers, setExpandedViewers] = useState({});
   // Per-user pagination for view timestamps inside the dropdown
   const [viewerTimePages, setViewerTimePages] = useState({});
-  const [monthlyPage, setMonthlyPage] = useState(1);
   const [topPage, setTopPage] = useState(1);
   const [topPastPapersPage, setTopPastPapersPage] = useState(1);
   const [activityTrendTab, setActivityTrendTab] = useState('books'); // 'books' or 'pastpapers'
@@ -171,7 +170,6 @@ const Dashboard = () => {
 
   const uploadsTrend = calcTrend(timeSeries, 'uploads');
   const viewsTrend = calcTrend(timeSeries, 'views');
-  const downloadsTrend = calcTrend(timeSeries, 'downloads');
 
   // Past Papers time series data (for Activity Trend tabs)
   const monthsPastPapers = (stats.monthlyPastPapers || []).map(m => ({
@@ -190,9 +188,6 @@ const Dashboard = () => {
   }));
 
   // Only show non-zero rows in tables and sort highest first
-  const nonZeroMonthly = safeMonthly
-    .filter(m => m.Uploads > 0)
-    .sort((a, b) => b.Uploads - a.Uploads);
   const nonZeroTop = safeTop
     .filter(b => b.downloads > 0)
     .sort((a, b) => b.downloads - a.downloads);
@@ -200,14 +195,8 @@ const Dashboard = () => {
     .filter(p => p.downloads > 0)
     .sort((a, b) => b.downloads - a.downloads);
 
-  const monthlyTotalPages = Math.max(1, Math.ceil((nonZeroMonthly.length || 0) / OVERVIEW_PAGE_SIZE));
   const topTotalPages = Math.max(1, Math.ceil((nonZeroTop.length || 0) / OVERVIEW_PAGE_SIZE));
   const topPastPapersTotalPages = Math.max(1, Math.ceil((nonZeroTopPastPapers.length || 0) / OVERVIEW_PAGE_SIZE));
-
-  const monthlyStart = (monthlyPage - 1) * OVERVIEW_PAGE_SIZE;
-  const monthlyEnd = monthlyStart + OVERVIEW_PAGE_SIZE;
-  const pagedMonthly = nonZeroMonthly.slice(monthlyStart, monthlyEnd);
-
 
   const topStart = (topPage - 1) * OVERVIEW_PAGE_SIZE;
   const topEnd = topStart + OVERVIEW_PAGE_SIZE;
@@ -225,7 +214,6 @@ const Dashboard = () => {
       setLoading(true);
       try {
         const data = await fetchStats();
-        console.log('[Dashboard] fetchStats returned:', data);
         setStats(data);
         try {
           localStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify({ timestamp: Date.now(), stats: data }));

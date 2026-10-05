@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchProfiles, fetchUploadCountsByUser, updateUserRole, fetchAuthenticatedUsers } from '../api';
+import { fetchProfiles, fetchUploadCountsByUser, updateUserRole } from '../api';
 import { FiCheck, FiChevronDown, FiFilter, FiSearch } from 'react-icons/fi';
 import UsersAnalytics from './UsersAnalytics';
 import profilePlaceholder from '../../../BookDashboard/user-profile.svg';
@@ -59,7 +59,6 @@ const Users = ({ isSuperAdmin }) => {
 
       try {
         profiles = await profilesPromise;
-        console.log('[Users.load] fetchProfiles success:', profiles?.length || 0);
       } catch (e) {
         console.error('[Users.load] fetchProfiles error:', e?.message || e);
         setRows([]);
@@ -69,14 +68,11 @@ const Users = ({ isSuperAdmin }) => {
 
       try {
         uploadCounts = await uploadCountsPromise;
-        console.log('[Users.load] fetchUploadCountsByUser success:', uploadCounts?.length || 0);
       } catch (e) {
         console.error('[Users.load] fetchUploadCountsByUser error:', e?.message || e);
       }
 
       console.groupCollapsed('[Users.load] fetched data');
-      console.log('profiles (count):', Array.isArray(profiles) ? profiles.length : profiles, profiles?.slice?.(0, 3));
-      console.log('uploadCounts (count):', Array.isArray(uploadCounts) ? uploadCounts.length : uploadCounts, uploadCounts?.slice?.(0, 10));
       console.groupEnd();
 
       const uploadsMap = new Map(
@@ -160,9 +156,7 @@ const Users = ({ isSuperAdmin }) => {
   const changeRole = async (id, role) => {
     setSaving((s) => ({ ...s, [id]: true }));
     try {
-      console.log('[Users.changeRole] Updating role for user:', id, 'to:', role);
       await updateUserRole(id, role);
-      console.log('[Users.changeRole] Role updated successfully');
       await load();
     } catch (error) {
       console.error('[Users.changeRole] Error updating role:', error?.message || error);

@@ -58,11 +58,6 @@ export async function recordBookDownload({
       };
     }
 
-    console.log('✅ Download recorded successfully:', {
-      userId,
-      bookId,
-      timestamp: new Date().toISOString()
-    });
 
     return {
       success: true,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Card,
@@ -8,7 +8,6 @@ import {
   Select,
   MenuItem,
   FormControl,
-  InputLabel,
   FormGroup,
   FormControlLabel,
   Checkbox,
@@ -29,8 +28,7 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { FiSend, FiFileText, FiHistory } from 'react-icons/fi';
-import { MdEmail } from 'react-icons/md';
+import { FiSend } from 'react-icons/fi';
 import { API_URL } from '../../../../config';
 import './SendEmails.css';
 
@@ -223,7 +221,6 @@ const SendEmails = () => {
   const [recipientType, setRecipientType] = useState('all_users');
   const [recipientRole, setRecipientRole] = useState('admin');
   const [recipientTier, setRecipientTier] = useState('premium');
-  const [specificEmails, setSpecificEmails] = useState('');
   const [tags, setTags] = useState([]);
   const [isUrgent, setIsUrgent] = useState(false);
 
@@ -243,6 +240,7 @@ const SendEmails = () => {
   const [availableUsers, setAvailableUsers] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [usersLoaded, setUsersLoaded] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState('');
 
   // Fetch notifications on mount or when tab changes
@@ -252,13 +250,6 @@ const SendEmails = () => {
       fetchStats();
     }
   }, [tabValue]);
-
-  // Fetch users when specific_users is selected
-  useEffect(() => {
-    if (recipientType === 'specific_users' && availableUsers.length === 0) {
-      fetchAvailableUsers();
-    }
-  }, [recipientType]);
 
   // Fetch notification history
   const fetchNotifications = async () => {
@@ -290,7 +281,7 @@ const SendEmails = () => {
   };
 
   // Fetch available users from database
-  const fetchAvailableUsers = async () => {
+  const fetchAvailableUsers = useCallback(async () => {
     setUsersLoading(true);
     try {
       const response = await fetch(`${API_URL}/api/admin/users`);
@@ -300,7 +291,6 @@ const SendEmails = () => {
       const data = await response.json();
       if (data.success && Array.isArray(data.users)) {
         setAvailableUsers(data.users);
-        console.log('✅ Loaded', data.users.length, 'users');
       } else {
         console.warn('No users returned from API');
         setAvailableUsers([]);
@@ -312,8 +302,18 @@ const SendEmails = () => {
       setAvailableUsers([]);
     } finally {
       setUsersLoading(false);
+      setUsersLoaded(true);
     }
-  };
+  }, []);
+
+  // Fetch users when specific_users is selected
+  useEffect(() => {
+    if (recipientType === 'specific_users' && !usersLoaded) {
+      fetchAvailableUsers();
+    } else if (recipientType !== 'specific_users' && usersLoaded) {
+      setUsersLoaded(false);
+    }
+  }, [recipientType, usersLoaded, fetchAvailableUsers]);
 
   // Handle user selection
   const handleUserSelect = (userId, email) => {
@@ -437,7 +437,6 @@ const SendEmails = () => {
           setMessage('');
           setNotificationType('general');
           setRecipientType('all_users');
-          setSpecificEmails('');
           setTags([]);
           setIsUrgent(false);
           setSelectedTemplate(null);

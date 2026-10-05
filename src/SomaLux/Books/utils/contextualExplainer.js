@@ -11,8 +11,6 @@
  * Extract actual meaning and entities from text
  */
 const extractMeaning = (text) => {
-  const lowerText = text.toLowerCase();
-  
   return {
     // People mentioned
     people: text.match(/[A-Z][a-z]+\s+[A-Z][a-z]+/g) || [],
@@ -113,14 +111,6 @@ const identifyTheme = (text) => {
 export const getContextualExplanation = (text) => {
   const meaning = extractMeaning(text);
   
-  console.log('📖 Analyzing text for real meaning...');
-  console.log('  Theme:', meaning.theme);
-  console.log('  Emotions:', meaning.emotions);
-  console.log('  Text Type:', {
-    isTechnical: meaning.isTechnical,
-    isNarrative: meaning.isNarrative,
-    isAcademic: meaning.isAcademic
-  });
   
   // Build explanation from ACTUAL text content
   let explanation = '';
@@ -419,4 +409,3 @@ const buildInstructionalExplanation = (text, meaning) => {
 };
 
 export { extractMeaning };
-

@@ -44,7 +44,6 @@ const useMobileZoomGestures = (containerRef, onZoomIn, onZoomOut, onResetZoom, o
         touch1.clientY - touch2.clientY
       );
       
-      console.log('👆 Pinch start: distance=', distance.toFixed(2), 'currentScale=', currentScale.toFixed(2));
       
       touchStartScaleRef.current = {
         distance,
@@ -98,7 +97,6 @@ const useMobileZoomGestures = (containerRef, onZoomIn, onZoomOut, onResetZoom, o
       const zoomFactor = currentDistance / startDistance;
       const targetScale = Math.max(0.25, Math.min(1.0, startScale * zoomFactor));
 
-      console.log('🔍 Pinch zoom: factor=', zoomFactor.toFixed(2), 'target=', targetScale.toFixed(2), 'current=', currentScale.toFixed(2));
 
       if (onPreviewZoom) {
         onPreviewZoom(targetScale, undefined, pinchCenterRef.current);
@@ -110,7 +108,7 @@ const useMobileZoomGestures = (containerRef, onZoomIn, onZoomOut, onResetZoom, o
       pendingScaleRef.current = targetScale;
       lastProcessedScaleRef.current = targetScale;
     }
-  }, [onPreviewZoom, onSetZoom]);
+  }, [onPreviewZoom]);
 
   // Handle pinch-zoom end
   const handleTouchEnd = useCallback((e) => {
@@ -161,13 +159,14 @@ const useMobileZoomGestures = (containerRef, onZoomIn, onZoomOut, onResetZoom, o
 
     document.addEventListener('touchmove', preventPinchZoom, { passive: false });
 
+    const zoomFrameId = zoomFrameRef.current;
     return () => {
       window.removeEventListener('resize', handleResize);
       container.removeEventListener('touchstart', handleTouchStart);
       container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
       document.removeEventListener('touchmove', preventPinchZoom);
-      if (zoomFrameRef.current) cancelAnimationFrame(zoomFrameRef.current);
+      if (zoomFrameId) cancelAnimationFrame(zoomFrameId);
     };
   }, [checkMobileDevice, containerRef, handleTouchStart, handleTouchMove, handleTouchEnd]);
 

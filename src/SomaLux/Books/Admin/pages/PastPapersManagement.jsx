@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchPastPapers, deletePastPaper, updatePastPaper, getFaculties } from '../pastPapersApi';
 import { useAdminUI } from '../AdminUIContext';
 
@@ -34,7 +34,6 @@ const PastPapersManagement = ({ userProfile }) => {
   const [sort, setSort] = useState({ col: 'created_at', dir: 'desc' });
   const [editingId, setEditingId] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
-  const [allPaperIds, setAllPaperIds] = useState(new Set()); // Track ALL papers across all pages
   const [editDraft, setEditDraft] = useState({});
   const [newPdf, setNewPdf] = useState(null);
   const [useCustomFaculty, setUseCustomFaculty] = useState(false);
@@ -48,14 +47,14 @@ const PastPapersManagement = ({ userProfile }) => {
   const isEditor = userProfile?.role === 'editor';
   const totalPages = useMemo(() => Math.max(1, Math.ceil(count / pageSize)), [count, pageSize]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const { data, count: total } = await fetchPastPapers({ page, pageSize, search, faculty: facultyFilter, sort });
       setRows(data);
       setCount(total);
     } finally { setLoading(false); }
-  };
+  }, [page, pageSize, search, facultyFilter, sort]);
 
   // Fetch all paper IDs matching current filters (no pagination)
   const fetchAllMatchingIds = async () => {
@@ -73,8 +72,10 @@ const PastPapersManagement = ({ userProfile }) => {
   }, []);
 
   useEffect(() => {
-    if (userProfile) load();
-  }, [page, search, facultyFilter, sort.col, sort.dir, userProfile]);
+    if (userProfile) {
+      load();
+    }
+  }, [load, userProfile]);
 
   const canEdit = (row) => {
     if (isAdmin) return true;

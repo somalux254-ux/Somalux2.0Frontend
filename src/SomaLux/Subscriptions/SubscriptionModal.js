@@ -105,7 +105,6 @@ const SubscriptionModal = ({
       setError(null);
 
       // Demo mode: Simulate payment request
-      console.log('📱 Demo Mode - Starting subscription:', { product, planId: currentPlan.id, phoneNumber: phoneNumber.trim() });
 
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1500));
@@ -134,7 +133,6 @@ const SubscriptionModal = ({
       setError(null);
 
       // Demo mode: Simulate payment verification
-      console.log('📱 Demo Mode - Verifying payment:', { reference: checkoutRequestId });
 
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1500));

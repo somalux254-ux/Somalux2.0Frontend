@@ -55,6 +55,5 @@ export const showGlobalToast = (payload) => {
   } else {
     // No handler registered yet
     // Optionally, queue or log
-    // console.debug('Global toast handler not set');
   }
 };

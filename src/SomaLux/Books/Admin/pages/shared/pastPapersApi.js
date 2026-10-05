@@ -27,7 +27,6 @@ export async function fetchPastPapers({
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
   
-  console.log('📥 fetchPastPapers called with:', { page, pageSize, search, universityId, faculty, forceRefresh });
   
   const cacheKey = makePastPapersCacheKey({ page, pageSize, search, universityId, faculty, sort });
   if (!forceRefresh) {
@@ -36,7 +35,6 @@ export async function fetchPastPapers({
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed?.timestamp && (Date.now() - parsed.timestamp) < CACHE_TTL_MS) {
-          console.log('📦 Returning cached papers');
           return { data: parsed.data || [], count: parsed.count || 0, fromCache: true };
         }
       }
@@ -94,7 +92,6 @@ export async function fetchPastPapers({
           const publicUrlData = supabase.storage.from(PAST_PAPERS_BUCKET).getPublicUrl(paper.file_path);
           if (publicUrlData?.data?.publicUrl) {
             finalUrl = publicUrlData.data.publicUrl;
-            console.log(`✓ Generated URL for ${paper.id}:`, finalUrl);
           }
         } catch (err) {
           console.warn(`⚠️ Failed to generate URL from file_path for paper ${paper.id}:`, err);
@@ -114,10 +111,6 @@ export async function fetchPastPapers({
     });
 
     const result = { data: processedData || [], count: count || 0 };
-    console.log('✅ Successfully fetched and processed papers:', {
-      count: processedData.length,
-      papers: processedData.map(p => ({ id: p.id, title: p.title, hasUrl: !!p.file_url }))
-    });
     try {
       localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data: result.data, count: result.count }));
     } catch (e) {

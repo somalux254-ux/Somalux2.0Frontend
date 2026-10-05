@@ -21,7 +21,6 @@ class PerformanceOptimizer {
         timestamp: Date.now(),
         ttl: ttlMs
       });
-      console.log(`✅ Cached in memory: ${key}`);
     } catch (e) {
       console.warn('Memory cache error:', e);
     }
@@ -38,7 +37,6 @@ class PerformanceOptimizer {
         return null;
       }
       
-      console.log(`🔥 Hit memory cache: ${key}`);
       return cached.data;
     } catch (e) {
       return null;
@@ -101,7 +99,6 @@ class PerformanceOptimizer {
     if (this.prefetchQueue.length === 0) return;
     
     const { page, callback } = this.prefetchQueue.shift();
-    console.log(`📚 Prefetching page ${page}...`);
     
     try {
       await callback(page);
@@ -165,7 +162,7 @@ class PerformanceOptimizer {
         cleared++;
       }
     }
-    if (cleared > 0) console.log(`🗑️ Cleared ${cleared} expired cache entries`);
+    return cleared;
   }
 
   // CACHE SIZE MONITORING
@@ -186,7 +183,6 @@ class PerformanceOptimizer {
     this.memoryCache.clear();
     this.compressionCache.clear();
     this.prefetchQueue = [];
-    console.log('🗑️ All caches cleared');
   }
 }
 

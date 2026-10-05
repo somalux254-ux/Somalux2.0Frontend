@@ -38,7 +38,6 @@ export const initializeLiveUpdate = async () => {
       url: bundleUrl,
     });
     await LiveUpdate.setNextBundle({ bundleId: manifest.bundleId });
-    console.log('[LiveUpdate] Update downloaded and will apply on next app launch.');
   } catch (error) {
     console.warn('[LiveUpdate] Update check failed:', error?.message || error);
   }

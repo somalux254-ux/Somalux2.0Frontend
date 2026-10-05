@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import logo from '../../../../Assets/SomaLuxLogo.svg';
 import { fetchStats, fetchViewDetails, fetchAllUsers } from '../api';
 import { useAdminUI } from '../AdminUIContext';
-import { supabase } from '../../supabaseClient';
 
 const Settings = ({ userProfile }) => {
   const [pdfOptions, setPdfOptions] = useState({
@@ -51,26 +49,9 @@ const Settings = ({ userProfile }) => {
     setSelectedRoles(prev => prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]);
   };
 
-  // Helper: fetch asset and convert to Base64 data URL
-  const toDataUrl = async (url) => {
-    try {
-      const resp = await fetch(url);
-      const blob = await resp.blob();
-      return await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    } catch (e) {
-      return null;
-    }
-  };
-
   const generatePDF = async () => {
     setGenerating(true);
     try {
-      const logoDataUrl = await toDataUrl(logo);
       const stats = await fetchStats();
       const viewDetails = pdfOptions.viewsDetails ? await fetchViewDetails() : [];
       const usersAll = (pdfOptions.includeUsers ? (usersDataCache.length ? usersDataCache : await fetchAllUsers()) : []);
@@ -78,38 +59,10 @@ const Settings = ({ userProfile }) => {
       const doc = new jsPDF();
       let yPos = 20;
 
-      // Add watermark to first page (behind content)
-      const addWatermark = () => {
-        if (!logoDataUrl) return;
-        const pw = doc.internal.pageSize.width;
-        const ph = doc.internal.pageSize.height;
-        const w = Math.min(pw * 0.25, 60); // Smaller size
-        const h = w; // Keep square for simplicity
-        const x = (pw - w) / 2;
-        const y = (ph - h) / 2;
-        try {
-          // @ts-ignore
-          const g = doc.GState && new doc.GState({ opacity: 0.06 });
-          if (g && doc.setGState) doc.setGState(g);
-          doc.addImage(logoDataUrl, 'PNG', x, y, w, h, undefined, 'FAST');
-        } catch {}
-        // Reset opacity
-        try {
-          if (doc.setGState) doc.setGState(new doc.GState({ opacity: 1 }));
-        } catch {}
-      };
-
-      addWatermark(); // Add to page 1
-
-      // Header with embedded logo
+      // Header
       doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(0, 168, 132); // Brand green
-      try {
-        if (logoDataUrl) {
-          doc.addImage(logoDataUrl, 'PNG', 15, yPos - 6, 22, 22);
-        }
-      } catch {}
       doc.text('SomaLux Documentation', 105, yPos, { align: 'center' });
       
       doc.setFontSize(10);
@@ -131,7 +84,6 @@ const Settings = ({ userProfile }) => {
         const pageH = doc.internal.pageSize.height;
         if (y > pageH - reserve) {
           doc.addPage();
-          addWatermark(); // Add watermark behind content on new page
           return 20;
         }
         return y;

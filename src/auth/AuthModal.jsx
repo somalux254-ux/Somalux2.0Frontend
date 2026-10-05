@@ -19,9 +19,8 @@ export const prewarmGoogleSignIn = () => {
   if (!clientId) return;
 
   googleSignInInitialization = GoogleSignIn.initialize({ clientId });
-  void googleSignInInitialization.catch((error) => {
+  void googleSignInInitialization.catch(() => {
     googleSignInInitialization = null;
-    console.warn('Google sign-in initialization failed:', error);
   });
 };
 
@@ -54,17 +53,6 @@ export const AuthModal = ({ isOpen, onClose, onSuccess, action = 'action' }) => 
     pushBackAction(handleNativeBack);
     return () => popBackAction(handleNativeBack);
   }, [handleNativeBack, isOpen]);
-
-  const getActionMessage = () => {
-    const messages = {
-      'view': 'view book details',
-      'like': 'like this book',
-      'download': 'download this book',
-      'search': 'search and discover books',
-      'action': 'continue with this action'
-    };
-    return messages[action] || messages['action'];
-  };
 
   const isUserCancellation = (err) => {
     const code = String(err?.code || '').toLowerCase();
@@ -106,15 +94,9 @@ export const AuthModal = ({ isOpen, onClose, onSuccess, action = 'action' }) => 
           throw new Error('Google did not return an ID token.');
         }
 
-        const tokenExchange = supabase.auth.signInWithIdToken({
+        void supabase.auth.signInWithIdToken({
           provider: 'google',
           token: result.idToken,
-        });
-
-        void tokenExchange.then(({ error: tokenError }) => {
-          if (tokenError) {
-            console.error('Background sign in error:', tokenError);
-          }
         });
 
         setLoading(false);
@@ -148,7 +130,6 @@ export const AuthModal = ({ isOpen, onClose, onSuccess, action = 'action' }) => 
       } else if (err?.name === 'AbortError') {
         setError('Sign in took too long. Please try again.');
       } else {
-        console.error('Sign in error:', err);
         setError(err.message || 'Failed to sign in. Please try again.');
       }
       setLoading(false);

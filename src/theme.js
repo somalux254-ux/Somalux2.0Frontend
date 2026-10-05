@@ -1,7 +1,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 
-const SystemBars = registerPlugin('SystemBars');
+export const SystemBars = registerPlugin('SystemBars');
 
 const getSystemTheme = () => (
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: light)').matches

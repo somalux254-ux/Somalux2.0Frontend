@@ -96,7 +96,6 @@ const PREFIX_CORRECTIONS = {
   'diffrent': 'different',
   'defferent': 'different',
   'occassions': 'occasions',
-  'occured': 'occurred',
   
   // Technical terms
   'optimiztion': 'optimization',
@@ -107,8 +106,6 @@ const PREFIX_CORRECTIONS = {
   'processing': 'processing',
   'computin': 'computing',
   'computting': 'computing',
-  'developement': 'development',
-  'developement': 'development',
   'enviroment': 'environment',
   'enviromnent': 'environment',
   'infrastucture': 'infrastructure',
@@ -122,39 +119,6 @@ const PREFIX_CORRECTIONS = {
   'practise': 'practice',
   'analyse': 'analyze',
   'analysed': 'analyzed'
-};
-
-/**
- * Generate variations of a word (for matching)
- */
-const generateWordVariations = (word) => {
-  const variations = [word];
-  
-  // Add variations with missing first letter
-  for (let i = 0; i < 26; i++) {
-    const letter = String.fromCharCode(97 + i);
-    variations.push(letter + word);
-  }
-  
-  // Add variations with doubled letters removed
-  let doubled = word.replace(/(.)\1+/g, '$1');
-  if (doubled !== word) variations.push(doubled);
-  
-  // Add variations with common replacements
-  const commonReplacements = {
-    'ie': 'ei', 'ei': 'ie',
-    'tion': 'sion', 'sion': 'tion',
-    'ence': 'ance', 'ance': 'ence',
-    'y': 'i', 'i': 'y'
-  };
-  
-  for (const [from, to] of Object.entries(commonReplacements)) {
-    if (word.includes(from)) {
-      variations.push(word.replace(from, to));
-    }
-  }
-  
-  return variations;
 };
 
 /**
@@ -184,7 +148,6 @@ const advancedSpellCorrect = (word) => {
   }
   
   // Try to find in common words with fuzzy matching
-  let bestMatch = word;
   let bestScore = 0;
   let bestCandidate = '';
   
@@ -192,7 +155,6 @@ const advancedSpellCorrect = (word) => {
     const score = calculateSimilarity(lowerWord, candidate);
     if (score > bestScore) {
       bestScore = score;
-      bestMatch = word;
       bestCandidate = candidate;
     }
   }
@@ -253,7 +215,6 @@ const levenshteinDistance = (str1, str2) => {
  * Correct misspelled words in text
  */
 const correctSpelling = (text) => {
-  console.log('✏️ Correcting spelling...');
   
   const words = text.split(/(\s+)/); // Keep whitespace
   const corrected = words.map(word => {
@@ -279,7 +240,6 @@ const correctSpelling = (text) => {
   });
 
   const result = corrected.join('');
-  console.log('✅ Spelling corrected:', result);
   return result;
 };
 
@@ -287,7 +247,6 @@ const correctSpelling = (text) => {
  * Reconstruct truncated words more intelligently
  */
 const reconstructTruncated = (text) => {
-  console.log('🔧 Reconstructing truncated words...');
   
   const words = text.split(/\s+/);
   const reconstructed = [];
@@ -318,7 +277,6 @@ const reconstructTruncated = (text) => {
   }
 
   const result = reconstructed.join(' ');
-  console.log('✅ Text reconstructed:', result);
   return result;
 };
 
@@ -326,7 +284,6 @@ const reconstructTruncated = (text) => {
  * Clean and normalize text
  */
 const normalizeText = (text) => {
-  console.log('🧹 Normalizing text...');
   
   let normalized = text.trim().replace(/\s+/g, ' ');
   
@@ -337,7 +294,6 @@ const normalizeText = (text) => {
     .replace(/:\s+/g, ': ') // Fix colons
     .replace(/([.!?])\s+([a-z])/g, '$1 $2'); // Ensure proper spacing after sentence end
 
-  console.log('✅ Text normalized:', normalized);
   return normalized;
 };
 
@@ -347,12 +303,9 @@ const normalizeText = (text) => {
  */
 export const explainIntelligentText = async (text) => {
   try {
-    console.log('🚀 Starting intelligent text processing...');
-    console.log('📝 Original text length:', text.length, 'characters');
 
     // For very long text (paragraphs), use contextual analysis directly
     if (text.length > 300) {
-      console.log('📖 Long paragraph detected - using contextual analysis');
       const contextResult = await explainParagraphContextually(text);
       return contextResult;
     }
@@ -369,7 +322,6 @@ export const explainIntelligentText = async (text) => {
     // Step 4: Correct spelling again after reconstruction
     processedText = correctSpelling(processedText);
 
-    console.log('✨ Final processed text:', processedText);
 
     // Generate explanation from Wikipedia
     const mainConcept = extractMainConcept(processedText);
@@ -407,13 +359,11 @@ export const explainIntelligentText = async (text) => {
  */
 const generateLocalExplanation = async (text) => {
   try {
-    console.log('📚 Fetching explanation from Wikipedia for:', text.substring(0, 50));
     
     // Fetch from Wikipedia using the enhanced API
     const result = await fetchWikipediaExplanation(text);
     
     if (result.success && result.extract) {
-      console.log('✅ Wikipedia explanation fetched successfully');
       return result.extract;
     }
     
@@ -440,7 +390,6 @@ const generateLocalExplanation = async (text) => {
  */
 const explainParagraphContextually = async (text) => {
   try {
-    console.log('🎯 Analyzing paragraph contextually...');
     
     // Import contextual explainer for paragraph analysis
     const { getContextualExplanation } = await import('./contextualExplainer.js');
@@ -448,8 +397,6 @@ const explainParagraphContextually = async (text) => {
     const contextualExplanation = getContextualExplanation(text);
     const mainConcept = extractParagraphMainConcept(text);
     
-    console.log('✅ Contextual explanation generated');
-    console.log('📚 Main concept:', mainConcept);
     
     // Quality validation
     const responseQuality = validateResponseQuality(contextualExplanation, text);
@@ -571,14 +518,12 @@ const extractMainConcept = (text) => {
  * Get just the corrected text (without explanation)
  */
 export const getIntelligentCorrectedText = (text) => {
-  console.log('🎯 Processing text for correction only...');
   
   let processed = normalizeText(text);
   processed = correctSpelling(processed);
   processed = reconstructTruncated(processed);
   processed = correctSpelling(processed);
   
-  console.log('✅ Text correction complete');
   
   return {
     original: text,

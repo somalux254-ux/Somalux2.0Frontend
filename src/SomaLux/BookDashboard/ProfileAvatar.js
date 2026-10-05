@@ -1,5 +1,4 @@
-import React, { useRef, useState } from "react";
-import { FiCamera } from "react-icons/fi";
+import React, { useRef } from "react";
 import { toast } from "react-toastify";
 import { supabase } from "../Books/supabaseClient";
 import profilePlaceholder from "./user-profile.svg";
@@ -25,7 +24,6 @@ export const ProfileAvatar = ({
   showUploadButton = true 
 }) => {
   const fileInputRef = useRef(null);
-  const [isSavingImage, setIsSavingImage] = useState(false);
 
   const getStoredUserProfile = (user) => {
     const key = user?.id ? `userProfile_${user.id}` : 'userProfile';
@@ -42,17 +40,13 @@ export const ProfileAvatar = ({
   };
 
   const handleUpload = async (e) => {
-    console.log('handleUpload triggered');
     const file = e.target.files?.[0];
     if (!file) {
-      console.log('No file selected');
       return;
     }
-    console.log('File selected:', file.name, file.type, file.size);
 
     // Basic validation
     if (!file.type.startsWith('image/')) {
-      console.log('Invalid file type:', file.type);
       toast.error('Please select an image file');
       return;
     }
@@ -84,44 +78,35 @@ export const ProfileAvatar = ({
       return;
     }
 
-    setIsSavingImage(true);
-
     try {
       const ext = file.name.split('.').pop();
       const fileName = `${sessionUser.id}/${Date.now()}.${ext}`;
-      console.log('Uploading file as:', fileName);
 
       // Upload to storage bucket
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('user-avatars')
         .upload(fileName, file, {
           cacheControl: '3600',
           upsert: true,
           contentType: file.type,
         });
-      console.log('Upload response received - uploadData:', uploadData, 'uploadError:', uploadError);
 
       if (uploadError) {
         console.error('Avatar upload error:', uploadError);
         console.error('Upload error details:', JSON.stringify(uploadError, null, 2));
         const errMsg = uploadError.message || JSON.stringify(uploadError);
         toast.error('Avatar upload failed: ' + errMsg, { autoClose: 6000 });
-        setIsSavingImage(false);
         return;
       }
 
-      console.info('Avatar uploaded successfully');
       const publicUrl = supabase.storage.from('user-avatars').getPublicUrl(fileName).data.publicUrl;
 
       // Avatar is already uploaded to storage successfully
-      console.log('Avatar uploaded and available at:', publicUrl);
 
       // Update auth user metadata
       try {
         await supabase.auth.updateUser({ data: { avatar_url: publicUrl } });
-        console.log('Auth metadata updated');
-      } catch (uErr) {
-        console.warn('Failed to update auth user metadata:', uErr?.message);
+      } catch {
       }
 
       // Update local storage
@@ -132,7 +117,6 @@ export const ProfileAvatar = ({
       if (!authUser?.id) {
         localStorage.setItem('userProfile', JSON.stringify(merged));
       }
-      console.log('Local storage updated');
       
       // Update avatar map
       try {
@@ -156,16 +140,13 @@ export const ProfileAvatar = ({
           .eq('id', sessionUser.id);
         if (profileError) {
           console.warn('Failed to update profile avatar_url:', profileError?.message);
-        } else {
-          console.log('Profile avatar_url and avatar_path updated successfully');
-        }
+        } 
       } catch (e) {
         console.warn('Error updating profile:', e?.message);
       }
       
       // Update UI
       setProfileImage(publicUrl);
-      console.log('UI updated with new avatar');
 
       // Delete previous avatar if exists
       try {
@@ -173,9 +154,7 @@ export const ProfileAvatar = ({
           const { error: delErr } = await supabase.storage.from('user-avatars').remove([prevAvatarPath]);
           if (delErr) {
             console.warn('Failed to delete previous avatar:', delErr?.message);
-          } else {
-            console.info('Previous avatar deleted:', prevAvatarPath);
-          }
+          } 
         }
       } catch (delEx) {
         console.warn('Error deleting previous avatar:', delEx?.message);
@@ -183,8 +162,6 @@ export const ProfileAvatar = ({
     } catch (err) {
       console.error('handleUpload error', err);
       toast.error('Unexpected error saving avatar');
-    } finally {
-      setIsSavingImage(false);
     }
   };
 

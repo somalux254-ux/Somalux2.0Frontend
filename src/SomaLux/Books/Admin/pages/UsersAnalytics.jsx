@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
 const UsersAnalytics = ({ rows }) => {
   const [range, setRange] = useState('month');
@@ -8,10 +7,6 @@ const UsersAnalytics = ({ rows }) => {
     kpiActive,
     kpiSignedOut,
     totalActiveNow,
-    totalUsers,
-    totalSignedOut,
-    chartData,
-    rangeLabel,
   } = useMemo(() => {
     const now = new Date();
     let from;
@@ -25,9 +20,7 @@ const UsersAnalytics = ({ rows }) => {
       from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
 
-    const totalUsersLocal = rows.length;
     let totalActiveNowLocal = 0;
-    let totalSignedOutLocal = 0;
     let activePeriod = 0;
     let signedOutPeriod = 0;
 
@@ -44,7 +37,6 @@ const UsersAnalytics = ({ rows }) => {
       const isSignedIn = !isSignedOutByTimestamp;
 
       if (isOnlineNow) totalActiveNowLocal += 1;
-      if (isSignedOutByTimestamp) totalSignedOutLocal += 1;
 
       if (isSignedIn) {
         const activityTime = lastActiveAt || createdAt;
@@ -56,20 +48,10 @@ const UsersAnalytics = ({ rows }) => {
       }
     });
 
-    const chartDataLocal = [
-      // Removed graph data for active and signed out users
-    ];
-
-    const rangeLabelLocal = range === 'daily' ? 'Last 24 hours' : range === 'week' ? 'Last 7 days' : range === 'year' ? 'Last 12 months' : 'Last 30 days';
-
     return {
       kpiActive: activePeriod,
       kpiSignedOut: signedOutPeriod,
       totalActiveNow: totalActiveNowLocal,
-      totalUsers: totalUsersLocal,
-      totalSignedOut: totalSignedOutLocal,
-      chartData: chartDataLocal,
-      rangeLabel: rangeLabelLocal,
     };
   }, [rows, range]);
 

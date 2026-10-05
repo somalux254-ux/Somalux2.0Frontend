@@ -1,8 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { FiDownload, FiFolder } from 'react-icons/fi';
+import { FiDownload } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import styled from 'styled-components';
-import { downloadOptimizer } from '../../utils/DownloadOptimizer';
 import { checkDownloadLimit, recordDownload } from '../../utils/downloadLimitService';
 import { getSelectedFolder, setSelectedFolder } from '../utils/downloadFolderManager';
 import DownloadLimitModal from './DownloadLimitModal';

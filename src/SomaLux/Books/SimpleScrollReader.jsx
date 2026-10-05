@@ -1,11 +1,11 @@
-﻿// SimpleScrollReader.jsx - Like Microsoft Edge PDF viewer - just scroll to read
-import React, { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
+// SimpleScrollReader.jsx - Like Microsoft Edge PDF viewer - just scroll to read
+import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { TextToSpeech } from '@capacitor-community/text-to-speech';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-import { FiX, FiPlay, FiPause, FiList, FiDownload, FiBarChart2, FiEdit3, FiBookmark, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiX, FiPlay, FiPause, FiList, FiDownload, FiBookmark } from 'react-icons/fi';
 import { PDFDocument } from 'pdf-lib';
 import saveAs from 'file-saver';
 import SummaryModal from './SummaryModal';
@@ -17,17 +17,16 @@ import { generateSummaryDocument } from './utils/generateWordDoc';
 import useMobileZoomGestures from './hooks/useMobileZoomGestures';
 import ZoomClarity from './ZoomClarity';
 import { getPersistentPdfSource } from './utils/persistentPdfCache';
+import { SystemBars } from '../../theme';
 import loadingSvg from './loading.svg';
 import './SimpleScrollReader.css';
 
 const PersistentTts = registerPlugin('PersistentTts');
-const SystemBars = registerPlugin('SystemBars');
 
 // Verify worker is configured (set in pdfConfig.js at startup)
 let simpleReaderWorkerReady = false;
 
 if (pdfjs.GlobalWorkerOptions.workerSrc) {
-  console.log('✅ SimpleScrollReader: Worker ready:', pdfjs.GlobalWorkerOptions.workerSrc);
   simpleReaderWorkerReady = true;
 } else {
   console.error('❌ PDF worker not configured! Attempting fallback...');
@@ -35,7 +34,6 @@ if (pdfjs.GlobalWorkerOptions.workerSrc) {
     const fallbackWorker = '/pdf.worker.min.mjs';
     pdfjs.GlobalWorkerOptions.workerSrc = fallbackWorker;
     simpleReaderWorkerReady = true;
-    console.log('✅ SimpleScrollReader: Worker set to fallback:', fallbackWorker);
   } catch (e) {
     console.error('❌ Failed to set PDF worker fallback in SimpleScrollReader:', e);
     simpleReaderWorkerReady = false;
@@ -92,13 +90,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
       });
       voices = window.speechSynthesis.getVoices();
     }
-    console.log('[tts] Browser speech engine ready', {
-      voiceCount: voices.length,
-      paused: window.speechSynthesis.paused,
-      speaking: window.speechSynthesis.speaking,
-      pending: window.speechSynthesis.pending,
-      defaultVoice: voices.find(voice => voice.default)?.name || null
-    });
     // Chrome can speak with its default voice even when getVoices() is still empty.
     return true;
   }, [useNativeTextToSpeech]);
@@ -114,7 +105,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
             const language = languages.find(value => /^en(-|$)/i.test(value)) || languages[0];
             if (language) {
               nativeTtsLanguageRef.current = language;
-              console.log('[tts] Native engine ready', { language, languageCount: languages.length });
               return true;
             }
           } catch (error) {
@@ -133,16 +123,11 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
   const getZoomPercent = (value) => Math.max(0, Math.min(100, Math.round((Math.log(Math.max(MIN_ZOOM, value) / MIN_ZOOM) / Math.log(MAX_ZOOM / MIN_ZOOM)) * 100)));
   // Debug: Log the PDF source
   useEffect(() => {
-    console.log('🔍 SimpleScrollReader received PDF source', {
-      sourceType: src?.startsWith('blob:') ? 'persistent-cache' : 'signed-url',
-      hasSource: Boolean(src),
-      cacheKey
-    });
     loadingStartedAtRef.current = Date.now();
     if (!src) {
       console.warn('⚠️ No PDF source provided!');
     }
-  }, [src]);
+  }, [src, cacheKey]);
 
   const [numPages, setNumPages] = useState(null);
   const [documentSource, setDocumentSource] = useState(null);
@@ -154,19 +139,15 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
   const zoomTimeoutRef = useRef(null);
   const zoomAnchorRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [firstPageReady, setFirstPageReady] = useState(false);
   const hasRenderedFirstPageRef = useRef(false);
   const loadingStartedAtRef = useRef(Date.now());
   const [pdfError, setPdfError] = useState(!simpleReaderWorkerReady);
   const [showTOC, setShowTOC] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [audioCurrentPage, setAudioCurrentPage] = useState(1);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const [audioProgress, setAudioProgress] = useState(0);
   const audioStateRef = useRef({ isAudioPlaying: false, isPaused: false });
   const [extractedText, setExtractedText] = useState('');
   const [pageTextMap, setPageTextMap] = useState({});
-  const [sentenceMap, setSentenceMap] = useState([]);
   const pageTextMapRef = useRef({});
   const pdfDocumentRef = useRef(null);
   const textLoadPromiseRef = useRef(null);
@@ -192,8 +173,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
   const [statisticsModalOpen, setStatisticsModalOpen] = useState(false);
   const [bookmarksPageOpen, setBookmarksPageOpen] = useState(false);
-  const [notes, setNotes] = useState(new Map());
-  const [readingStartTime, setReadingStartTime] = useState(new Date());
+  const [notes] = useState(new Map());
   const [totalReadingTime, setTotalReadingTime] = useState(0);
 
   useEffect(() => {
@@ -202,7 +182,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
     const keepSpeechAlive = window.setInterval(() => {
       if (!isPlayingRef.current) return;
       if (window.speechSynthesis.paused) {
-        console.log('[tts] Resuming paused browser speech');
         window.speechSynthesis.resume();
       } else if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending && Date.now() - lastSpeechActivityRef.current > 1800) {
         console.warn('[tts] Speech engine stalled; restarting current page');
@@ -216,15 +195,12 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
   }, [isAudioPlaying, useNativeTextToSpeech]);
 
   // Use perfect WPS-grade selection with uniform styling support (all colors/styles)
-  const { selection, position, clearSelection, isSelecting, lensData, bounds } = useWPSPrecisionSelectionPerfect('.simple-scroll-reader');
-  const containerRef = useRef(null);
+  const { selection, position, clearSelection } = useWPSPrecisionSelectionPerfect('.simple-scroll-reader');
   const scrollAreaRef = useRef(null);
   const contentAreaRef = useRef(null);
   const [pageWidth, setPageWidth] = useState(null);
   const pageRefsMap = useRef({});
   const zoomIndicatorRef = useRef(null);
-  const scaleRef = useRef(1.0);
-  const audioRef = useRef(null);
   const isPlayingRef = useRef(false);
   const audioToggleRef = useRef(null);
   const playPageAudioRef = useRef(null);
@@ -275,9 +251,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
 
   // Debug: Monitor selection state
   useEffect(() => {
-    if (selection) {
-      console.log('📲 SimpleScrollReader - Selection state updated:', { selection, position });
-    }
   }, [selection, position]);
   const handleDocumentLoad = (pdfDocument) => {
     const nextNumPages = pdfDocument?.numPages || 0;
@@ -294,11 +267,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
     if (hasRenderedFirstPageRef.current) return;
 
     hasRenderedFirstPageRef.current = true;
-    console.log('[pdf-load] First page rendered', {
-      durationMs: Date.now() - loadingStartedAtRef.current,
-      title
-    });
-    setFirstPageReady(true);
     setLoadingMessageIndex(2);
     setIsLoading(false);
 
@@ -333,10 +301,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
 
   // Add or update note for current page
   // Get note for current page
-  const getCurrentPageNote = () => {
-    return notes.get(currentPage);
-  };
-
   // Get reading statistics
   const getStatistics = () => {
     const timeInMinutes = Math.floor(totalReadingTime / 60);
@@ -418,7 +382,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
     if (zoomIndicatorRef.current) {
       zoomIndicatorRef.current.textContent = `${getZoomPercent(nextScale)}%`;
     }
-  }, []);
+  }, [DEFAULT_ZOOM]);
 
   // Initialize mobile zoom gestures hook - defined after zoom functions
   const handleMobileDoubleTap = useCallback((touch, eventTarget) => {
@@ -472,7 +436,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
       scrollArea.classList.remove('pinch-preview');
     });
     return () => cancelAnimationFrame(frame);
-  }, [mobileScale, isMobileDevice]);
+  }, [mobileScale, isMobileDevice, DEFAULT_ZOOM]);
 
   // --- Zoom stability & clarity fix ------------------------------------------------
   // (1) devicePixelRatio must only reflect the SCREEN's real pixel density. It was
@@ -523,7 +487,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
     return () => {
       if (zoomTimeoutRef.current) clearTimeout(zoomTimeoutRef.current);
     };
-  }, [effectiveScale, isMobileDevice]);
+  }, [effectiveScale, isMobileDevice, currentPage]);
 
   useLayoutEffect(() => {
     const anchor = zoomAnchorRef.current;
@@ -575,7 +539,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
       scrollArea.style.setProperty('--zoom-correction', String(ratio));
       scrollArea.classList.add('zoom-correcting');
     }
-  }, [effectiveScale, committedScale]);
+  }, [effectiveScale, committedScale, isMobileDevice]);
 
   // Pan gesture hook for zoomed content - allows swiping to see full content when zoomed
   // Ultra-optimized scroll handler with virtual rendering - tracks current page and visible pages
@@ -718,9 +682,9 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
   };
 
   // Get sorted bookmarked pages
-  const getBookmarkedPages = () => {
+  const getBookmarkedPages = useCallback(() => {
     return Array.from(bookmarks).sort((a, b) => a - b);
-  };
+  }, [bookmarks]);
 
 
 
@@ -766,7 +730,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
       console.error('Error exporting PDF:', error);
       alert('Failed to export bookmarked pages');
     }
-  }, [bookmarks, src, title]);
+  }, [getBookmarkedPages, src, title]);
 
   // Export summary as Word document
   const exportSummaryAsWord = useCallback(async () => {
@@ -781,7 +745,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
       console.error('Error exporting summary:', error);
       alert('Failed to export summary');
     }
-  }, [bookmarks, src, title]);
+  }, [getBookmarkedPages, pageTextMap, title]);
 
   // Play audio for current page - page by page reading
   const loadTextPage = useCallback(async (pageNum) => {
@@ -895,7 +859,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
           volume: 1.0,
           queueStrategy: 0
         }).then(() => {
-          console.log('[tts] Native sentence completed', { page: pageNum, sentenceLength: sentences[sentenceIndex].length });
           sentenceIndex += 1;
           audioSentenceIndexRef.current = sentenceIndex;
           setTimeout(speakNextNativeSentence, 150);
@@ -941,16 +904,8 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
       utterance.lang = preferredVoice?.lang || 'en-US';
       utterance.pitch = 1;
       utterance.volume = 1;
-      console.log('[tts] Browser sentence starting', {
-        page: pageNum,
-        sentenceLength: sentence.length,
-        voice: preferredVoice?.name || null,
-        language: preferredVoice?.lang || null,
-        volume: utterance.volume
-      });
 
       utterance.onend = () => {
-        console.log('[tts] Browser sentence completed', { page: pageNum });
         lastSpeechActivityRef.current = Date.now();
         speechRetryCountRef.current = 0;
         sentenceIndex += 1;
@@ -984,7 +939,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
 
     // Start reading sentences on this page
     readNextSentence();
-  }, [loadTextPage, pageTextMap, numPages, useNativeTextToSpeech]);
+  }, [loadTextPage, numPages, useNativeTextToSpeech]);
 
   playPageAudioRef.current = playPageAudio;
 
@@ -1039,12 +994,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
 
   // Toggle audio playback (play/pause)
   const toggleAudio = useCallback(async () => {
-    console.log('[tts] Toggle requested', {
-      native: useNativeTextToSpeech,
-      isAudioPlaying,
-      isPaused,
-      hasExtractedText: Boolean(extractedText)
-    });
     if (useNativeTextToSpeech) {
       const ready = await prepareNativeTextToSpeech();
       if (!ready) return;
@@ -1097,11 +1046,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
       const selectedPageText = readablePages
         .map(page => `Page ${page.pageNum}. ${page.text.trim()}`)
         .join('\n\n');
-      console.log('[tts] Text extraction ready', {
-        pageCount: readablePages.length,
-        selectedPage: readablePage?.pageNum || currentPage,
-        selectedPageCharacters: selectedPageText.length
-      });
       if (!selectedPageText) {
         console.error('[tts] Selected PDF page contains no extractable text');
         setIsAudioPlaying(false);
@@ -1123,7 +1067,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
       isPlayingRef.current = true;
       setIsAudioPlaying(true);
       setIsPaused(false);
-      setAudioProgress(0);
       if (useNativeTextToSpeech) {
         PersistentTts.speak({
           text: selectedPageText,
@@ -1136,7 +1079,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
       }
       playPageAudio();
     }
-  }, [ensureTextLoaded, isAudioPlaying, isPaused, playPageAudio, prepareBrowserTextToSpeech, prepareNativeTextToSpeech, useNativeTextToSpeech]);
+  }, [currentPage, ensureTextLoaded, isAudioPlaying, isPaused, playPageAudio, prepareBrowserTextToSpeech, prepareNativeTextToSpeech, title, useNativeTextToSpeech]);
 
   audioToggleRef.current = toggleAudio;
   audioStateRef.current = { isAudioPlaying, isPaused };
@@ -1160,7 +1103,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
     if (selection && selection.text && selection.text.length > 0) {
       try {
         await navigator.clipboard.writeText(selection.text);
-        console.log('✅ Text copied to clipboard');
         // Panel stays open with feedback animation
       } catch (err) {
         console.error('❌ Failed to copy:', err);
@@ -1171,7 +1113,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
         textarea.select();
         try {
           document.execCommand('copy');
-          console.log('✅ Text copied via fallback');
         } catch (e) {
           console.error('❌ Fallback copy failed:', e);
         }
@@ -1207,7 +1148,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
       );
 
       let node;
-      while (node = walker.nextNode()) {
+      while ((node = walker.nextNode())) {
         // Check if node is within the range
         const nodeRange = document.createRange();
         nodeRange.selectNode(node);
@@ -1233,9 +1174,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
         
         // For each text node, wrap it or partial text if at boundaries
         const parent = textNode.parentNode;
-        
-        // Create a partial selection within this text node
-        const nodeRange = document.createRange();
         
         if (textNode === rangeCopy.startContainer && textNode === rangeCopy.endContainer) {
           // Single node: partial selection
@@ -1289,7 +1227,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
         }
       });
 
-      console.log(`✨ Highlighted: "${selection.text.substring(0, 30)}..." in ${color}`);
       sel.removeAllRanges();
     } catch (err) {
       console.error('❌ Highlight failed:', err);

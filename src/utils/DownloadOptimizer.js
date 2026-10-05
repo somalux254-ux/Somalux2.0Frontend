@@ -25,7 +25,6 @@ export class DownloadOptimizer {
       // Try to get from cache first
       const cachedBlob = await this.getCachedFile(filename);
       if (cachedBlob) {
-        console.log('✅ Using cached file:', filename);
         this.triggerDownload(cachedBlob, filename);
         return;
       }
@@ -72,7 +71,6 @@ export class DownloadOptimizer {
       // Trigger download
       this.triggerDownload(blob, filename);
       
-      console.log(`✅ Downloaded ${filename} (${this.formatBytes(blob.size)})`);
     } catch (error) {
       console.error('Download failed:', error);
       throw error;
@@ -120,19 +118,18 @@ export class DownloadOptimizer {
       const chunkCount = Math.ceil(contentLength / this.chunkSize);
       const chunks = new Array(chunkCount);
       let downloadedBytes = 0;
+      const reportProgress = (bytes) => {
+        downloadedBytes += bytes;
+        if (onProgress) {
+          const progress = (downloadedBytes / contentLength) * 100;
+          onProgress(progress, downloadedBytes, contentLength);
+        }
+      };
 
       // Download chunks in parallel
       const activeDownloads = [];
       for (let i = 0; i < chunkCount; i++) {
-        activeDownloads.push(this.downloadChunk(url, i, chunks, contentLength)
-          .then((bytes) => {
-            downloadedBytes += bytes;
-            if (onProgress) {
-              const progress = (downloadedBytes / contentLength) * 100;
-              onProgress(progress, downloadedBytes, contentLength);
-            }
-          })
-        );
+        activeDownloads.push(this.downloadChunk(url, i, chunks).then(reportProgress));
 
         // Limit concurrent downloads
         if (activeDownloads.length >= this.maxConcurrentChunks) {
@@ -153,7 +150,6 @@ export class DownloadOptimizer {
       // Trigger download
       this.triggerDownload(blob, filename);
       
-      console.log(`✅ Downloaded large file ${filename} (${this.formatBytes(blob.size)})`);
     } catch (error) {
       console.error('Large file download failed:', error);
       throw error;
@@ -163,10 +159,7 @@ export class DownloadOptimizer {
   /**
    * Download a single chunk of a file
    */
-  async downloadChunk(url, chunkIndex, chunks, totalSize) {
-    const start = chunkIndex * this.chunkSize;
-    const end = Math.min(start + this.chunkSize - 1, totalSize - 1);
-
+  async downloadChunk(url, chunkIndex, chunks) {
     const response = await this.fetchWithRetry(url);
     const reader = response.body.getReader();
     const chunk = [];
@@ -206,7 +199,6 @@ export class DownloadOptimizer {
         request.onsuccess = () => resolve();
       });
 
-      console.log(`💾 Cached ${filename} in IndexedDB`);
     } catch (error) {
       console.warn('Failed to cache file:', error);
     }
@@ -305,7 +297,6 @@ export class DownloadOptimizer {
         request.onerror = () => reject(request.error);
         request.onsuccess = () => resolve();
       });
-      console.log('✅ Cache cleared');
     } catch (error) {
       console.error('Failed to clear cache:', error);
     }

@@ -14,7 +14,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-reader') => {
   const isMobileRef = useRef(false);
-  const [isMobile, setIsMobile] = useState(false);
 
   const [selection, setSelection] = useState(null);
   const [position, setPosition] = useState(null);
@@ -34,7 +33,6 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
         navigator.userAgent
       ) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) || (navigator.maxTouchPoints > 2);
       isMobileRef.current = mobile;
-      setIsMobile(mobile);
     };
     detectMobile();
     window.addEventListener('orientationchange', detectMobile);
@@ -78,7 +76,7 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
       );
 
       let node;
-      while (node = walker.nextNode()) {
+      while ((node = walker.nextNode())) {
         // Check if this node is within the range
         const nodeRange = document.createRange();
         nodeRange.selectNodeContents(node);
@@ -361,7 +359,10 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
       if (cleanSelectedText.length < 1) return false;
       if (cleanSelectedText.length > 50000) return false; // Very generous limit
 
-      if (/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(cleanSelectedText)) {
+      if ([...cleanSelectedText].some(character => {
+        const code = character.charCodeAt(0);
+        return code <= 0x08 || code === 0x0B || code === 0x0C || (code >= 0x0E && code <= 0x1F);
+      })) {
         return false;
       }
 
@@ -460,7 +461,6 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
 
       // LAYER 1: Text nodes
       if (!validateTextNodes(range)) {
-        console.log('❌ PRECISION: Failed text node validation');
         setLensData(null);
         return;
       }
@@ -469,33 +469,28 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
       const allRects = collectAllRects(range);
       const bounds = validateRectBoundariesPerfect(allRects);
       if (!bounds) {
-        console.log('❌ PRECISION: Failed rect boundary validation');
         setLensData(null);
         return;
       }
 
       // LAYER 3: Spillage
       if (!validateNoTextSpillage(range, text)) {
-        console.log('❌ PRECISION: Failed spillage validation');
         setLensData(null);
         return;
       }
 
       // LAYER 4: Container bounds
       if (!validateContainerBoundaries(bounds)) {
-        console.log('❌ PRECISION: Failed container boundary validation');
         setLensData(null);
         return;
       }
 
       // LAYER 5: Text integrity
       if (!validateTextIntegrity(range, text)) {
-        console.log('❌ PRECISION: Failed text integrity validation');
         setLensData(null);
         return;
       }
 
-      console.log('✅ PRECISION: Valid selection detected', { text: text.substring(0, 30), bounds });
 
       // Update lens data for live feedback ONLY (no panel yet)
       updateLensData(range, text, bounds);
@@ -533,7 +528,6 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
   const completeSelection = useCallback(() => {
     try {
       if (!lastCompletedSelectionRef.current) {
-        console.log('ℹ️ No selection to complete');
         setSelection(null);
         setPosition(null);
         return;
@@ -541,18 +535,15 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
 
       const { text, range, bounds } = lastCompletedSelectionRef.current;
 
-      console.log('🔍 completeSelection: text length =', text.length, 'bounds =', bounds);
 
       // Calculate position for panel
       const pos = calculatePosition(bounds);
       if (!pos) {
-        console.log('❌ Failed to calculate panel position, bounds =', bounds);
         setSelection(null);
         setPosition(null);
         return;
       }
 
-      console.log('🎉 SELECTION COMPLETED - Showing panel', { text: text.substring(0, 30), pos });
 
       // NOW show the panel
       setSelection({

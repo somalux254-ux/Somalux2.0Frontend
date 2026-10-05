@@ -29,6 +29,22 @@ const readCachedSessionUser = () => {
   }
 };
 
+const getUserProfileStorageKey = (user) => (user?.id ? `userProfile_${user.id}` : 'userProfile');
+
+const getStoredUserProfile = (user) => {
+  const key = getUserProfileStorageKey(user);
+  try {
+    const current = JSON.parse(localStorage.getItem(key) || '{}');
+    if (current && Object.keys(current).length > 0) return current;
+  } catch (error) {}
+
+  try {
+    return JSON.parse(localStorage.getItem('userProfile') || '{}');
+  } catch (error) {
+    return {};
+  }
+};
+
 export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [profileImage, setProfileImage] = useState(() => {
@@ -60,23 +76,7 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
     notifications: 0,
   };
 
-  const getUserProfileStorageKey = (user) => (user?.id ? `userProfile_${user.id}` : 'userProfile');
-
-  const getStoredUserProfile = (user) => {
-    const key = getUserProfileStorageKey(user);
-    try {
-      const current = JSON.parse(localStorage.getItem(key) || '{}');
-      if (current && Object.keys(current).length > 0) return current;
-    } catch (e) {}
-
-    try {
-      return JSON.parse(localStorage.getItem('userProfile') || '{}');
-    } catch (e) {
-      return {};
-    }
-  };
-
-  const setStoredUserProfile = (user, data) => {
+  const setStoredUserProfile = useCallback((user, data) => {
     const key = getUserProfileStorageKey(user);
     try {
       localStorage.setItem(key, JSON.stringify(data));
@@ -87,34 +87,13 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
         localStorage.setItem('userProfile', JSON.stringify(data));
       } catch (e) {}
     }
-  };
-
-  const getUserAvatarUrl = (user, profileRow = null) => {
-    const stored = getStoredUserProfile(user);
-
-    const candidates = [
-      profileRow?.avatar_url,
-      profileRow?.avatar,
-      user?.user_metadata?.avatar_url,
-      user?.user_metadata?.picture,
-      user?.app_metadata?.avatar_url,
-      user?.app_metadata?.picture,
-      user?.avatar_url,
-      user?.picture,
-      stored?.avatar,
-      stored?.avatar_url,
-    ];
-
-    return candidates.find((candidate) => !!candidate && typeof candidate === 'string' && candidate.trim().length > 0) || null;
-  };
+  }, []);
 
   const loadAvatar = async (url, retryCount = 0) => {
     if (!url) {
-      console.log('⚠️ No URL provided to loadAvatar');
       return null;
     }
     
-    console.log('📸 loadAvatar called with:', url.substring(0, 60) + '...');
     
     // For simplicity, just use the avatar URL directly
     // The backend will handle caching and proxy if needed
@@ -140,8 +119,7 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
           },
           { returning: 'minimal' }
         );
-    } catch (e) {
-      console.warn('Failed to mark profile active', e);
+    } catch {
     }
   };
 
@@ -157,8 +135,7 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
           deactivated_at: nowIso,
         })
         .eq('id', user.id);
-    } catch (e) {
-      console.warn('Failed to mark profile signed out', e);
+    } catch {
     }
   };
 
@@ -186,7 +163,7 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
   }, [showActionsGrid]);
 
   // Load data from storage
-  const loadDataFromStorage = () => {
+  const loadDataFromStorage = useCallback(() => {
     try {
       const currentUser = authUser || JSON.parse(localStorage.getItem('somalux_current_session') || '{}')?.user || null;
       const stored = getStoredUserProfile(currentUser);
@@ -208,7 +185,7 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
     try {
       setNotificationsCount(Number(localStorage.getItem("notifications") || 0));
     } catch (e) {}
-  };
+  }, [authUser]);
 
   useEffect(() => {
     loadDataFromStorage();
@@ -221,7 +198,7 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener("wishlistChanged", handleStorage);
     };
-  }, []);
+  }, [loadDataFromStorage]);
 
   // Fetch subscription tier
   useEffect(() => {
@@ -260,31 +237,19 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
   // Auth initialization - fetch full profile from Supabase
   useEffect(() => {
     (async () => {
-      console.log('🔐 [Profile] Initializing auth...');
       const { data } = await supabase.auth.getSession();
       const user = data?.session?.user || null;
-      console.log('🔐 [Profile] Auth session:', user?.email ? `${user.email}` : 'No user');
       setAuthUser(user);
 
       if (user) {
         try {
-          console.log('📥 [Profile] Fetching full profile from Supabase for:', user.email);
           const fullProfile = await getCurrentUserProfile();
-          console.log('📥 [Profile] Full profile loaded:', {
-            email: fullProfile?.email,
-            avatar_url: fullProfile?.avatar_url ? `[URL present: ${fullProfile.avatar_url.substring(0, 50)}...]` : '[No avatar]',
-            role: fullProfile?.role,
-            full_name: fullProfile?.full_name
-          });
 
           const avatarUrl = fullProfile?.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
           
           if (avatarUrl) {
-            console.log('🖼️ [Profile] Setting avatar URL:', avatarUrl.substring(0, 60) + '...');
             setProfileImage(avatarUrl);
-          } else {
-            console.log('⚠️ [Profile] No avatar URL found');
-          }
+          } 
 
           const authUserData = {
             name: fullProfile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
@@ -296,7 +261,6 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
             avatar_url: avatarUrl,
           };
           
-          console.log('✅ [Profile] Setting local user data');
           setLocalUser(authUserData);
           setStoredUserProfile(user, authUserData);
           markProfileActive(user);
@@ -326,23 +290,16 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
     const { data: { subscription } = {} } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!isMounted) return;
       
-      console.log('🔐 [Profile] Auth state changed:', _event);
       const user = session?.user || null;
       setAuthUser(user);
       
       if (user) {
         try {
-          console.log('📥 [Profile] Auth state change - fetching full profile for:', user.email);
           const fullProfile = await getCurrentUserProfile();
-          console.log('📥 [Profile] Profile from auth change:', {
-            avatar_url: fullProfile?.avatar_url ? '[URL present]' : '[No avatar]',
-            role: fullProfile?.role
-          });
 
           const avatarUrl = fullProfile?.avatar_url || user.user_metadata?.avatar_url || user.user_metadata?.picture || null;
           
           if (avatarUrl) {
-            console.log('🖼️ [Profile] Setting avatar from auth change');
             setProfileImage(avatarUrl);
           }
 
@@ -374,8 +331,7 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
                     display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || null,
                     updated_at: new Date().toISOString(),
                   }, { onConflict: 'id' });
-                if (!error) console.log('✅ Avatar synced to profiles table');
-                else console.warn('⚠️ Failed to sync avatar:', error);
+                if (error) console.warn('⚠️ Failed to sync avatar:', error);
               } catch (e) {
                 console.warn('⚠️ Avatar sync error:', e);
               }
@@ -384,8 +340,7 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
 
           // Non-blocking profile marking
           markProfileActive(user);
-        } catch (e) {
-          console.error('❌ [Profile] Auth state change error:', e);
+        } catch {
           // Fallback user data
           const authUserData = {
             name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
@@ -422,7 +377,7 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
         subscription?.unsubscribe?.();
       } catch (e) {}
     };
-  }, []);
+  }, [setStoredUserProfile]);
 
   // Display values
   const displayedName = authUser?.user_metadata?.full_name || authUser?.email?.split('@')[0] || localUser?.name || propUser?.name || FALLBACK.name;
@@ -456,14 +411,12 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
               // Try fallback avatar using email hash
               if (authUser?.email && !profileImage.includes('dicebear')) {
                 const fallbackUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${authUser.email}`;
-                console.log('🔄 [Profile] Trying fallback avatar:', fallbackUrl);
                 setProfileImage(fallbackUrl);
               } else {
                 setProfileImage(null);
               }
             }}
             onLoad={() => {
-              console.log('✅ Profile avatar loaded successfully:', profileImage?.substring(0, 60));
             }}
           />
         ) : (

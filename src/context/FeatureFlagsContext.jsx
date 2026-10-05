@@ -15,7 +15,6 @@ export const FeatureFlagsContext = createContext();
 const FEATURES_CACHE_KEY = 'app_features_cache';
 const FEATURES_TIMESTAMP_KEY = 'app_features_timestamp';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-const REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes
 
 // Default features - used if backend fails and cache is empty
 const DEFAULT_FEATURES = {
@@ -56,7 +55,6 @@ export const FeatureFlagsProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const wsRef = useRef(null);
-  const refreshTimerRef = useRef(null);
   const hasInitializedRef = useRef(false);
 
   /**
@@ -72,8 +70,6 @@ export const FeatureFlagsProvider = ({ children }) => {
       if (user?.id) params.user_id = user.id;
       if (user?.tier) params.user_tier = user.tier;
 
-      console.log('Fetching features from:', API_URL);
-      
       let response;
       try {
         // Try main features endpoint
@@ -81,18 +77,14 @@ export const FeatureFlagsProvider = ({ children }) => {
           `${API_URL}/api/features`,
           { params, timeout: 5000 }
         );
-        console.log('✅ Features fetched from /api/features');
-      } catch (mainError) {
-        console.warn('⚠️ /api/features failed, trying simpler endpoint:', mainError.message);
+      } catch {
         try {
           // Fallback to simple endpoint without DB queries
           response = await axios.get(
             `${API_URL}/api/features-simple`,
             { timeout: 3000 }
           );
-          console.log('✅ Features fetched from /api/features-simple (fallback)');
         } catch (simpleError) {
-          console.error('❌ Both /api/features and /api/features-simple failed');
           throw simpleError; // Proceed to cache/defaults
         }
       }
@@ -106,16 +98,13 @@ export const FeatureFlagsProvider = ({ children }) => {
         localStorage.setItem(FEATURES_TIMESTAMP_KEY, Date.now().toString());
         setFeatures(mergedFeatures);
         setError(null);
-        console.log('✅ Features loaded from backend:', Object.keys(mergedFeatures).length);
       } else {
         // Empty response - use cache or defaults
         throw new Error('Backend returned empty features');
       }
       
       return newFeatures;
-    } catch (err) {
-      console.warn('⚠️ Failed to fetch features from backend:', err.message);
-      
+    } catch {
       // Try to use cached features
       const cachedFeatures = localStorage.getItem(FEATURES_CACHE_KEY);
       if (cachedFeatures) {
@@ -123,15 +112,11 @@ export const FeatureFlagsProvider = ({ children }) => {
           const parsed = JSON.parse(cachedFeatures);
           setFeatures(mergeFeatures(parsed));
           setError('Using cached features');
-          console.log('✅ Using cached features');
           return mergeFeatures(parsed);
-        } catch (parseErr) {
-          console.warn('Cache parse error:', parseErr);
-        }
+        } catch {}
       }
       
       // Fall back to defaults
-      console.log('Using default features (backend unavailable)');
       setFeatures(DEFAULT_FEATURES);
       setError('Backend unavailable - using default features');
       setLoading(false);
@@ -147,7 +132,6 @@ export const FeatureFlagsProvider = ({ children }) => {
   const setupWebSocket = useCallback(() => {
     // Skip WebSocket setup in production on Render (which doesn't support it well)
     if (process.env.NODE_ENV === 'production' && window.location.hostname !== 'localhost') {
-      console.log('⏭️ WebSocket skipped (not available in production)');
       return;
     }
 
@@ -162,14 +146,12 @@ export const FeatureFlagsProvider = ({ children }) => {
       const ws = new WebSocket(wsUrl);
       let connectTimeout = setTimeout(() => {
         if (ws.readyState !== WebSocket.OPEN) {
-          console.warn('WebSocket connection timeout');
           ws.close();
         }
       }, 3000);
 
       ws.onopen = () => {
         clearTimeout(connectTimeout);
-        console.log('✅ Feature flags WebSocket connected');
         wsRef.current = ws;
       };
 
@@ -178,31 +160,24 @@ export const FeatureFlagsProvider = ({ children }) => {
           const message = JSON.parse(event.data);
 
           if (message.type === 'feature_update') {
-            console.log('📢 Feature update received:', message.feature);
             fetchFeatures();
           }
-        } catch (err) {
-          console.warn('WebSocket message parse error:', err);
-        }
+        } catch {}
       };
 
-      ws.onerror = (error) => {
+      ws.onerror = () => {
         clearTimeout(connectTimeout);
-        console.warn('⚠️ Feature flags WebSocket error (non-critical):', error?.type);
-        // Don't fail the app - just log the warning
       };
 
       ws.onclose = () => {
         clearTimeout(connectTimeout);
-        console.log('Feature flags WebSocket disconnected');
         wsRef.current = null;
         // Reconnect after 5 seconds (non-critical)
         setTimeout(setupWebSocket, 5000);
       };
 
       wsRef.current = ws;
-    } catch (err) {
-      console.warn('WebSocket setup failed (non-critical):', err);
+    } catch {
       // Don't fail - WebSocket is optional for feature flags
     }
   }, [fetchFeatures]);
@@ -224,29 +199,23 @@ export const FeatureFlagsProvider = ({ children }) => {
         const parsed = JSON.parse(cachedFeatures);
         setFeatures(mergeFeatures(parsed));
         setLoading(false);
-        console.log('✅ Loaded features from cache instantly');
-      } catch (parseErr) {
-        console.warn('Cache parse error:', parseErr);
+      } catch {
       }
     } else if (cachedFeatures) {
       try {
         const parsed = JSON.parse(cachedFeatures);
         setFeatures(mergeFeatures(parsed));
-        console.log('⚡ Loaded stale features from cache');
-      } catch (parseErr) {
-        console.warn('Cache parse error:', parseErr);
+      } catch {
       }
     } else {
       // No cache - use defaults immediately
       setFeatures(DEFAULT_FEATURES);
-      console.log('📦 Using default features');
     }
 
     // Fetch fresh features from backend (non-blocking)
     fetchFeatures();
 
     return () => {
-      if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
       if (wsRef.current) {
         try {
           wsRef.current.close();

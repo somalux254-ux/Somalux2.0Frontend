@@ -555,7 +555,6 @@ export function setupAutoFill(inputElement, resultContainer) {
       if (query.length < 3) return;
 
       const suggestions = await searchUniversityNames(query);
-      console.log('Suggestions:', suggestions);
       
       const datalist = document.createElement('datalist');
       datalist.id = 'university-suggestions';

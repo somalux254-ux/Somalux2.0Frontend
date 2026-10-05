@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchProfiles, updateUserTier } from '../api';
 import { useAdminUI } from '../AdminUIContext';
@@ -120,22 +120,19 @@ const Verify = ({ userProfile }) => {
   const [search, setSearch] = useState('');
   const [tierFilter, setTierFilter] = useState('');
   const [updating, setUpdating] = useState({});
-  const [sort, setSort] = useState({ col: 'created_at', dir: 'desc' });
   const [tierMenuOpen, setTierMenuOpen] = useState(false);
   const tierMenuRef = useRef(null);
 
-  const { confirm, showToast } = useAdminUI();
+  const { showToast } = useAdminUI();
   const ADMIN_EMAILS = ['campuslives254@gmail.com', 'paltechsomalux@gmail.com', 'eliblearning@gmail.com'];
   const isAdmin = userProfile?.role === 'admin' || ADMIN_EMAILS.includes(userProfile?.email);
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(count / pageSize)), [count, pageSize]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      console.log('[Verify.load] Loading profiles...');
       const allProfiles = await fetchProfiles();
-      console.log('[Verify.load] Fetched', allProfiles?.length || 0, 'profiles');
       
       const profiles = (allProfiles || [])
         .filter(p => p && p.id) // Ensure valid profiles
@@ -150,7 +147,6 @@ const Verify = ({ userProfile }) => {
           };
         });
       
-      console.log('[Verify.load] Loaded profiles:', profiles.length);
       setRows(profiles);
       setCount(profiles.length);
     } catch (error) {
@@ -159,11 +155,13 @@ const Verify = ({ userProfile }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
 
   useEffect(() => {
-    if (userProfile) load();
-  }, [userProfile]);
+    if (userProfile) {
+      load();
+    }
+  }, [load, userProfile]);
 
   useEffect(() => {
     const closeTierMenu = (event) => {
@@ -193,9 +191,7 @@ const Verify = ({ userProfile }) => {
   const updateTier = async (userId, newTier) => {
     setUpdating(s => ({ ...s, [userId]: true }));
     try {
-      console.log('[Verify.updateTier] Updating tier for user:', userId, 'to:', newTier);
       const updatedUser = await updateUserTier(userId, newTier);
-      console.log('[Verify.updateTier] Tier updated successfully');
       setRows((currentRows) => currentRows.map((row) => (
         row.id === userId
           ? {

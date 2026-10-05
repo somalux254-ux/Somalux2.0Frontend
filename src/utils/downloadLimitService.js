@@ -152,10 +152,12 @@ export const resetDailyDownloads = () => {
   }
 };
 
-export default {
+const downloadLimitService = {
   checkDownloadLimit,
   recordDownload,
   getTodayDownloadHistory,
   resetDailyDownloads,
   getTodayDownloadCount,
 };
+
+export default downloadLimitService;

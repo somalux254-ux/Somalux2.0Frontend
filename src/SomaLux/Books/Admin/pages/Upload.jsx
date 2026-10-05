@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createBookSubmission, createBook, fetchCategories } from '../api';
 import { createPastPaper, createPastPaperSubmission, getUniversitiesForDropdown, getFacultiesByUniversity, getUnitNamesByUniversityAndFaculty, getYearsByUniversityFacultyAndUnitName, checkDuplicatePastPaper } from '../pastPapersApi';
-import { FiUpload, FiFile, FiImage, FiBook, FiFileText, FiSearch, FiX, FiLoader } from 'react-icons/fi';
+import { FiUpload, FiFile, FiImage, FiBook, FiFileText } from 'react-icons/fi';
 import { useAdminUI } from '../AdminUIContext';
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -108,9 +108,6 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
   const [useCustomYear, setUseCustomYear] = useState(false);
   const [customYear, setCustomYear] = useState('');
   
-  // Success state for past paper upload
-  const [lastUploadedPaper, setLastUploadedPaper] = useState(null);
-
   const [busy, setBusy] = useState(false);
   const [extractingCover, setExtractingCover] = useState(false);
 
@@ -325,9 +322,9 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
               author: author || prev.author,
               title: title || prev.title || (pdf?.name?.replace(/\.[^/.]+$/, '') || '')
             }));
-          } else if (!bookForm.title) {
+          } else {
             // At least set title from filename
-            setBookForm(prev => ({
+            setBookForm(prev => prev.title ? prev : ({
               ...prev,
               title: pdf?.name?.replace(/\.[^/.]+$/, '') || ''
             }));
@@ -412,7 +409,6 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
         uploaded_by: userProfile?.id || null
       };
       
-      console.log('📤 Submitting book with metadata:', metadata);
       
       // Check if user is admin or editor - if so, directly upload; otherwise submit for approval
       const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'editor';
@@ -489,8 +485,6 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
         uploaded_by: userProfile?.id || null
       };
       
-      console.log('📤 Submitting past paper with metadata:', JSON.stringify(metadata, null, 2));
-      console.log('📤 Current form state:', JSON.stringify(paperForm, null, 2));
       
       // Reset form for next upload
       setPaperForm({ university_id: '', faculty: '', unit_code: '', unit_name: '', year: '', semester: '', exam_type: '' });
@@ -723,7 +717,7 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
               <div>
                 <label className="label">Unit Name *</label>
                 {!useCustomUnitName ? (
-                  <select className="select" value={paperForm.unit_name} onChange={onPaperChange('unit_name')} disabled={!paperForm.faculty && !useCustomFaculty || unitNames.length === 0}>
+                  <select className="select" value={paperForm.unit_name} onChange={onPaperChange('unit_name')} disabled={(!paperForm.faculty && !useCustomFaculty) || unitNames.length === 0}>
                     <option value="">
                       {(!paperForm.faculty && !useCustomFaculty) ? 'Select a faculty first' : unitNames.length === 0 ? 'No units available' : 'Select Unit Name'}
                     </option>
@@ -794,7 +788,7 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
               <div>
                 <label className="label">Year *</label>
                 {!useCustomYear ? (
-                  <select className="select" value={paperForm.year} onChange={onPaperChange('year')} disabled={!paperForm.unit_name && !useCustomUnitName || years.length === 0}>
+                  <select className="select" value={paperForm.year} onChange={onPaperChange('year')} disabled={(!paperForm.unit_name && !useCustomUnitName) || years.length === 0}>
                     <option value="">
                       {(!paperForm.unit_name && !useCustomUnitName) ? 'Select a unit first' : years.length === 0 ? 'No years available' : 'Select Year'}
                     </option>

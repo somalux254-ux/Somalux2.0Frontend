@@ -16,7 +16,6 @@ export const HelpTab = ({ onViewFaq }) => {
 
   const handleSubmitContactForm = (e) => {
     e.preventDefault();
-    console.log('Contact form submitted:', contactFormData);
     setFormSubmitted(true);
     
     // Reset form after 3 seconds

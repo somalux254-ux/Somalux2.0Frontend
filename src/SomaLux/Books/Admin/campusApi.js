@@ -205,7 +205,6 @@ export async function createUniversitySubmission({ metadata, coverFile, coverFil
     if (imagesError) throw imagesError;
   }
   
-  console.log('University uploaded successfully:', data);
   try { clearUniversitiesCache(); } catch (e) {}
   return data;
 }

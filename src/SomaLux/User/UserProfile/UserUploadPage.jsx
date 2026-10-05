@@ -13,7 +13,6 @@ const UserUploadPage = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [activeTab, setActiveTab] = useState(tabType || 'books');
   const [userProfile, setUserProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
@@ -22,20 +21,16 @@ const UserUploadPage = () => {
     const fetchUserProfile = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        console.log('👤 UserUploadPage - Auth user:', { id: user?.id, email: user?.email });
         if (user) {
           const { data: profile } = await supabase
             .from('profiles')
             .select('id, email, full_name, role')
             .eq('id', user.id)
             .single();
-          console.log('👤 UserUploadPage - Profile fetched:', profile);
           setUserProfile(profile);
         }
       } catch (err) {
         console.error('Failed to fetch user profile:', err);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -155,4 +150,3 @@ const UserUploadPage = () => {
 };
 
 export default UserUploadPage;
-

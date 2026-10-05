@@ -30,23 +30,19 @@ const API_PATTERNS = [
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
-  console.log('[ServiceWorker] Installing...');
   // Immediately skip waiting to activate faster
   self.skipWaiting();
   
   // Cache static assets in background (non-blocking)
   caches.open(STATIC_CACHE).then((cache) => {
-    console.log('[ServiceWorker] Caching static assets');
     cache.addAll(STATIC_ASSETS).catch(() => {
       // Graceful failure - some assets may not be available yet
-      console.log('[ServiceWorker] Some static assets not available');
     });
   });
 });
 
 // Activate event - cleanup old caches and skip waiting
 self.addEventListener('activate', (event) => {
-  console.log('[ServiceWorker] Activating...');
   event.waitUntil(
     Promise.all([
       // Delete old caches
@@ -62,14 +58,12 @@ self.addEventListener('activate', (event) => {
               return isOldStatic || isOldApi || isOldFeatures || isOldPdf || isOldImage;
             })
             .map((name) => {
-              console.log('[ServiceWorker] Deleting old cache:', name);
               return caches.delete(name);
             })
         );
       }),
       // Claim all clients to activate immediately
       self.clients.claim().then(() => {
-        console.log('[ServiceWorker] Claimed all clients');
       })
     ])
   );
@@ -148,7 +142,6 @@ async function networkFirstStrategy(request, cacheName, timeout = 10000) {
     // Network failed or timed out, try cache
     const cached = await caches.match(request);
     if (cached) {
-      console.log('[ServiceWorker] Using cached response for:', request.url);
       return cached;
     }
 
@@ -247,7 +240,6 @@ self.addEventListener('message', (event) => {
 
   if (event.data && event.data.type === 'CLEAR_FEATURES_CACHE') {
     caches.delete(FEATURES_CACHE).then(() => {
-      console.log('[ServiceWorker] Cleared features cache');
     });
   }
 
@@ -257,7 +249,6 @@ self.addEventListener('message', (event) => {
         cacheNames.map((name) => caches.delete(name))
       );
     }).then(() => {
-      console.log('[ServiceWorker] Cleared all caches');
     });
   }
 });

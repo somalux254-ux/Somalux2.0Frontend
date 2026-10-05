@@ -164,7 +164,6 @@ export class CacheManager {
     }
 
     keysToRemove.forEach(key => localStorage.removeItem(key));
-    console.log(`Cleared ${keysToRemove.length} expired cache entries`);
     return keysToRemove.length;
   }
 

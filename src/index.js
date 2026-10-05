@@ -11,7 +11,7 @@ import { SomaLux } from './SomaLux';
 import SpeedTracker from './SpeedTracker';
 import { prewarmGoogleSignIn } from './auth/AuthModal';
 import { supabase } from './SomaLux/Books/supabaseClient';
-import { handleOAuthCallback } from './auth/oauthHandler';
+import { captureOAuthTokensFromUrl, handleOAuthCallback } from './auth/oauthHandler';
 import { handleSubscriptionBack } from './SomaLux/Subscriptions/backNavigation';
 import { runBackAction } from './SomaLux/services/backNavigation';
 import { initializeTheme } from './theme';
@@ -27,13 +27,13 @@ if ('serviceWorker' in navigator) {
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
+captureOAuthTokensFromUrl();
 prewarmGoogleSignIn();
 
 const hydrateAuthSession = async () => {
   try {
     await handleOAuthCallback(supabase);
-  } catch (error) {
-    console.warn('Auth hydration failed:', error);
+  } catch {
   }
 };
 

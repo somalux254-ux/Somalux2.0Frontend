@@ -3,8 +3,36 @@
  * Called at app start to detect and restore OAuth sessions from URL hash
  */
 
+export const captureOAuthTokensFromUrl = () => {
+  if (typeof window === 'undefined') return false;
+
+  const hashString = window.location.hash.startsWith('#')
+    ? window.location.hash.substring(1)
+    : window.location.hash;
+  const urlParams = new URLSearchParams(hashString);
+  const accessToken = urlParams.get('access_token');
+  const refreshToken = urlParams.get('refresh_token');
+
+  if (!accessToken || !refreshToken) return false;
+
+  try {
+    sessionStorage.setItem('oauth_tokens_from_url', JSON.stringify({
+      accessToken,
+      refreshToken,
+    }));
+  } catch {
+    return false;
+  }
+
+  window.history.replaceState(
+    window.history.state,
+    '',
+    `${window.location.pathname}${window.location.search}#/`
+  );
+  return true;
+};
+
 export const handleOAuthCallback = async (supabase) => {
-  console.log('🔐 [oauthHandler] Checking for OAuth tokens...');
   
   try {
     // 🔐 CRITICAL: First check sessionStorage for tokens captured at app startup
@@ -18,16 +46,12 @@ export const handleOAuthCallback = async (supabase) => {
         oauthData = JSON.parse(stored);
         accessToken = oauthData.accessToken;
         refreshToken = oauthData.refreshToken;
-        console.log('🔐 [oauthHandler] OAuth tokens retrieved from sessionStorage!');
-        console.log('🔐 [oauthHandler] Captured at:', oauthData.capturedAt);
       }
-    } catch (e) {
-      console.warn('⚠️ [oauthHandler] Failed to parse sessionStorage:', e.message);
+    } catch {
     }
     
     // If tokens found in sessionStorage, use them
     if (accessToken && refreshToken) {
-      console.log('🔐 [oauthHandler] Setting session with captured OAuth tokens...');
       
       try {
         const { data, error } = await supabase.auth.setSession({
@@ -35,12 +59,7 @@ export const handleOAuthCallback = async (supabase) => {
           refresh_token: refreshToken,
         });
         
-        if (error) {
-          console.error('❌ [oauthHandler] setSession() failed:', error.message);
-        } else if (data?.session) {
-          console.log('✅ [oauthHandler] Session set successfully!');
-          console.log('✅ [oauthHandler] User ID:', data.session.user?.id);
-          console.log('✅ [oauthHandler] User email:', data.session.user?.email);
+        if (!error && data?.session) {
           
           // Store in localStorage to persist across page reloads
           try {
@@ -48,9 +67,7 @@ export const handleOAuthCallback = async (supabase) => {
               session: data.session,
               timestamp: new Date().getTime(),
             }));
-            console.log('💾 [oauthHandler] Session cached to localStorage');
-          } catch (e) {
-            console.warn('⚠️ [oauthHandler] Failed to cache session:', e);
+          } catch {
           }
           
           // Clean up sessionStorage
@@ -58,22 +75,19 @@ export const handleOAuthCallback = async (supabase) => {
           
           return data.session;
         }
-      } catch (err) {
-        console.error('❌ [oauthHandler] Exception in setSession():', err);
+      } catch {
       }
     }
     
     // Fallback: Check URL hash (in case it's still there)
     const fullHash = window.location.hash;
     if (fullHash.length > 0) {
-      console.log('🔐 [oauthHandler] URL hash found, attempting to parse...');
       const hashString = fullHash.startsWith('#') ? fullHash.substring(1) : fullHash;
       const urlParams = new URLSearchParams(hashString);
       const urlAccessToken = urlParams.get('access_token');
       const urlRefreshToken = urlParams.get('refresh_token');
       
       if (urlAccessToken) {
-        console.log('🔐 [oauthHandler] Access token found in URL hash!');
         
         try {
           const { data, error } = await supabase.auth.setSession({
@@ -81,35 +95,26 @@ export const handleOAuthCallback = async (supabase) => {
             refresh_token: urlRefreshToken || '',
           });
           
-          if (error) {
-            console.error('❌ [oauthHandler] setSession() failed:', error.message);
-          } else if (data?.session) {
-            console.log('✅ [oauthHandler] Session set from URL successfully!');
-            console.log('✅ [oauthHandler] User ID:', data.session.user?.id);
-            console.log('✅ [oauthHandler] User email:', data.session.user?.email);
+          if (!error && data?.session) {
             
             try {
               localStorage.setItem('somalux_oauth_session', JSON.stringify({
                 session: data.session,
                 timestamp: new Date().getTime(),
               }));
-              console.log('💾 [oauthHandler] Session cached to localStorage');
-            } catch (e) {
-              console.warn('⚠️ [oauthHandler] Failed to cache session:', e);
+            } catch {
             }
             
             return data.session;
           }
-        } catch (err) {
-          console.error('❌ [oauthHandler] Exception in setSession():', err);
+        } catch {
         }
       }
     }
     
     // Try to get session from Supabase (in case detectSessionInUrl worked)
-    const { data: { session }, error } = await supabase.auth.getSession();
+    const { data: { session } } = await supabase.auth.getSession();
     if (session) {
-      console.log('✅ [oauthHandler] Session found via getSession()!');
       return session;
     }
     
@@ -118,17 +123,13 @@ export const handleOAuthCallback = async (supabase) => {
       const cached = localStorage.getItem('somalux_oauth_session');
       if (cached) {
         const { session: cachedSession } = JSON.parse(cached);
-        console.log('✅ [oauthHandler] Using cached OAuth session from localStorage');
         return cachedSession;
       }
-    } catch (e) {
-      console.warn('⚠️ [oauthHandler] Failed to load cached session:', e.message);
+    } catch {
     }
     
-    console.log('ℹ️ [oauthHandler] No OAuth session found');
     return null;
-  } catch (err) {
-    console.error('❌ [oauthHandler] Error:', err);
+  } catch {
     return null;
   }
 };

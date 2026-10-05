@@ -12,7 +12,6 @@ export const BookManagement = () => {
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [currentUserTier, setCurrentUserTier] = useState('basic');
-  const [isChatSelected, setIsChatSelected] = useState(false);
   const tabSwipeStartRef = useRef(null);
 
   // Determine active tab from URL path
@@ -35,10 +34,8 @@ export const BookManagement = () => {
   // Render only the active tab component to avoid rendering all at once
   const renderActiveComponent = () => {
     try {
-      console.log('[BookManagement] Rendering tab:', activeTab);
       switch (activeTab) {
         case 'pastpapers':
-          console.log('[BookManagement] About to render PaperPanel');
           return (
             <React.Suspense fallback={<div style={{ padding: '20px', color: '#888' }}>Loading Past Papers...</div>}>
               <PaperPanel />
@@ -46,7 +43,6 @@ export const BookManagement = () => {
           );
         case 'books':
         default:
-          console.log('[BookManagement] About to render BookPanel');
           return (
             <React.Suspense fallback={<div style={{ padding: '20px', color: '#888' }}>Loading Books...</div>}>
               <BookPanel />

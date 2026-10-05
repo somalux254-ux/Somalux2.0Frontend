@@ -57,7 +57,6 @@ export const translateText = async (text, targetLanguage) => {
     // Method 1: Try using public Google Translate endpoint (most reliable)
     try {
       const encodedText = encodeURIComponent(text);
-      const url = `https://translate.googleapis.com/translate_a/element.js?cb=googleTranslateElementInit`;
       
       // Use Google's public translation endpoint
       const response = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + targetCode + '&dt=t&q=' + encodedText, {
@@ -76,7 +75,6 @@ export const translateText = async (text, targetLanguage) => {
           const translation = translatedParts.join('');
           
           if (translation) {
-            console.log(`✅ Translated to ${targetLanguage}:`, translation);
             return {
               success: true,
               translation: translation,
@@ -105,7 +103,6 @@ export const translateText = async (text, targetLanguage) => {
       if (response.ok) {
         const data = await response.json();
         if (data.translation) {
-          console.log(`✅ Translated to ${targetLanguage} via backend:`, data.translation);
           return {
             success: true,
             translation: data.translation,

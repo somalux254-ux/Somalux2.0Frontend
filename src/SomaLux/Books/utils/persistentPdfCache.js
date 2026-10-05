@@ -16,7 +16,6 @@ export async function getPersistentPdfSource(cacheKey, networkSource) {
 
     const blobUrl = URL.createObjectURL(await cachedResponse.blob());
     objectUrls.add(blobUrl);
-    console.log('[pdf-cache] Persistent cache hit', { cacheKey });
     return blobUrl;
   } catch (error) {
     console.warn('[pdf-cache] Persistent cache read failed', { cacheKey, error: error.message });
@@ -37,7 +36,6 @@ export function cachePdfAfterFirstPage(cacheKey, networkSource) {
       if (!response.ok) return;
 
       await cache.put(cacheRequest, response);
-      console.log('[pdf-cache] Cached after first page', { cacheKey });
     } catch (error) {
       console.warn('[pdf-cache] Background cache failed', { cacheKey, error: error.message });
     } finally {

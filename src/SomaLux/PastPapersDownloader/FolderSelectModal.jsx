@@ -5,8 +5,7 @@ import {
   setSelectedFolder as saveSelectedFolder, 
   addCustomFolder, 
   getCustomFolders, 
-  removeCustomFolder,
-  getDefaultFolders 
+  removeCustomFolder
 } from '../utils/downloadFolderManager';
 import { API_URL as API_BASE } from '../../config';
 
@@ -52,7 +51,6 @@ const FolderSelectModal = ({ isOpen, onClose, onFolderSelect, currentFolder }) =
       );
       setCustomFolders(downloadsSubfolders);
       
-      console.log('✓ Loaded folders:', { custom: downloadsSubfolders.length });
     } catch (err) {
       setError(`Error loading folders: ${err.message}`);
     } finally {
@@ -74,7 +72,6 @@ const FolderSelectModal = ({ isOpen, onClose, onFolderSelect, currentFolder }) =
         ? `Downloads/${newFolderName.trim()}`
         : `${parentFolder}/${newFolderName.trim()}`;
       
-      console.log(`📁 Creating: ${folderPath}`);
       const response = await fetch(`${API_BASE}/api/elib/download-folders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -120,7 +117,6 @@ const FolderSelectModal = ({ isOpen, onClose, onFolderSelect, currentFolder }) =
         setLoading(true);
         setError('');
         
-        console.log(`🗑️  Deleting: ${folderPath}`);
         
         fetch(`${API_BASE}/api/elib/download-folders`, {
           method: 'DELETE',

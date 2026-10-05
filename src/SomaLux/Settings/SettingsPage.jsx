@@ -72,9 +72,7 @@ function SettingsPage({ onBack, onLogout }) {
     setShowLogoutConfirm(false);
     document.documentElement.style.backgroundColor = 'var(--bg-primary, #f5f8f7)';
     document.body.style.backgroundColor = 'var(--bg-primary, #f5f8f7)';
-    void Promise.resolve(onLogout?.()).catch((error) => {
-      console.warn('Background sign out failed:', error?.message || error);
-    });
+    void Promise.resolve(onLogout?.()).catch(() => {});
     navigate('/BookManagement', {
       replace: true,
       state: { reopenAuth: true, authAction: 'action' },
@@ -102,7 +100,7 @@ function SettingsPage({ onBack, onLogout }) {
     }
 
     navigate('/BookManagement', { replace: true, state: {} });
-  }, [location.state, navigate, onBack]);
+  }, [location.state, navigate]);
 
   useEffect(() => {
     if (typeof onBack !== 'function') return undefined;
@@ -160,8 +158,6 @@ function SettingsPage({ onBack, onLogout }) {
     const currentValue = settings[category]?.[key];
     const toggledValue = !currentValue;
 
-    console.log(`Toggle ${key} from ${currentValue} to ${toggledValue}`);
-    console.log(`Check: category=${category}, key=${key}, !toggledValue=${!toggledValue}`);
 
     setSettings(prev => {
       const newState = {
@@ -171,7 +167,6 @@ function SettingsPage({ onBack, onLogout }) {
           [key]: toggledValue
         }
       };
-      console.log('New settings state:', newState.privacy);
       return newState;
     });
 
@@ -206,7 +201,6 @@ function SettingsPage({ onBack, onLogout }) {
   };
 
   const handleDeleteAccount = () => {
-    console.log('Account deletion initiated');
     setShowConfirmDelete(false);
     onBack();
   };
