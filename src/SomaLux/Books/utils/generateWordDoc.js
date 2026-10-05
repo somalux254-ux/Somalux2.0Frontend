@@ -98,7 +98,6 @@ export const generateSummaryDocument = async (pageTextMap, pageNumbers, bookTitl
     const blob = await Packer.toBlob(doc);
     saveAs(blob, `${bookTitle}-summaries.docx`);
   } catch (error) {
-    console.error('Error generating Word document:', error);
     alert('Failed to generate summary document');
   }
 };

@@ -30,7 +30,6 @@ export const HelpTab = ({ onViewFaq }) => {
     try {
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (e) {
-      console.warn('Could not open link:', e);
     }
   };
 

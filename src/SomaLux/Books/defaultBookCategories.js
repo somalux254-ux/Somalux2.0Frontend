@@ -420,7 +420,6 @@ export async function seedDefaultBookCategories(supabaseClient) {
 
     return [...(existingRows || []), ...(inserted || [])];
   } catch (error) {
-    console.warn('seedDefaultBookCategories failed:', error);
     return [];
   }
 }

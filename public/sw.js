@@ -130,13 +130,9 @@ async function syncPendingDownloads() {
           await cache.put(download.url, response.clone());
           await db.delete('pending', download.id);
         }
-      } catch (error) {
-        console.error('Sync download failed:', error);
-      }
+      } catch {}
     }
-  } catch (error) {
-    console.error('Background sync failed:', error);
-  }
+  } catch {}
 }
 
 function openDB(name) {

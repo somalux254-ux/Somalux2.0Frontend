@@ -50,7 +50,6 @@ export const BookManagement = () => {
           );
       }
     } catch (error) {
-      console.error('[BookManagement] Error in renderActiveComponent:', error);
       return (
         <div style={{ padding: '20px', color: '#ff6b6b', border: '1px solid #ff6b6b' }}>
           <h3>Error loading {activeTab} tab</h3>
@@ -149,7 +148,6 @@ export const BookManagement = () => {
         if (!isMounted) return;
         
         if (error) {
-          console.error('Error fetching subscription tier:', error);
           setCurrentUserTier('basic');
           return;
         }
@@ -157,7 +155,6 @@ export const BookManagement = () => {
         setCurrentUserTier(profile?.subscription_tier || 'basic');
       } catch (err) {
         if (isMounted) {
-          console.error('Error fetching user tier:', err);
           setCurrentUserTier('basic');
         }
       }

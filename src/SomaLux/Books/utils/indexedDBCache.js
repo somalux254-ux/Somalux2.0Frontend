@@ -20,7 +20,6 @@ class IndexedDBCache {
   async initDB() {
     return new Promise((resolve, reject) => {
       if (typeof window === 'undefined' || !window.indexedDB) {
-        console.warn('IndexedDB not available');
         resolve(false);
         return;
       }
@@ -28,7 +27,6 @@ class IndexedDBCache {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
       request.onerror = () => {
-        console.error('IndexedDB error:', request.error);
         reject(request.error);
       };
 
@@ -81,8 +79,7 @@ class IndexedDBCache {
         };
         tx.onerror = () => reject(tx.error);
       });
-    } catch (e) {
-      console.warn('Save books error:', e);
+    } catch  {
     }
   }
 
@@ -96,8 +93,7 @@ class IndexedDBCache {
         tx.oncomplete = () => resolve(true);
         tx.onerror = () => reject(tx.error);
       });
-    } catch (error) {
-      console.warn('Clear cached books error:', error);
+    } catch  {
     }
   }
 
@@ -128,7 +124,6 @@ class IndexedDBCache {
         request.onerror = () => resolve(null);
       });
     } catch (e) {
-      console.warn('Load books error:', e);
       return null;
     }
   }
@@ -156,8 +151,7 @@ class IndexedDBCache {
         };
         tx.onerror = () => reject(tx.error);
       });
-    } catch (e) {
-      console.warn('Save search error:', e);
+    } catch  {
     }
   }
 
@@ -183,7 +177,6 @@ class IndexedDBCache {
         request.onerror = () => resolve(null);
       });
     } catch (e) {
-      console.warn('Load search error:', e);
       return null;
     }
   }
@@ -210,8 +203,7 @@ class IndexedDBCache {
             cursor.continue();
           }
         };
-      } catch (e) {
-        console.warn(`Error clearing ${storeName}:`, e);
+      } catch  {
       }
     });
 
@@ -248,7 +240,6 @@ class IndexedDBCache {
         estimatedSizeMB: (totalItems * 5) / 1024 / 1024 // Rough estimate
       };
     } catch (e) {
-      console.warn('Storage stats error:', e);
       return null;
     }
   }
@@ -269,8 +260,7 @@ class IndexedDBCache {
         };
         tx.onerror = () => reject(tx.error);
       });
-    } catch (e) {
-      console.warn('Clear all error:', e);
+    } catch  {
     }
   }
 }

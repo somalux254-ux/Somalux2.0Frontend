@@ -220,8 +220,7 @@ const Dashboard = () => {
         } catch (error) {
           // Dashboard remains usable if storage is full or unavailable.
         }
-      } catch (error) {
-        console.error('Error fetching stats:', error);
+      } catch  {
       } finally {
         setLoading(false);
       }
@@ -321,8 +320,7 @@ const Dashboard = () => {
                   try {
                     const details = await fetchViewDetails();
                     setViewDetails(details);
-                  } catch (error) {
-                    console.error('Error fetching view details:', error);
+                  } catch  {
                   } finally {
                     setLoadingViews(false);
                   }

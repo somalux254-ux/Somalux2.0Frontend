@@ -18,7 +18,6 @@ export async function getPersistentPdfSource(cacheKey, networkSource) {
     objectUrls.add(blobUrl);
     return blobUrl;
   } catch (error) {
-    console.warn('[pdf-cache] Persistent cache read failed', { cacheKey, error: error.message });
     return networkSource;
   }
 }
@@ -36,8 +35,7 @@ export function cachePdfAfterFirstPage(cacheKey, networkSource) {
       if (!response.ok) return;
 
       await cache.put(cacheRequest, response);
-    } catch (error) {
-      console.warn('[pdf-cache] Background cache failed', { cacheKey, error: error.message });
+    } catch  {
     } finally {
       inFlightCaches.delete(cacheKey);
     }

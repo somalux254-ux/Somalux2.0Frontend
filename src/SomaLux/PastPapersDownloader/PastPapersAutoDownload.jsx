@@ -84,7 +84,6 @@ const PastPapersAutoDownload = ({ userProfile, asSubmission = false }) => {
             }
           }
         } catch (err) {
-          console.error('Status check error:', err);
         }
       }, 2000);
 
@@ -236,13 +235,11 @@ const PastPapersAutoDownload = ({ userProfile, asSubmission = false }) => {
             newHashes.add(fileHash);
             downloaded++;
           } else {
-            console.error(`Failed to download ${file.filename}: ${result.error}`);
           }
           
           // Wait before starting next download
           await new Promise(resolve => setTimeout(resolve, 1000));
         } catch (err) {
-          console.error(`Error downloading ${file.filename}:`, err);
         }
       }
 

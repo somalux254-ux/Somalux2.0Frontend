@@ -30,7 +30,6 @@ const UserUploadPage = () => {
           setUserProfile(profile);
         }
       } catch (err) {
-        console.error('Failed to fetch user profile:', err);
       }
     };
 

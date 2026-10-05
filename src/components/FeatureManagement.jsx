@@ -66,7 +66,6 @@ export const FeatureManagement = () => {
           }));
       setFeatures(normalizedFeatures);
     } catch (err) {
-      console.error('Error fetching features:', err);
       setError('Failed to fetch features');
     } finally {
       setLoading(false);
@@ -110,7 +109,6 @@ export const FeatureManagement = () => {
       fetchFeatures();
       setError(null);
     } catch (err) {
-      console.error('Error saving feature:', err);
       setError(err.response?.data?.error || 'Failed to save feature');
     }
   };
@@ -124,7 +122,6 @@ export const FeatureManagement = () => {
       });
       fetchFeatures();
     } catch (err) {
-      console.error('Error toggling feature:', err);
       setError('Failed to toggle feature');
     }
   };
@@ -136,7 +133,6 @@ export const FeatureManagement = () => {
       });
       fetchFeatures();
     } catch (err) {
-      console.error('Error updating rollout:', err);
       setError('Failed to update rollout');
     }
   };
@@ -147,7 +143,6 @@ export const FeatureManagement = () => {
         await axios.delete(`${API_URL}/api/features/${featureKey}`);
         fetchFeatures();
       } catch (err) {
-        console.error('Error deleting feature:', err);
         setError('Failed to delete feature');
       }
     }

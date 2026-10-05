@@ -217,14 +217,12 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
           .single();
 
         if (error) {
-          console.error('Error fetching subscription tier:', error);
           setCurrentUserTier('basic');
           return;
         }
 
         setCurrentUserTier(profile?.subscription_tier || 'basic');
       } catch (err) {
-        console.error('Error fetching user tier:', err);
         setCurrentUserTier('basic');
       }
     };
@@ -270,7 +268,6 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
             await loadAvatar(avatarUrl);
           }
         } catch (e) {
-          console.error('❌ [Profile] Failed to load profile:', e);
           // Still set a fallback user
           const authUserData = {
             name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
@@ -317,7 +314,7 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
 
           if (avatarUrl || user.user_metadata?.avatar_url || user.user_metadata?.picture) {
             const finalAvatar = avatarUrl || user.user_metadata?.avatar_url || user.user_metadata?.picture;
-            loadAvatar(finalAvatar).catch(e => console.warn('Avatar load failed:', e));
+            loadAvatar(finalAvatar).catch(() => {});
 
             (async () => {
               try {
@@ -331,9 +328,8 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
                     display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || null,
                     updated_at: new Date().toISOString(),
                   }, { onConflict: 'id' });
-                if (error) console.warn('⚠️ Failed to sync avatar:', error);
+                if (error) {}
               } catch (e) {
-                console.warn('⚠️ Avatar sync error:', e);
               }
             })();
           }
@@ -404,10 +400,6 @@ export const Profile = ({ user: propUser = null, pendingSubmissions = 0 }) => {
             className="profile-avatar"
             alt="Profile"
             onError={(e) => {
-              console.error('❌ Profile avatar failed to load:', {
-                src: profileImage?.substring(0, 60),
-                error: e.message
-              });
               // Try fallback avatar using email hash
               if (authUser?.email && !profileImage.includes('dicebear')) {
                 const fallbackUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${authUser.email}`;
@@ -714,7 +706,6 @@ export const ProfilePage = () => {
         setLocalUser(userProfile);
         setProfileImage(avatar);
       } catch (error) {
-        console.warn('Failed to load profile page data:', error);
         const cached = readCachedProfile();
         setLocalUser(cached);
         setProfileImage(cached?.avatar_url || cached?.avatar || user.user_metadata?.avatar_url || null);

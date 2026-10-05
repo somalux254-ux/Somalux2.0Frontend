@@ -62,7 +62,6 @@ const PastPapersManagement = ({ userProfile }) => {
       const { data } = await fetchPastPapers({ page: 1, pageSize: 10000, search, faculty: facultyFilter, sort });
       return new Set(data.map(item => item.id));
     } catch (error) {
-      console.error('Failed to fetch all matching papers:', error);
       return new Set();
     }
   };
@@ -225,7 +224,6 @@ const PastPapersManagement = ({ userProfile }) => {
       for (const { id, cached } of papersToUpdate) {
         const row = cached || missingPapersMap.get(id);
         if (!row) {
-          console.warn(`Paper with ID ${id} not found`);
           continue;
         }
         
@@ -259,7 +257,6 @@ const PastPapersManagement = ({ userProfile }) => {
       
       showToast({ type: 'success', message: `${selectedIds.size} past paper(s) updated successfully.` });
     } catch (e) {
-      console.error('Failed to update past papers:', e?.message || e);
       showToast({ type: 'error', message: e?.message || 'Failed to update past papers.' });
     }
   };
@@ -285,7 +282,6 @@ const PastPapersManagement = ({ userProfile }) => {
       await load();
       showToast({ type: 'success', message: 'Past paper updated.' });
     } catch (e) {
-      console.error('Failed to update past paper:', e?.message || e);
       showToast({ type: 'error', message: e?.message || 'Failed to update past paper.' });
     }
   };
@@ -310,7 +306,6 @@ const PastPapersManagement = ({ userProfile }) => {
       await load();
       showToast({ type: 'success', message: 'Past paper deleted.' });
     } catch (e) {
-      console.error('Failed to delete past paper:', e);
       showToast({ type: 'error', message: e?.message || 'Failed to delete past paper.' });
     }
   };
@@ -398,7 +393,6 @@ const PastPapersManagement = ({ userProfile }) => {
       
       showToast({ type: 'success', message: `${papersData.length} past paper(s) deleted successfully.` });
     } catch (e) {
-      console.error('Failed to delete past papers:', e?.message || e);
       showToast({ type: 'error', message: e?.message || 'Failed to delete past papers.' });
     }
   };

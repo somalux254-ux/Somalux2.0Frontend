@@ -16,7 +16,6 @@ const UploadHistoryPage = ({ userProfile }) => {
         setRefreshKey(prev => prev + 1);
         alert('Upload history cleared successfully!');
       } catch (err) {
-        console.error('Failed to clear history:', err);
         alert('Failed to clear upload history. Please try again.');
       } finally {
         setIsClearing(false);

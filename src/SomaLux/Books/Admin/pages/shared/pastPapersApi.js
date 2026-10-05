@@ -78,7 +78,6 @@ export async function fetchPastPapers({
 
     const { data, error, count } = await query;
     if (error) {
-      console.error('Supabase error fetching past papers:', error);
       throw new Error(`Failed to fetch past papers: ${error.message}`);
     }
 
@@ -93,15 +92,13 @@ export async function fetchPastPapers({
           if (publicUrlData?.data?.publicUrl) {
             finalUrl = publicUrlData.data.publicUrl;
           }
-        } catch (err) {
-          console.warn(`⚠️ Failed to generate URL from file_path for paper ${paper.id}:`, err);
+        } catch  {
           // Fall back to stored file_url if generation fails
         }
       }
       
       // Validate URL format
       if (!finalUrl || !finalUrl.startsWith('https://')) {
-        console.warn(`⚠️ Invalid file_url for paper ${paper.id}:`, finalUrl);
       }
       
       return {
@@ -118,7 +115,6 @@ export async function fetchPastPapers({
     }
     return result;
   } catch (err) {
-    console.error('❌ Error in fetchPastPapers:', err);
     throw err;
   }
 }
@@ -150,7 +146,6 @@ export async function uploadPastPaperFile(file) {
       });
     
     if (error) {
-      console.error('Upload error:', error);
       throw new Error(`Failed to upload file to bucket '${PAST_PAPERS_BUCKET}': ${error.message}`);
     }
     
@@ -159,7 +154,6 @@ export async function uploadPastPaperFile(file) {
       publicUrl: supabase.storage.from(PAST_PAPERS_BUCKET).getPublicUrl(data.path).data.publicUrl 
     };
   } catch (err) {
-    console.error('File upload failed:', err);
     throw err;
   }
 }
@@ -297,7 +291,6 @@ export async function deletePastPaper({ id, file_path }) {
       .single();
     
     if (fetchError && fetchError.code !== 'PGRST116') {
-      console.warn('Could not fetch past paper details before deletion:', fetchError);
     }
 
     // Delete the past paper record from database
@@ -316,14 +309,12 @@ export async function deletePastPaper({ id, file_path }) {
         .from(PAST_PAPERS_BUCKET)
         .remove([fileToDelete])
         .catch((err) => {
-          console.warn('Failed to delete past paper file from storage:', err);
           // Don't throw - record is already deleted from DB
         });
     }
 
     try { clearPastPapersCache(); } catch (e) {}
   } catch (err) {
-    console.error('Error in deletePastPaper:', err);
     throw err;
   }
 }
@@ -365,7 +356,6 @@ export async function getFaculties() {
 
     return allFaculties;
   } catch (error) {
-    console.error('Error fetching faculties:', error);
     return [...new Set(fallbackFaculties)].sort((a, b) => a.localeCompare(b));
   }
 }
@@ -402,7 +392,6 @@ export async function getUniversitiesForDropdown({ forceRefresh = false } = {}) 
     }
     return data || [];
   } catch (error) {
-    console.error('Error fetching universities:', error);
     return [];
   }
 }
@@ -417,7 +406,6 @@ export async function getPastPaperStats() {
       totalPapers: totalPapers || 0
     };
   } catch (error) {
-    console.error('Error fetching past paper stats:', error);
     return { totalPapers: 0 };
   }
 }
@@ -468,7 +456,6 @@ export async function getLoveCountsForPapers(paperIds = []) {
       .select('paper_id');
 
     if (error) {
-      console.error('Error fetching love counts:', error);
       return {};
     }
 
@@ -486,7 +473,6 @@ export async function getLoveCountsForPapers(paperIds = []) {
     
     return counts;
   } catch (err) {
-    console.error('Unexpected error in getLoveCountsForPapers:', err);
     return {};
   }
 }
@@ -503,7 +489,6 @@ export async function getUserLovedPapers(paperIds = []) {
     .in('paper_id', paperIds);
 
   if (error) {
-    console.error('Error fetching user loved papers:', error);
     return new Set();
   }
   return new Set((data || []).map(r => r.paper_id));
@@ -522,7 +507,6 @@ export async function togglePaperLove(paperId) {
     .maybeSingle();
 
   if (checkErr && checkErr.code !== 'PGRST116') { // ignore no rows
-    console.error('Error checking love state:', checkErr);
   }
 
   if (existing) {

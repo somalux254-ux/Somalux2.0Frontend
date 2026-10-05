@@ -92,8 +92,6 @@ export const ProfileAvatar = ({
         });
 
       if (uploadError) {
-        console.error('Avatar upload error:', uploadError);
-        console.error('Upload error details:', JSON.stringify(uploadError, null, 2));
         const errMsg = uploadError.message || JSON.stringify(uploadError);
         toast.error('Avatar upload failed: ' + errMsg, { autoClose: 6000 });
         return;
@@ -126,7 +124,6 @@ export const ProfileAvatar = ({
           localStorage.setItem('avatarsByEmail', JSON.stringify(map));
         }
       } catch (e) {
-        console.warn('Avatar map update failed:', e?.message);
       }
       
       // Update profiles table with avatar URL and file path
@@ -139,10 +136,8 @@ export const ProfileAvatar = ({
           })
           .eq('id', sessionUser.id);
         if (profileError) {
-          console.warn('Failed to update profile avatar_url:', profileError?.message);
         } 
       } catch (e) {
-        console.warn('Error updating profile:', e?.message);
       }
       
       // Update UI
@@ -153,14 +148,11 @@ export const ProfileAvatar = ({
         if (prevAvatarPath && prevAvatarPath !== fileName) {
           const { error: delErr } = await supabase.storage.from('user-avatars').remove([prevAvatarPath]);
           if (delErr) {
-            console.warn('Failed to delete previous avatar:', delErr?.message);
           } 
         }
       } catch (delEx) {
-        console.warn('Error deleting previous avatar:', delEx?.message);
       }
     } catch (err) {
-      console.error('handleUpload error', err);
       toast.error('Unexpected error saving avatar');
     }
   };
@@ -175,7 +167,6 @@ export const ProfileAvatar = ({
           onClick={showUploadButton ? () => fileInputRef.current?.click() : undefined}
           style={showUploadButton ? { cursor: 'pointer' } : {}}
           onError={() => {
-            console.warn('Profile image failed to load');
             setProfileImage(null);
           }}
         />

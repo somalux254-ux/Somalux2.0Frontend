@@ -208,7 +208,6 @@ const TextSelectionPanel = ({
         // Keep panel open after copy feedback
       }, 1200);
     } catch (err) {
-      console.error('❌ Copy failed:', err);
       // Fallback copy
       const textarea = document.createElement('textarea');
       textarea.value = textToCopy;
@@ -222,8 +221,7 @@ const TextSelectionPanel = ({
         feedbackTimeoutRef.current = setTimeout(() => {
           setCopiedFeedback(false);
         }, 1200);
-      } catch (e) {
-        console.error('❌ Fallback copy failed:', e);
+      } catch  {
       }
       document.body.removeChild(textarea);
     }
@@ -257,7 +255,6 @@ const TextSelectionPanel = ({
       });
       setSummaryViewMode('summary');
     } catch (err) {
-      console.error('Summarize error:', err);
       setExpandedView({ 
         type: 'summarize', 
         content: 'Error generating summary. Please try again.' 
@@ -349,7 +346,6 @@ const TextSelectionPanel = ({
       setIsStreamingExplanation(false);
       setIsStreamingPaused(false);
     } catch (err) {
-      console.error('❌ Explain error:', err);
       setIsStreamingExplanation(false);
       setIsStreamingPaused(false);
       
@@ -408,7 +404,6 @@ const TextSelectionPanel = ({
         source: result.source
       });
     } catch (error) {
-      console.error('❌ Translation failed:', error);
       setTranslationResult({
         language: language,
         translation: selectedText,
@@ -425,7 +420,6 @@ const TextSelectionPanel = ({
     if (isMobile && navigator.vibrate) navigator.vibrate(30);
     // Check browser support for Web Speech API
     if (!window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') {
-      console.warn('Text-to-speech is not available on this device');
       return;
     }
     const utterance = new SpeechSynthesisUtterance(selectedText);
@@ -478,7 +472,6 @@ const TextSelectionPanel = ({
       document.body.removeChild(element);
       setShowSaveOptions(false);
     } catch (error) {
-      console.error('Error saving as text:', error);
       alert('Failed to save summary as text');
     } finally {
       setIsSavingFormat(null);
@@ -523,7 +516,6 @@ const TextSelectionPanel = ({
       saveAs(blob, 'summary.docx');
       setShowSaveOptions(false);
     } catch (error) {
-      console.error('Error saving as Word:', error);
       alert('Failed to save summary as Word document');
     } finally {
       setIsSavingFormat(null);
@@ -578,7 +570,6 @@ const TextSelectionPanel = ({
       doc.save('summary.pdf');
       setShowSaveOptions(false);
     } catch (error) {
-      console.error('Error saving as PDF:', error);
       alert('Failed to save summary as PDF');
     } finally {
       setIsSavingFormat(null);
@@ -1027,8 +1018,7 @@ const TextSelectionPanel = ({
                         try {
                           await navigator.clipboard.writeText(textToCopy);
                           alert('Summary copied to clipboard!');
-                        } catch (err) {
-                          console.error('Failed to copy:', err);
+                        } catch  {
                         }
                       }}
                       style={{
@@ -1559,8 +1549,7 @@ const TextSelectionPanel = ({
                         try {
                           navigator.clipboard.writeText(editedText);
                           alert('Summary copied to clipboard!');
-                        } catch (err) {
-                          console.error('Failed to copy:', err);
+                        } catch  {
                         }
                       }}
                       style={{
@@ -1699,7 +1688,6 @@ const TextSelectionPanel = ({
                                 saveAs(blob, 'edited-summary.docx');
                                 setShowEditSummarySaveOptions(false);
                               } catch (error) {
-                                console.error('Error saving as Word:', error);
                                 alert('Failed to save summary as Word document');
                               }
                             }}
@@ -1777,7 +1765,6 @@ const TextSelectionPanel = ({
 
                                 doc.save('edited-summary.pdf');
                               } catch (error) {
-                                console.error('Error saving as PDF:', error);
                                 alert('Failed to save summary as PDF');
                               }
                               setShowEditSummarySaveOptions(false);

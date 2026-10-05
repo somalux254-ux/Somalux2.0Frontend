@@ -259,7 +259,6 @@ const Settings = ({ userProfile }) => {
       doc.save(`SomaLux-Report-${new Date().toISOString().split('T')[0]}.pdf`);
       showToast({ type: 'success', message: 'PDF report downloaded.' });
     } catch (error) {
-      console.error('Error generating PDF:', error);
       showToast({ type: 'error', message: 'Failed to generate PDF. Please try again.' });
     } finally {
       setGenerating(false);

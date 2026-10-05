@@ -136,7 +136,6 @@ const UniversitiesManagement = ({ userProfile }) => {
         if (!cancelled) setUniversitySuggestions(suggestions || []);
       } catch (error) {
         if (!cancelled) setUniversitySuggestions([]);
-        console.warn('University autocomplete failed:', error?.message || error);
       } finally {
         if (!cancelled) setLoadingUniversitySuggestions(false);
       }
@@ -259,7 +258,6 @@ const UniversitiesManagement = ({ userProfile }) => {
       await load();
       showToast({ type: 'success', message: 'University updated successfully.' });
     } catch (e) {
-      console.error('Failed to update university:', e);
       showToast({ type: 'error', message: e?.message || 'Failed to update university.' });
     }
   };
@@ -284,7 +282,6 @@ const UniversitiesManagement = ({ userProfile }) => {
       await load();
       showToast({ type: 'success', message: 'University deleted.' });
     } catch (err) {
-      console.error('Failed to delete university:', err);
       showToast({ type: 'error', message: err?.message || 'Failed to delete university.' });
     }
   };

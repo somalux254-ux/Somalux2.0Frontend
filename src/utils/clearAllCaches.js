@@ -225,7 +225,6 @@ async function clearAllCaches() {
 
 // Run the cache clearing
 clearAllCaches().catch(error => {
-  console.error(error);
 });
 
 // ============================================================

@@ -63,7 +63,6 @@ export const AppsTab = () => {
       });
       window.localStorage.setItem(DOWNLOADED_APPS_KEY, JSON.stringify(savedDownloadedApps));
     } catch (error) {
-      console.warn('[AppsTab] Unable to refresh app states:', error?.message || error);
     } finally {
       checkingStates.current = false;
     }

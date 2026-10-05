@@ -170,7 +170,6 @@ const Books = ({ userProfile }) => {
       const { data } = await fetchBooks(fetchParams);
       return new Set(data.map(item => item.id));
     } catch (error) {
-      console.error('Failed to fetch all matching books:', error);
       return new Set();
     }
   };
@@ -382,7 +381,6 @@ const Books = ({ userProfile }) => {
       for (const { id, cached } of booksToUpdate) {
         const row = cached || missingBooksMap.get(id);
         if (!row) {
-          console.warn(`Book with ID ${id} not found`);
           continue;
         }
         
@@ -414,7 +412,6 @@ const Books = ({ userProfile }) => {
       
       showToast({ type: 'success', message: `${selectedIds.size} book(s) updated successfully.` });
     } catch (e) {
-      console.error('Failed to update books:', e?.message || e);
       showToast({ type: 'error', message: e?.message || 'Failed to update books.' });
     }
   };
@@ -436,7 +433,6 @@ const Books = ({ userProfile }) => {
       await load();
       showToast({ type: 'success', message: 'Book details updated.' });
     } catch (e) {
-      console.error('Failed to update book:', e);
       showToast({ type: 'error', message: e?.message || 'Failed to update book.' });
     }
   };
@@ -460,7 +456,6 @@ const Books = ({ userProfile }) => {
       await load();
       showToast({ type: 'success', message: 'Book deleted.' });
     } catch (e) {
-      console.error('Failed to delete book:', e);
       showToast({ type: 'error', message: e?.message || 'Failed to delete book.' });
     }
   };
@@ -547,7 +542,6 @@ const Books = ({ userProfile }) => {
       
       showToast({ type: 'success', message: `${booksData.length} book(s) deleted successfully.` });
     } catch (e) {
-      console.error('Failed to delete books:', e?.message || e);
       showToast({ type: 'error', message: e?.message || 'Failed to delete books.' });
     }
   };

@@ -25,7 +25,6 @@ export const getSelectedFolder = () => {
     const folder = localStorage.getItem(DOWNLOAD_FOLDER_KEY);
     return folder || DEFAULT_FOLDER;
   } catch (err) {
-    console.warn('Error reading selected folder:', err);
     return DEFAULT_FOLDER;
   }
 };
@@ -39,7 +38,6 @@ export const setSelectedFolder = (folderPath) => {
     localStorage.setItem(DOWNLOAD_FOLDER_KEY, folderPath);
     addToFolderHistory(folderPath);
   } catch (err) {
-    console.warn('Error saving selected folder:', err);
   }
 };
 
@@ -52,7 +50,6 @@ export const getFolderHistory = () => {
     const history = localStorage.getItem(DOWNLOAD_FOLDERS_HISTORY_KEY);
     return history ? JSON.parse(history) : [];
   } catch (err) {
-    console.warn('Error reading folder history:', err);
     return [];
   }
 };
@@ -69,7 +66,6 @@ export const addToFolderHistory = (folderPath) => {
     const updated = [folderPath, ...filtered].slice(0, 10); // Keep last 10
     localStorage.setItem(DOWNLOAD_FOLDERS_HISTORY_KEY, JSON.stringify(updated));
   } catch (err) {
-    console.warn('Error updating folder history:', err);
   }
 };
 
@@ -80,7 +76,6 @@ export const clearFolderHistory = () => {
   try {
     localStorage.removeItem(DOWNLOAD_FOLDERS_HISTORY_KEY);
   } catch (err) {
-    console.warn('Error clearing folder history:', err);
   }
 };
 
@@ -93,7 +88,6 @@ export const getCustomFolders = () => {
     const customFolders = localStorage.getItem(CUSTOM_FOLDERS_KEY);
     return customFolders ? JSON.parse(customFolders) : [];
   } catch (err) {
-    console.warn('Error reading custom folders:', err);
     return [];
   }
 };
@@ -110,7 +104,6 @@ export const addCustomFolder = (folderPath, folderName = null) => {
     // Check if folder already exists
     const exists = customFolders.some(f => f.path === folderPath);
     if (exists) {
-      console.warn(`Folder already exists: ${folderPath}`);
       return;
     }
     
@@ -125,7 +118,6 @@ export const addCustomFolder = (folderPath, folderName = null) => {
     const updated = [...customFolders, newFolder];
     localStorage.setItem(CUSTOM_FOLDERS_KEY, JSON.stringify(updated));
   } catch (err) {
-    console.warn('Error adding custom folder:', err);
   }
 };
 
@@ -139,7 +131,6 @@ export const removeCustomFolder = (folderPath) => {
     const filtered = customFolders.filter(f => f.path !== folderPath);
     localStorage.setItem(CUSTOM_FOLDERS_KEY, JSON.stringify(filtered));
   } catch (err) {
-    console.warn('Error removing custom folder:', err);
   }
 };
 
@@ -161,13 +152,11 @@ export const fetchAvailableFolders = async () => {
       
       // Check if response is OK and is JSON
       if (!response.ok) {
-        console.warn('Folder API returned status:', response.status);
         return allFolders;
       }
       
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        console.warn('Folder API returned non-JSON content, using defaults');
         return allFolders;
       }
       
@@ -178,12 +167,10 @@ export const fetchAvailableFolders = async () => {
         return [...data.folders, ...customFolders];
       }
     } catch (apiErr) {
-      console.warn('API fetch failed, using local folders:', apiErr.message);
     }
     
     return allFolders;
   } catch (err) {
-    console.warn('Error fetching folders:', err.message);
     return getDefaultFolders();
   }
 };
@@ -248,7 +235,6 @@ export const validateFolder = async (folderPath) => {
     const data = await response.json();
     return data.ok || false;
   } catch (err) {
-    console.error('Error validating folder:', err);
     return false;
   }
 };
@@ -268,7 +254,6 @@ export const getUserFolderPreferences = async () => {
       return { defaultFolder: DEFAULT_FOLDER, folders: [] };
     }
   } catch (err) {
-    console.error('Error fetching preferences:', err);
     return { defaultFolder: DEFAULT_FOLDER, folders: [] };
   }
 };
@@ -289,7 +274,6 @@ export const saveUserFolderPreferences = async (preferences) => {
     const data = await response.json();
     return data.ok || false;
   } catch (err) {
-    console.error('Error saving preferences:', err);
     return false;
   }
 };

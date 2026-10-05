@@ -337,7 +337,6 @@ export const explainIntelligentText = async (text) => {
       qualityScore: 0.75
     };
   } catch (error) {
-    console.error('❌ Error in intelligent text processing:', error);
     
     // Fallback: Generate explanation for original text
     const explanation = await generateLocalExplanation(text);
@@ -368,7 +367,6 @@ const generateLocalExplanation = async (text) => {
     }
     
     // Fallback: if Wikipedia fails, use local sentence extraction
-    console.warn('⚠️ Wikipedia fetch failed, using local fallback');
     const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
     const explanation = sentences.slice(0, 3).map(s => s.trim()).join('. ');
     
@@ -378,7 +376,6 @@ const generateLocalExplanation = async (text) => {
     
     return text.substring(0, 500);
   } catch (error) {
-    console.error('❌ Error generating explanation:', error);
     
     // Final fallback: just return truncated text
     return text.substring(0, 200);
@@ -411,7 +408,6 @@ const explainParagraphContextually = async (text) => {
       qualityScore: Math.max(0.75, responseQuality.score) // Boost quality for contextual
     };
   } catch (error) {
-    console.error('❌ Contextual paragraph analysis failed:', error);
     throw error;
   }
 };
@@ -452,7 +448,6 @@ const extractParagraphMainConcept = (text) => {
     
     return extractMainConcept(text);
   } catch (error) {
-    console.error('Error extracting paragraph concept:', error);
     return extractMainConcept(text);
   }
 };

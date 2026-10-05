@@ -28,7 +28,6 @@ export function initializePDFWorker() {
       return;
     }
   } catch (e1) {
-    console.warn('⚠️ Failed to set local path:', e1.message);
   }
 
   // Strategy 2: CDN fallback with http:// instead of https:// for compatibility
@@ -41,16 +40,13 @@ export function initializePDFWorker() {
       return;
     }
   } catch (e2) {
-    console.warn('⚠️ Failed to set CDN path:', e2.message);
   }
 
   // Fallback: Set a fallback inline worker to prevent null reference
-  console.warn('⚠️ Using minimal worker fallback');
   try {
     // Create inline worker as last resort
     const workerCode = `
     self.onmessage = function(event) {
-      console.error('PDF worker not properly initialized');
       self.postMessage({ error: 'Worker not ready' });
     };
     `;
@@ -59,10 +55,8 @@ export function initializePDFWorker() {
     pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
     return;
   } catch (e3) {
-    console.error('⚠️ Failed to create fallback worker:', e3.message);
   }
 
-  console.error('❌ All strategies failed - PDF functionality may be limited');
 }
 
 // Initialize immediately when this module loads
@@ -72,12 +66,10 @@ initializePDFWorker();
 if (typeof window !== 'undefined') {
   window.addEventListener('load', () => {
     if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-      console.warn('⚠️ Worker not initialized on window load - attempting recovery');
       initializePDFWorker();
     }
   }, { once: true });
 }
 
 export default initializePDFWorker;
-
 

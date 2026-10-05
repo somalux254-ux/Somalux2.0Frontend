@@ -131,7 +131,6 @@ export async function fetchPastPapers({
 
     const { data, error, count } = await query;
     if (error) {
-      console.error('Supabase error fetching past papers:', error);
       throw new Error(`Failed to fetch past papers: ${error.message}`);
     }
 
@@ -146,15 +145,13 @@ export async function fetchPastPapers({
           if (publicUrlData?.data?.publicUrl) {
             finalUrl = publicUrlData.data.publicUrl;
           }
-        } catch (err) {
-          console.warn(`⚠️ Failed to generate URL from file_path for paper ${paper.id}:`, err);
+        } catch  {
           // Fall back to stored file_url if generation fails
         }
       }
       
       // Validate URL format
       if (!finalUrl || !finalUrl.startsWith('https://')) {
-        console.warn(`⚠️ Invalid file_url for paper ${paper.id}:`, finalUrl);
       }
       
       return {
@@ -171,7 +168,6 @@ export async function fetchPastPapers({
     }
     return result;
   } catch (err) {
-    console.error('❌ Error in fetchPastPapers:', err);
     throw err;
   }
 }
@@ -203,7 +199,6 @@ export async function uploadPastPaperFile(file) {
       });
     
     if (error) {
-      console.error('Upload error:', error);
       throw new Error(`Failed to upload file to bucket '${PAST_PAPERS_BUCKET}': ${error.message}`);
     }
     
@@ -212,7 +207,6 @@ export async function uploadPastPaperFile(file) {
       publicUrl: supabase.storage.from(PAST_PAPERS_BUCKET).getPublicUrl(data.path).data.publicUrl 
     };
   } catch (err) {
-    console.error('File upload failed:', err);
     throw err;
   }
 }
@@ -229,7 +223,6 @@ export async function checkDuplicatePastPaper({ universityId, faculty, unitCode,
       .eq('year', year ? Number(year) : null);
     
     if (error && error.code !== 'PGRST116') {
-      console.error('Error checking duplicate:', error);
       throw error;
     }
     
@@ -239,7 +232,6 @@ export async function checkDuplicatePastPaper({ universityId, faculty, unitCode,
       paper: data && data.length > 0 ? data[0] : null
     };
   } catch (err) {
-    console.error('Duplicate check failed:', err);
     throw err;
   }
 }
@@ -292,7 +284,6 @@ export async function createPastPaper({ metadata, pdfFile }) {
 
     
     if (error) {
-      console.error('💥 Database error:', { message: error.message, code: error.code, details: error.details, hint: error.hint });
       throw new Error(error.message || 'Failed to create past paper');
     }
 
@@ -302,7 +293,6 @@ export async function createPastPaper({ metadata, pdfFile }) {
     
     return pastPaper;
   } catch (err) {
-    console.error('❌ Create past paper failed:', err);
     throw err;
   }
 }
@@ -398,7 +388,6 @@ export async function deletePastPaper({ id, file_path }) {
       .single();
     
     if (fetchError && fetchError.code !== 'PGRST116') {
-      console.warn('Could not fetch past paper details before deletion:', fetchError);
     }
 
     // Delete the past paper record from database
@@ -417,14 +406,12 @@ export async function deletePastPaper({ id, file_path }) {
         .from(PAST_PAPERS_BUCKET)
         .remove([fileToDelete])
         .catch((err) => {
-          console.warn('Failed to delete past paper file from storage:', err);
           // Don't throw - record is already deleted from DB
         });
     }
 
     try { clearPastPapersCache(); } catch (e) {}
   } catch (err) {
-    console.error('Error in deletePastPaper:', err);
     throw err;
   }
 }
@@ -466,7 +453,6 @@ export async function getFaculties() {
 
     return allFaculties;
   } catch (error) {
-    console.error('Error fetching faculties:', error);
     return [...new Set(fallbackFaculties)].sort((a, b) => a.localeCompare(b));
   }
 }
@@ -492,7 +478,6 @@ export async function getFacultiesByUniversity(universityId) {
     const faculties = [...new Set(data.map(item => item.faculty))].filter(Boolean);
     return faculties;
   } catch (error) {
-    console.error('Error fetching faculties for university:', error);
     return [];
   }
 }
@@ -520,7 +505,6 @@ export async function getUnitNamesByUniversityAndFaculty(universityId, faculty) 
     const unitNames = [...new Set(data.map(item => item.unit_name))].filter(Boolean);
     return unitNames;
   } catch (error) {
-    console.error('Error fetching unit names for university and faculty:', error);
     return [];
   }
 }
@@ -550,7 +534,6 @@ export async function getYearsByUniversityFacultyAndUnitName(universityId, facul
     const years = [...new Set(data.map(item => item.year))].filter(Boolean).sort((a, b) => b - a);
     return years;
   } catch (error) {
-    console.error('Error fetching years for university, faculty, and unit:', error);
     return [];
   }
 }
@@ -587,7 +570,6 @@ export async function getUniversitiesForDropdown({ forceRefresh = false } = {}) 
     }
     return data || [];
   } catch (error) {
-    console.error('Error fetching universities:', error);
     return [];
   }
 }
@@ -602,7 +584,6 @@ export async function getPastPaperStats() {
       totalPapers: totalPapers || 0
     };
   } catch (error) {
-    console.error('Error fetching past paper stats:', error);
     return { totalPapers: 0 };
   }
 }
@@ -623,7 +604,6 @@ export async function getPastPaperCountByUniversity(universityId, subscriptionTi
     
     return count || 0;
   } catch (error) {
-    console.error('Error fetching past paper count:', error);
     return 0;
   }
 }
@@ -677,7 +657,6 @@ export function subscribeToPastPapersByUniversity(universityId, callback) {
 export async function searchUnitFaculty(universityName, unitCode, unitName) {
   try {
     if (!universityName || !unitCode) {
-      console.warn('⚠️ searchUnitFaculty: Missing university name or unit code');
       return { faculty: null, source: 'error', error: 'Missing required parameters' };
     }
 
@@ -696,7 +675,6 @@ export async function searchUnitFaculty(universityName, unitCode, unitName) {
     });
 
     if (!response.ok) {
-      console.warn(`⚠️ Faculty search failed with status ${response.status}`);
       return { faculty: null, source: 'error', status: response.status };
     }
 
@@ -704,7 +682,6 @@ export async function searchUnitFaculty(universityName, unitCode, unitName) {
     
     return data; // Returns { faculty, source, fallback }
   } catch (error) {
-    console.error('❌ Error searching for faculty:', error);
     return { 
       faculty: null, 
       source: 'error', 
@@ -758,16 +735,13 @@ export async function logUploadHistory({
     if (error) {
       // History is auxiliary telemetry; older deployments may not have the table yet.
       if (error.code === '42P01' || error.code === 'PGRST205') {
-        console.warn('⚠️ Upload history table is not deployed; continuing without history logging.');
       } else {
-        console.error('⚠️ Failed to log upload history:', error);
       }
       return null;
     }
 
     return data;
   } catch (err) {
-    console.error('❌ Error logging upload history:', err);
     return null;
   }
 }
@@ -829,7 +803,6 @@ export async function fetchUploadHistory({
     const { data, error, count } = await query;
 
     if (error) {
-      console.error('❌ Error fetching upload history:', error);
       throw error;
     }
 
@@ -839,7 +812,6 @@ export async function fetchUploadHistory({
       count: count || 0 
     };
   } catch (err) {
-    console.error('❌ Error in fetchUploadHistory:', err);
     throw err;
   }
 }
@@ -888,7 +860,6 @@ export async function getUploadHistoryStats() {
 
     return stats;
   } catch (err) {
-    console.error('❌ Error getting upload history stats:', err);
     throw err;
   }
 }
@@ -901,7 +872,6 @@ export async function clearAllUploadHistory() {
       .select('id', { count: 'exact', head: true });
 
     if (countError) {
-      console.error('❌ Error counting records before delete:', countError);
       throw countError;
     }
 
@@ -915,7 +885,6 @@ export async function clearAllUploadHistory() {
       .select('id');
 
     if (idError) {
-      console.error('❌ Error fetching record IDs for delete:', idError);
       throw idError;
     }
 
@@ -931,13 +900,11 @@ export async function clearAllUploadHistory() {
         .select('id');
 
       if (error) {
-        console.warn('⚠️ Direct delete failed, trying RPC fallback:', error);
         try {
           const { data: rpcData, error: rpcError } = await supabase.rpc('clear_past_papers_upload_history');
           if (rpcError) throw rpcError;
           deletedCount = Array.isArray(rpcData) ? rpcData.length : Number(rpcData || 0);
         } catch (rpcFailure) {
-          console.error('❌ RPC fallback failed:', rpcFailure);
           throw error;
         }
       } else {
@@ -950,19 +917,15 @@ export async function clearAllUploadHistory() {
       .select('id', { count: 'exact', head: true });
 
     if (afterCountError) {
-      console.error('❌ Error counting after delete:', afterCountError);
       throw afterCountError;
     }
 
     if ((afterCount || 0) > 0) {
-      console.warn('⚠️ WARNING: Records still exist after delete. Check Supabase RLS or DB permissions.');
       throw new Error(`Upload history could not be fully cleared. ${afterCount} rows remain.`);
     }
 
     return { success: true, deletedCount, remainingCount: afterCount };
   } catch (err) {
-    console.error('❌ Error in clearAllUploadHistory:', err);
-    console.error('❌ Full error details:', JSON.stringify(err, null, 2));
     throw err;
   }
 }
@@ -1014,7 +977,6 @@ export async function extractPastPaperMetadataBackend(pdfFile) {
       confidence: result.data.confidence
     };
   } catch (error) {
-    console.error('❌ [BACKEND-EXTRACT] Extraction error:', error.message);
     // Return empty result - let frontend fallback to filename extraction
     return {
       unitCode: null,
@@ -1055,19 +1017,16 @@ export async function extractFirstPageMetadata(pdfFile) {
     
     
     if (!response.ok) {
-      console.error('❌ [FIRST-PAGE-API] HTTP error:', response.status, response.statusText);
       return null;
     }
     
     const data = await response.json();
     
     if (!data.success) {
-      console.warn('⚠️ [FIRST-PAGE-API] Extraction unsuccessful:', data);
       return null;
     }
     
     if (!data.unitCode || !data.unitName) {
-      console.warn('⚠️ [FIRST-PAGE-API] Missing required fields:', { unitCode: data.unitCode, unitName: data.unitName });
       return null;
     }
     
@@ -1087,7 +1046,6 @@ export async function extractFirstPageMetadata(pdfFile) {
     return result;
     
   } catch (error) {
-    console.error('❌ [FIRST-PAGE-API] Exception:', error.message);
     return null;
   }
 }
@@ -1141,7 +1099,6 @@ export async function extractFirstPageMetadataBatch(pdfFiles) {
     };
     
   } catch (error) {
-    console.error('❌ [BATCH-FIRST-PAGE] Error:', error.message);
     return {
       success: false,
       error: error.message,

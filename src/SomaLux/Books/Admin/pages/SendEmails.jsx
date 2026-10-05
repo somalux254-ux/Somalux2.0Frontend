@@ -260,8 +260,7 @@ const SendEmails = () => {
       if (data.success) {
         setNotifications(data.data || []);
       }
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
+    } catch  {
     } finally {
       setNotificationsLoading(false);
     }
@@ -275,8 +274,7 @@ const SendEmails = () => {
       if (data.success) {
         setNotificationStats(data.stats || {});
       }
-    } catch (error) {
-      console.error('Error fetching stats:', error);
+    } catch  {
     }
   };
 
@@ -292,11 +290,9 @@ const SendEmails = () => {
       if (data.success && Array.isArray(data.users)) {
         setAvailableUsers(data.users);
       } else {
-        console.warn('No users returned from API');
         setAvailableUsers([]);
       }
     } catch (error) {
-      console.error('❌ Error fetching users:', error);
       setMessageNotification('Failed to load users: ' + error.message);
       setNotificationTypeUI('error');
       setAvailableUsers([]);
@@ -449,7 +445,6 @@ const SendEmails = () => {
         setNotificationTypeUI('error');
       }
     } catch (error) {
-      console.error('Error sending email:', error);
       setMessageNotification(`❌ Failed to send email: ${error.message}`);
       setNotificationTypeUI('error');
     } finally {

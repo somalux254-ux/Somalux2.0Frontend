@@ -84,8 +84,7 @@ export const translateText = async (text, targetLanguage) => {
           }
         }
       }
-    } catch (err) {
-      console.warn('⚠️ Google Translate endpoint failed:', err);
+    } catch  {
     }
 
     // Method 2: Fallback - Try backend endpoint if available
@@ -111,12 +110,10 @@ export const translateText = async (text, targetLanguage) => {
           };
         }
       }
-    } catch (err) {
-      console.warn('⚠️ Backend translation failed:', err);
+    } catch  {
     }
 
     // Method 3: Fallback - Contextual translation (basic)
-    console.warn('⚠️ All translation methods failed, using fallback');
     return {
       success: false,
       translation: text,
@@ -126,7 +123,6 @@ export const translateText = async (text, targetLanguage) => {
     };
 
   } catch (error) {
-    console.error('❌ Translation error:', error);
     throw error;
   }
 };
@@ -141,7 +137,6 @@ export const translateBatch = async (texts, targetLanguage) => {
     );
     return results;
   } catch (error) {
-    console.error('❌ Batch translation error:', error);
     throw error;
   }
 };
@@ -181,7 +176,6 @@ export const detectLanguage = async (text) => {
     // Default to English for Latin text
     return 'English';
   } catch (error) {
-    console.error('❌ Language detection error:', error);
     return 'unknown';
   }
 };

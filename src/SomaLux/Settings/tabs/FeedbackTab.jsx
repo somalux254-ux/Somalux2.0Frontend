@@ -192,7 +192,6 @@ export const FeedbackTab = ({ setHeaderTitle }) => {
       setFeedback('');
       setSelectedArea('');
     } catch (error) {
-      console.error('Feedback submit failed:', error);
       setErrorMessage(error.message || 'Failed to send feedback.');
     } finally {
       setIsSubmitting(false);

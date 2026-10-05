@@ -114,7 +114,6 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
 
       return allRects;
     } catch (error) {
-      console.error('❌ Error collecting rects:', error);
       return Array.from(range.getClientRects());
     }
   }, []);
@@ -306,7 +305,6 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
 
       return true;
     } catch (error) {
-      console.error('❌ Text node validation error:', error);
       return false;
     }
   }, []);
@@ -321,7 +319,6 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
       }
       return true;
     } catch (error) {
-      console.error('❌ Spillage validation error:', error);
       return false;
     }
   }, []);
@@ -344,7 +341,6 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
 
       return true;
     } catch (error) {
-      console.error('❌ Container boundary validation error:', error);
       return false;
     }
   }, []);
@@ -368,7 +364,6 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
 
       return true;
     } catch (error) {
-      console.error('❌ Text integrity validation error:', error);
       return false;
     }
   }, []);
@@ -401,7 +396,6 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
 
       return { x, y };
     } catch (error) {
-      console.error('❌ Position calculation error:', error);
       return null;
     }
   }, []);
@@ -423,8 +417,7 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
         bounds: bounds,
         confidence: Math.min(100, Math.round((bounds.rectCount / 3) * 100))
       });
-    } catch (error) {
-      console.error('❌ Lens update error:', error);
+    } catch  {
     }
   }, []);
 
@@ -498,7 +491,6 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
       // Store the selection data but DON'T show panel yet
       lastCompletedSelectionRef.current = { text, range, bounds };
     } catch (error) {
-      console.error('❌ Selection detection error:', error);
       setLensData(null);
     } finally {
       isProcessingRef.current = false;
@@ -554,7 +546,6 @@ const useWPSPrecisionSelectionPerfect = (containerSelector = '.simple-scroll-rea
       });
       setPosition(pos);
     } catch (error) {
-      console.error('❌ Selection completion error:', error);
       setSelection(null);
       setPosition(null);
     }

@@ -132,7 +132,6 @@ export const BookPanel = ({ demoMode = false }) => {
         }
       })
       .catch((error) => {
-        console.warn('BookPanel: failed to load categories', error);
         if (mounted) {
           setCategories(mergeBookCategories([]));
         }
@@ -209,13 +208,11 @@ export const BookPanel = ({ demoMode = false }) => {
   const clearBookCaches = useCallback(async () => {
     try {
       booksCache.clear();
-    } catch (err) {
-      console.warn('Failed to clear booksCache', err);
+    } catch  {
     }
     try {
       perfOptimizer.clearAll();
-    } catch (err) {
-      console.warn('Failed to clear in-memory book cache', err);
+    } catch  {
     }
     await indexedDBCache.clearBooks?.();
     try {
@@ -228,8 +225,7 @@ export const BookPanel = ({ demoMode = false }) => {
         }
       }
       keysToRemove.forEach(k => localStorage.removeItem(k));
-    } catch (err) {
-      console.warn('Failed to clear page caches from localStorage', err);
+    } catch  {
     }
   }, []);
 
@@ -238,7 +234,6 @@ export const BookPanel = ({ demoMode = false }) => {
       const saved = localStorage.getItem('bookWishlist');
       return saved ? JSON.parse(saved) : [];
     } catch (error) {
-      console.error('Failed to parse wishlist from localStorage', error);
       return [];
     }
   });
@@ -386,20 +381,7 @@ export const BookPanel = ({ demoMode = false }) => {
 
       
     } catch (e) {
-      console.error('Failed to fetch books:', e);
-      console.error('❌ RAW ERROR:', {
-        message: e.message,
-        type: e.name,
-        toString: e.toString(),
-        stack: e.stack
-      });
       
-      console.error('📊 Error Details:', {
-        message: e.message,
-        type: e.name,
-        stack: e.stack,
-        supabaseUrl: process.env.REACT_APP_SUPABASE_URL || 'fallback URL'
-      });
 
       // Network error handling - modal disabled during startup
       try {
@@ -407,8 +389,7 @@ export const BookPanel = ({ demoMode = false }) => {
         // Avoid blocking the entire library view with a modal during failed startup fetches.
         // Keep the page usable and allow the user to retry manually if needed.
         setShowNetworkModal(false);
-      } catch (modalErr) {
-        console.warn('Network modal fallback failed:', modalErr);
+      } catch  {
       }
     } finally {
       setLoading(false);
@@ -584,12 +565,10 @@ export const BookPanel = ({ demoMode = false }) => {
           if (status === 'SUBSCRIBED') {
             if (poller) { clearInterval(poller); poller = null; }
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.warn('⚠️ Real-time subscription failed, using polling');
             if (poller) { clearInterval(poller); poller = null; }
           }
         });
     } catch (err) {
-      console.warn('Realtime unavailable, falling back to polling.', err);
       if (poller) { clearInterval(poller); poller = null; }
     }
 
@@ -606,8 +585,7 @@ export const BookPanel = ({ demoMode = false }) => {
       try {
         window.dispatchEvent(new CustomEvent('wishlistChanged', { detail: { count: wishlist.length, updatedAt: Date.now() } }));
       } catch (err) {}
-    } catch (error) {
-      console.error('Failed to save wishlist to localStorage', error);
+    } catch  {
     }
   }, [wishlist]);
 
@@ -665,7 +643,6 @@ export const BookPanel = ({ demoMode = false }) => {
           .eq('id', focusedBookId)
           .maybeSingle();
         if (error) {
-          console.warn('BookPanel: failed to fetch focused book by id', focusedBookId, error);
           return;
         }
         if (!row) return;
@@ -675,8 +652,7 @@ export const BookPanel = ({ demoMode = false }) => {
           const exists = (prev || []).some(book => String(book.id) === String(mapped.id));
           return exists ? prev : [mapped, ...(prev || [])];
         });
-      } catch (err) {
-        console.error('BookPanel: error ensuring focused book is loaded', err);
+      } catch  {
       }
     })();
 
@@ -700,7 +676,6 @@ export const BookPanel = ({ demoMode = false }) => {
         if (error) throw error;
         if (mounted) setFilteredByCategory((rows || []).map(mapRowToUi));
       } catch (error) {
-        console.warn('Failed to load books for category:', error);
         if (mounted) setFilteredByCategory([]);
       }
     })();
@@ -821,8 +796,7 @@ export const BookPanel = ({ demoMode = false }) => {
       setCurrentPage(page);
       setSearchCachedPage(term, page, mapped, uniqueRows.length > to + 1);
 
-    } catch (err) {
-      console.error('Search fetch failed', err);
+    } catch  {
     } finally {
       setPageLoading(false);
       setLoading(false);
@@ -878,8 +852,7 @@ export const BookPanel = ({ demoMode = false }) => {
           setHasMore(cached.hasMore ?? cached.data.length >= BOOKS_PER_PAGE);
         }
       }
-    } catch (err) {
-      console.warn('Failed to ensure page data', err);
+    } catch  {
     } finally {
       setPageLoading(false);
     }
@@ -902,7 +875,6 @@ export const BookPanel = ({ demoMode = false }) => {
         setSelectedBook(prev => prev?.id === book.id ? { ...prev, downloadUrl: signedUrl } : prev);
       })
       .catch(error => {
-        console.warn('Failed to prewarm signed URL for book:', { bookId: book.id, error: error.message });
       });
 
   };
@@ -1002,8 +974,7 @@ export const BookPanel = ({ demoMode = false }) => {
       const bookForReader = selectedBook ? { ...selectedBook, downloadUrl: signedUrl } : null;
       setSelectedBook(bookForReader);
       openReader(bookForReader);
-    } catch (error) {
-      console.error('Failed to create signed URL for book:', error);
+    } catch  {
     } finally {
       setOpeningBookId(null);
     }
@@ -1055,8 +1026,7 @@ export const BookPanel = ({ demoMode = false }) => {
                   try {
                     await clearBookCaches();
                     await fetchAll(true, networkRetryPage || 1);
-                  } catch (err) {
-                    console.error('Retry failed', err);
+                  } catch  {
                   } finally {
                     setLoading(false);
                   }
@@ -1508,13 +1478,6 @@ export const BookPanel = ({ demoMode = false }) => {
                             .select();
 
                           if (error) {
-                            console.error('❌ Failed to log book download:', {
-                              error: error.message,
-                              code: error.code,
-                              details: error.details,
-                              hint: error.hint,
-                              context: { userId: user.id, bookId: selectedBook.id }
-                            });
                         } else {
                           
                           // Increment count using the SQL function (bypasses RLS)
@@ -1523,11 +1486,6 @@ export const BookPanel = ({ demoMode = false }) => {
                               .rpc('increment_book_downloads', { p_book_id: selectedBook.id });
                             
                             if (rpcError) {
-                              console.error('❌ RPC increment failed, trying direct update:', {
-                                message: rpcError.message,
-                                code: rpcError.code,
-                                details: rpcError.details
-                              });
                               
                               // Fallback: direct update
                               const { data: bookData } = await supabase
@@ -1545,12 +1503,6 @@ export const BookPanel = ({ demoMode = false }) => {
                                 .eq('id', selectedBook.id);
                               
                               if (updateError) {
-                                console.error('❌ Count UPDATE FAILED:', {
-                                  message: updateError.message,
-                                  code: updateError.code,
-                                  details: updateError.details,
-                                  status: updateError.status
-                                });
                               } else {
                                 setSelectedBook(prev => ({
                                   ...prev,
@@ -1564,13 +1516,11 @@ export const BookPanel = ({ demoMode = false }) => {
                                 downloads_count: newCount
                               }));
                             }
-                          } catch (countError) {
-                            console.error('⚠️ Count increment exception:', countError);
+                          } catch  {
                           }
                         }
                       }
-                    } catch (error) {
-                      console.error('Exception while logging book download:', error);
+                    } catch  {
                     }
 
                     return true;

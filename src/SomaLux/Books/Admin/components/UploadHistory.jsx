@@ -23,8 +23,7 @@ export const UploadHistory = ({ userProfile, onClose, reloadTrigger = 0 }) => {
       });
       setHistory(result.data || []);
       setTotalCount(result.count || 0);
-    } catch (err) {
-      console.error('Failed to load upload history:', err);
+    } catch  {
     } finally {
       setLoading(false);
     }
@@ -34,8 +33,7 @@ export const UploadHistory = ({ userProfile, onClose, reloadTrigger = 0 }) => {
     try {
       const stats = await getUploadHistoryStats();
       setStats(stats);
-    } catch (err) {
-      console.error('Failed to load stats:', err);
+    } catch  {
     }
   }, []);
 
@@ -102,7 +100,6 @@ export const UploadHistory = ({ userProfile, onClose, reloadTrigger = 0 }) => {
         await loadStats();
         alert('Upload history cleared successfully!');
       } catch (err) {
-        console.error('Failed to clear history:', err);
         alert('Failed to clear upload history. Please try again.');
       } finally {
         setIsClearing(false);

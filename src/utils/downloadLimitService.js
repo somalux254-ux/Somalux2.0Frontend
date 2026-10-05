@@ -101,13 +101,11 @@ export const recordDownload = async (user, itemType, itemId, itemName) => {
           });
       } catch (supabaseError) {
         // Log error but don't fail the download - table may not exist yet
-        console.warn('Failed to record download in Supabase:', supabaseError?.message);
       }
     }
 
     return { success: true };
   } catch (error) {
-    console.error('Error recording download:', error);
     return { success: false, error: error.message };
   }
 };
@@ -134,7 +132,6 @@ export const getTodayDownloadHistory = async (user) => {
     if (error) throw error;
     return data || [];
   } catch (error) {
-    console.warn('Error fetching download history:', error);
     return [];
   }
 };
@@ -147,7 +144,6 @@ export const resetDailyDownloads = () => {
     localStorage.removeItem(STORAGE_KEY);
     return { success: true };
   } catch (error) {
-    console.error('Error resetting downloads:', error);
     return { success: false, error: error.message };
   }
 };

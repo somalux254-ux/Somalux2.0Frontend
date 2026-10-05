@@ -60,8 +60,7 @@ const writeUniversityExamsCache = (universityId, papers, total) => {
       total,
       cachedAt: Date.now()
     }));
-  } catch (error) {
-    console.warn('Could not cache university exam papers:', error?.message || error);
+  } catch  {
   }
 };
 
@@ -185,7 +184,6 @@ export const PaperPanel = () => {
             hasMore = false;
           }
         } catch (batchError) {
-          console.error(`Error loading batch ${pageNum}:`, batchError);
           // Continue loading remaining batches even if one fails
           pageNum++;
           attempts++;
@@ -203,14 +201,12 @@ export const PaperPanel = () => {
           data: transformedData,
           timestamp: Date.now()
         }));
-      } catch (e) {
-        console.warn('Could not cache papers (storage full):', e.message);
+      } catch  {
       }
       
       setPapers(transformedData);
       setLoading(false);
     } catch (error) {
-      console.error('Error loading past papers:', error);
       // If API fails, try to show cached data
       try {
         const cached = localStorage.getItem('cachedPastPapers');
@@ -220,12 +216,10 @@ export const PaperPanel = () => {
             setPapers(data);
             setLoading(false);
             return;
-          } catch (parseError) {
-            console.warn('Cache parse error:', parseError);
+          } catch  {
           }
         }
-      } catch (storageError) {
-        console.warn('localStorage access error:', storageError);
+      } catch  {
       }
       setLoading(false);
     }
@@ -271,12 +265,10 @@ export const PaperPanel = () => {
       writeUniversityExamsCache(universityId, refreshedPapers, total);
       if (!hasCachedPapers) setCurrentPage(1);
     } catch (error) {
-      console.error('Error loading university papers:', error);
       if (!hasCachedPapers) {
         setPapers([]);
         setUniversityPapersError(error?.message || 'Could not load exam papers. Please try again.');
       } else {
-        console.warn('Showing cached exam papers because refresh failed.');
       }
     } finally {
       setLoadingUniversityPapers(false);
@@ -299,18 +291,15 @@ export const PaperPanel = () => {
               setTimeout(() => fetchAndUpdateUniversities(), 500);
               return;
             }
-          } catch (parseError) {
-            console.warn('Cache parse error:', parseError);
+          } catch  {
           }
         }
-      } catch (storageError) {
-        console.warn('localStorage access error:', storageError);
+      } catch  {
       }
       
       // No cache, fetch normally
       await fetchAndUpdateUniversities();
     } catch (error) {
-      console.error('Error loading universities:', error);
       setLoading(false);
     }
   }, []);
@@ -347,7 +336,6 @@ export const PaperPanel = () => {
       setLoading(false);
 
     } catch (error) {
-      console.error('Error fetching universities:', error);
       setLoading(false);
     }
   };
@@ -356,8 +344,7 @@ export const PaperPanel = () => {
     try {
       const data = await getFaculties();
       setFaculties(data);
-    } catch (error) {
-      console.error('Error loading faculties:', error);
+    } catch  {
     }
   }, []);
 
@@ -527,7 +514,6 @@ export const PaperPanel = () => {
           setFacultyLikesCounts(countsObj);
         }
       } catch (error) {
-        console.error('Error loading faculty data:', error);
         // Fallback to localStorage
         const savedViews = JSON.parse(localStorage.getItem('facultyViews') || '{}');
         const savedLikes = JSON.parse(localStorage.getItem('facultyLikes') || '{}');
@@ -717,7 +703,6 @@ export const PaperPanel = () => {
         setNotification(null);
       }, 2000);
     } catch (e) {
-      console.error('Past paper submission failed:', e);
       setNotification({ 
         type: 'error', 
         message: e?.message || 'Failed to submit past paper. Please try again.' 
@@ -883,7 +868,6 @@ export const PaperPanel = () => {
         setSelectedPaper(prev => prev?.id === paper.id ? { ...prev, downloadUrl: signedUrl } : prev);
       })
       .catch(error => {
-        console.warn('Failed to load past paper preview:', { paperId: paper.id, error: error.message });
         setPreviewLoading(false);
       });
   };
@@ -909,7 +893,6 @@ export const PaperPanel = () => {
           setSelectedPaper(prev => prev?.id === paper.id ? { ...prev, downloadUrl: signedUrl } : prev);
         })
         .catch(error => {
-          console.warn('Failed to prewarm past paper URL:', { paperId: paper.id, error: error.message });
           setPreviewLoading(false);
         });
     }
@@ -942,8 +925,7 @@ export const PaperPanel = () => {
           return combined;
         });
         setCurrentPage(nextPage);
-      } catch (error) {
-        console.error('Error loading next university exam page:', error);
+      } catch  {
       } finally {
         setLoadingMoreUniversityPapers(false);
       }
@@ -975,7 +957,6 @@ export const PaperPanel = () => {
       const url = paper.downloadUrl || paper.file_url || await getPastPaperSignedUrl(paper.id);
 
       if (!url) {
-        console.warn('Unable to resolve reader URL for past paper', paper.id);
         return;
       }
 
@@ -984,8 +965,7 @@ export const PaperPanel = () => {
       setReaderUrl(url);
       setShowReader(true);
       
-    } catch (e) {
-      console.warn('Failed to open reader for past paper', e);
+    } catch  {
     }
   };
 
@@ -1089,7 +1069,6 @@ export const PaperPanel = () => {
           });
         }
       } catch (err) {
-        console.error('Error tracking faculty view:', err);
         // Fallback to localStorage
         setFacultyViews(prev => {
           const updated = { ...prev, [faculty]: (prev[faculty] || 0) + 1 };
@@ -1165,8 +1144,7 @@ export const PaperPanel = () => {
           });
         }
       }
-    } catch (err) {
-      console.error('Error toggling faculty like:', err);
+    } catch  {
     }
   };
 

@@ -29,13 +29,11 @@ let simpleReaderWorkerReady = false;
 if (pdfjs.GlobalWorkerOptions.workerSrc) {
   simpleReaderWorkerReady = true;
 } else {
-  console.error('❌ PDF worker not configured! Attempting fallback...');
   try {
     const fallbackWorker = '/pdf.worker.min.mjs';
     pdfjs.GlobalWorkerOptions.workerSrc = fallbackWorker;
     simpleReaderWorkerReady = true;
   } catch (e) {
-    console.error('❌ Failed to set PDF worker fallback in SimpleScrollReader:', e);
     simpleReaderWorkerReady = false;
   }
 }
@@ -54,14 +52,12 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
 
     let cancelled = false;
     SystemBars.enterImmersiveReader().catch(error => {
-      console.warn('Could not enter immersive PDF reader:', error?.message || error);
     });
 
     return () => {
       if (cancelled) return;
       cancelled = true;
       SystemBars.exitImmersiveReader().catch(error => {
-        console.warn('Could not restore system bars after PDF reader:', error?.message || error);
       });
     };
   }, [readerClassName]);
@@ -72,7 +68,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
   const prepareBrowserTextToSpeech = useCallback(async () => {
     if (useNativeTextToSpeech) return true;
     if (typeof window === 'undefined' || !window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') {
-      console.error('[tts] Browser speech synthesis is unavailable');
       return false;
     }
 
@@ -107,12 +102,10 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
               nativeTtsLanguageRef.current = language;
               return true;
             }
-          } catch (error) {
-            console.warn('[tts] Native engine not ready', { attempt: attempt + 1, error: error.message });
+          } catch  {
           }
           await new Promise(resolve => setTimeout(resolve, 300));
         }
-        console.error('[tts] No Android text-to-speech language is installed');
         return false;
       })().finally(() => {
         nativeTtsInitPromiseRef.current = null;
@@ -125,7 +118,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
   useEffect(() => {
     loadingStartedAtRef.current = Date.now();
     if (!src) {
-      console.warn('⚠️ No PDF source provided!');
     }
   }, [src, cacheKey]);
 
@@ -184,7 +176,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
       if (window.speechSynthesis.paused) {
         window.speechSynthesis.resume();
       } else if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending && Date.now() - lastSpeechActivityRef.current > 1800) {
-        console.warn('[tts] Speech engine stalled; restarting current page');
         window.speechSynthesis.cancel();
         lastSpeechActivityRef.current = Date.now();
         playPageAudioRef.current?.();
@@ -727,7 +718,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       saveAs(blob, `${title}-bookmarked-pages.pdf`);
     } catch (error) {
-      console.error('Error exporting PDF:', error);
       alert('Failed to export bookmarked pages');
     }
   }, [getBookmarkedPages, src, title]);
@@ -742,7 +732,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
     try {
       await generateSummaryDocument(pageTextMap, getBookmarkedPages(), title);
     } catch (error) {
-      console.error('Error exporting summary:', error);
       alert('Failed to export summary');
     }
   }, [getBookmarkedPages, pageTextMap, title]);
@@ -802,7 +791,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
           playPageAudio();
         }
       }).catch(error => {
-        console.error('[tts] Page text extraction failed', { page: pageNum, error: error.message });
         currentPageAudioRef.current += 1;
         audioSentenceIndexRef.current = 0;
         if (isPlayingRef.current) playPageAudio();
@@ -863,11 +851,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
           audioSentenceIndexRef.current = sentenceIndex;
           setTimeout(speakNextNativeSentence, 150);
         }).catch(error => {
-          console.error('[tts] Native sentence failed', {
-            page: pageNum,
-            sentenceLength: sentences[sentenceIndex].length,
-            error: error.message || String(error)
-          });
           setIsAudioPlaying(false);
           isPlayingRef.current = false;
         });
@@ -917,12 +900,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
       };
 
       utterance.onerror = () => {
-        console.error('[tts] Browser speech synthesis error', {
-          page: pageNum,
-          speaking: window.speechSynthesis.speaking,
-          paused: window.speechSynthesis.paused,
-          pending: window.speechSynthesis.pending
-        });
         if (isPlayingRef.current && speechRetryCountRef.current < 2) {
           speechRetryCountRef.current += 1;
           setTimeout(readNextSentence, 500);
@@ -981,7 +958,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
           setExtractedText('PDF loaded');
         } catch (error) {
           if (!isReaderMountedRef.current) return;
-          console.error('Error extracting text from PDF:', error);
           setPageTextMap({});
           pageTextMapRef.current = {};
           setExtractedText('');
@@ -1006,7 +982,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
         return;
       }
     } else if (typeof window === 'undefined' || !window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') {
-      console.warn('Text-to-speech is not available on this device');
       return;
     }
 
@@ -1047,7 +1022,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
         .map(page => `Page ${page.pageNum}. ${page.text.trim()}`)
         .join('\n\n');
       if (!selectedPageText) {
-        console.error('[tts] Selected PDF page contains no extractable text');
         setIsAudioPlaying(false);
         isPlayingRef.current = false;
         return;
@@ -1073,7 +1047,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
           title,
           page: currentPage
         }).catch(error => {
-          console.warn('[tts] Foreground service failed to start', error);
         });
         return;
       }
@@ -1105,7 +1078,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
         await navigator.clipboard.writeText(selection.text);
         // Panel stays open with feedback animation
       } catch (err) {
-        console.error('❌ Failed to copy:', err);
         // Fallback
         const textarea = document.createElement('textarea');
         textarea.value = selection.text;
@@ -1113,8 +1085,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
         textarea.select();
         try {
           document.execCommand('copy');
-        } catch (e) {
-          console.error('❌ Fallback copy failed:', e);
+        } catch  {
         }
         document.body.removeChild(textarea);
       }
@@ -1128,7 +1099,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
     try {
       const sel = window.getSelection();
       if (!sel.rangeCount || sel.rangeCount === 0) {
-        console.warn('⚠️ No selection range');
         return;
       }
 
@@ -1161,7 +1131,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
       }
 
       if (textNodes.length === 0) {
-        console.warn('⚠️ No text nodes found in selection');
         return;
       }
 
@@ -1228,8 +1197,7 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
       });
 
       sel.removeAllRanges();
-    } catch (err) {
-      console.error('❌ Highlight failed:', err);
+    } catch  {
     }
   };
 
@@ -1489,7 +1457,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
                   file={documentSource}
                   onLoadSuccess={handleDocumentLoad}
                   onError={(error) => {
-                    console.error('PDF loading error in SimpleScrollReader:', error?.message || error);
                     setPdfError(true);
                   }}
                   loading={null}
@@ -1553,7 +1520,6 @@ const SimpleScrollReader = ({ src, title, author, onClose, onAudioClose, sampleT
                               renderAnnotationLayer={false}
                               loading=""
                               onRenderError={(error) => {
-                                console.warn('PDF page render error:', error?.message || error);
                                 setPdfError(true);
                               }}
                               onRenderSuccess={pageNum === 1 ? handleFirstPageRender : undefined}

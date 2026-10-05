@@ -8,9 +8,8 @@ if (typeof window !== 'undefined') {
   if (typeof indexedDB !== 'undefined') {
     try {
       const request = indexedDB.deleteDatabase('cacheDB');
-      request.onerror = () => console.warn('Failed to clear IndexedDB');
+      request.onerror = () => {};
     } catch (e) {
-      console.warn('Could not clear IndexedDB:', e);
     }
   }
   

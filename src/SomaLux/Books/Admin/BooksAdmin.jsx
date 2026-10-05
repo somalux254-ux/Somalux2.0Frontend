@@ -66,7 +66,6 @@ export const BooksAdmin = () => {
   // Start downloading the active page while the profile/access check runs.
   useEffect(() => {
     preloadAdminRoute(location.pathname)?.catch((error) => {
-      console.warn('Could not preload admin page:', error?.message || error);
     });
   }, [location.pathname]);
 
@@ -82,8 +81,7 @@ export const BooksAdmin = () => {
 
         const profile = await getCurrentUserProfile(user);
         setUserProfile(profile);
-      } catch (error) {
-        console.error('Failed to load user profile:', error);
+      } catch  {
       } finally {
         setLoadingProfile(false);
       }
@@ -105,8 +103,7 @@ export const BooksAdmin = () => {
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error || 'Failed to load submissions summary');
         setPendingSubmissions(json.totalPending || 0);
-      } catch (e) {
-        console.warn('Submissions summary failed:', e?.message || e);
+      } catch  {
       }
     };
     fetchSummary();

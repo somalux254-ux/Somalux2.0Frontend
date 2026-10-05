@@ -106,7 +106,6 @@ export async function getBookSignedUrl(bookId) {
     return result.signedUrl;
   }).catch(error => {
     signedBookUrlCache.delete(bookId);
-    console.error('[signed-url] Client request failed', { bookId, error: error.message });
     throw error;
   });
 
@@ -135,7 +134,6 @@ export async function fetchUserSearchHistoryAdmin(userId, { limit = 200, days } 
     if (error) throw error;
     return data || [];
   } catch (e) {
-    console.error('Error fetching admin user search history:', e);
     return [];
   }
 }
@@ -171,7 +169,6 @@ export async function fetchAllUsers() {
     
     return allUsers;
   } catch (e) {
-    console.error('Error fetching users for PDF:', e);
     return [];
   }
 }
@@ -211,7 +208,6 @@ export async function fetchBooks({ page = 1, pageSize = 10, search = '', categor
     }
     const { data, error, count } = await query;
     if (error) {
-      console.error('Supabase error fetching books:', error);
       throw new Error(`Failed to fetch books: ${error.message || 'Unknown error'}. Make sure all required columns exist in the books table.`);
     }
     
@@ -225,7 +221,6 @@ export async function fetchBooks({ page = 1, pageSize = 10, search = '', categor
     
     return { data: mappedData, count: count || 0 };
   } catch (err) {
-    console.error('Error in fetchBooks:', err);
     throw err;
   }
 }
@@ -275,7 +270,6 @@ export async function uploadFile(file) {
       publicUrl: supabase.storage.from(BOOKS_BUCKET).getPublicUrl(result.path).data.publicUrl 
     };
   } catch (err) {
-    console.error('File upload failed:', err);
     throw err;
   }
 }
@@ -321,7 +315,6 @@ export async function uploadCover(file) {
     const result = await response.json();
     return { path: result.path, publicUrl: result.publicUrl };
   } catch (err) {
-    console.error('Cover upload failed:', err);
     throw err;
   }
 }
@@ -402,17 +395,12 @@ export async function createBookSubmission({ metadata, pdfFile, coverFile }) {
       uploadedBy: payload.uploaded_by || null,
       itemTitle: payload.title || null,
     };
-    const notifyResponse = await fetch(`${API_BASE}/api/elib/submissions/notify-admins`, {
+    await fetch(`${API_BASE}/api/elib/submissions/notify-admins`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(notifyBody),
     });
-    const notifyJson = await notifyResponse.json();
-    if (!notifyResponse.ok) {
-      console.warn('⚠️ [SUBMISSION] Admin notification failed:', notifyJson);
-    }
-  } catch (e) {
-    console.error('❌ [SUBMISSION] Error sending admin notification:', e);
+  } catch  {
   }
 
   // Send submission confirmation email to uploader
@@ -432,21 +420,14 @@ export async function createBookSubmission({ metadata, pdfFile, coverFile }) {
           uploaderName: uploaderProfile.full_name,
           itemTitle: payload.title,
         };
-        const uploaderResponse = await fetch(`${API_BASE}/api/elib/submissions/notify-uploader`, {
+        await fetch(`${API_BASE}/api/elib/submissions/notify-uploader`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(uploaderNotifyBody),
         });
-        const uploaderJson = await uploaderResponse.json();
-        if (!uploaderResponse.ok) {
-          console.warn('⚠️ [SUBMISSION] Uploader notification failed:', uploaderJson);
-        }
-      } else {
-        console.warn('⚠️ [SUBMISSION] Could not fetch uploader profile for confirmation email');
       }
     }
-  } catch (e) {
-    console.error('❌ [SUBMISSION] Error sending uploader confirmation:', e);
+  } catch  {
   }
 
   return data;
@@ -485,7 +466,6 @@ export async function deleteBook({ id, file_path }) {
       .maybeSingle();
     
     if (fetchError && fetchError.code !== 'PGRST116') {
-      console.warn('Could not fetch book details before deletion:', fetchError);
     }
 
     // Delete the book record from database
@@ -517,12 +497,10 @@ export async function deleteBook({ id, file_path }) {
         .from(BOOKS_BUCKET)
         .remove(filesToDelete)
         .catch((err) => {
-          console.warn('Failed to delete some files from storage:', err);
           // Don't throw - record is already deleted from DB
         });
     }
   } catch (err) {
-    console.error('Error in deleteBook:', err);
     throw err;
   }
 }
@@ -550,7 +528,6 @@ export async function fetchStats() {
       (async () => {
         const { count, error } = await supabase.from('android_apk_downloads').select('id', { count: 'exact', head: true });
         if (error) {
-          console.warn('[fetchStats] APK download metrics unavailable:', error.message);
           return 0;
         }
         return count || 0;
@@ -599,7 +576,6 @@ export async function fetchStats() {
       monthlyPastPapers: monthsPastPapers.map(m => ({ month: m.label, uploads: m.uploads }))
     };
   } catch (error) {
-    console.error('Error fetching stats:', error);
     return {
       counts: { books: 0, users: 0, universities: 0, pastPapers: 0 },
       recent: [],
@@ -637,7 +613,6 @@ export async function fetchProfiles() {
           .range(from, to);
 
         if (error) {
-          console.error('[fetchProfiles] Supabase error on page', page, ':', error);
           throw error;
         }
         return data || [];
@@ -652,7 +627,6 @@ export async function fetchProfiles() {
       display_name: p.full_name || p.display_name || p.email?.split('@')[0] || ''
     }));
   } catch (e) {
-    console.error('[fetchProfiles] Error:', e?.message || e);
     throw e;
   }
 }
@@ -669,7 +643,6 @@ export function getAvatarPublicUrl(avatarPath) {
     const { data } = supabase.storage.from('user-avatars').getPublicUrl(avatarPath);
     return data?.publicUrl || null;
   } catch (e) {
-    console.error('[getAvatarPublicUrl] Error getting public URL:', e);
     return null;
   }
 }
@@ -701,7 +674,6 @@ export async function migrateAvatarsToProfilesTable() {
       .list('', { limit: 10000 });
     
     if (listError) {
-      console.error('[migrateAvatarsToProfilesTable] Error listing files:', listError);
       return { success: false, error: listError.message };
     }
     
@@ -716,7 +688,6 @@ export async function migrateAvatarsToProfilesTable() {
       .select('id, email, avatar_url, avatar_path');
     
     if (profileError) {
-      console.error('[migrateAvatarsToProfilesTable] Error fetching profiles:', profileError);
       return { success: false, error: profileError.message };
     }
     
@@ -756,7 +727,6 @@ export async function migrateAvatarsToProfilesTable() {
         
         
         if (!publicUrl) {
-          console.warn(`[migrateAvatarsToProfilesTable] Failed to generate public URL for ${avatarFile.name}`);
           migrateResults.errors.push({ id: profile.id, error: 'Failed to generate public URL' });
           fileIndex++;
           continue;
@@ -772,7 +742,6 @@ export async function migrateAvatarsToProfilesTable() {
           .eq('id', profile.id);
         
         if (updateError) {
-          console.warn(`[migrateAvatarsToProfilesTable] Error updating profile ${profile.id}:`, updateError);
           migrateResults.errors.push({ id: profile.id, error: updateError.message });
         } else {
           migrateResults.updated.push({ 
@@ -785,7 +754,6 @@ export async function migrateAvatarsToProfilesTable() {
         
         fileIndex++;
       } catch (e) {
-        console.error(`[migrateAvatarsToProfilesTable] Exception for profile ${profile.id}:`, e);
         migrateResults.errors.push({ id: profile.id, error: e.message });
         fileIndex++;
       }
@@ -800,7 +768,6 @@ export async function migrateAvatarsToProfilesTable() {
       details: migrateResults
     };
   } catch (err) {
-    console.error('[migrateAvatarsToProfilesTable] Unexpected error:', err);
     return { success: false, error: err.message };
   }
 }
@@ -840,7 +807,6 @@ export async function fetchUploadCountsByUser() {
 
     return result;
   } catch (err) {
-    console.error('Error fetching upload counts by user:', err);
     return [];
   }
 }
@@ -864,7 +830,6 @@ export async function updateUserRole(id, role) {
     const payload = await res.json().catch(() => ({}));
     return payload?.data || null;
   } catch (error) {
-    console.error('[updateUserRole] Error:', error?.message || error);
     throw error;
   }
 }
@@ -920,7 +885,6 @@ export async function getCurrentUserProfile(authenticatedUser = undefined) {
       data = result?.data;
       error = result?.error;
     } catch (queryErr) {
-      console.error('❌ [getCurrentUserProfile] Profile query failed:', queryErr?.message || queryErr);
       return null;
     }
 
@@ -951,7 +915,6 @@ export async function getCurrentUserProfile(authenticatedUser = undefined) {
         }, { onConflict: 'id' });
 
       if (upsertError) {
-        console.warn('⚠️ [getCurrentUserProfile] Profile backfill failed:', upsertError);
       }
 
       return fallbackProfile;
@@ -973,8 +936,6 @@ export async function getCurrentUserProfile(authenticatedUser = undefined) {
     const result = { ...data, role: data.role || (isAdminEmail ? 'admin' : 'user') };
     return result;
   } catch (err) {
-    console.error('❌ [getCurrentUserProfile] FATAL Error:', err?.message || String(err));
-    console.error('Stack:', err?.stack);
     return null;
   }
 }
@@ -988,7 +949,6 @@ export async function fetchViewDetails() {
       .order('viewed_at', { ascending: false });
     
     if (viewsError) {
-      console.error('Error fetching views:', viewsError);
       return [];
     }
 
@@ -1064,7 +1024,6 @@ export async function fetchViewDetails() {
       })
       .sort((a, b) => b.total_views - a.total_views);
   } catch (error) {
-    console.error('Error in fetchViewDetails:', error);
     return [];
   }
 }
@@ -1214,7 +1173,6 @@ export async function cleanupOrphanedFiles() {
 
     return results;
   } catch (err) {
-    console.error('Error in cleanupOrphanedFiles:', err);
     throw err;
   }
 }
@@ -1301,7 +1259,6 @@ export async function getOrphanedFilesReport() {
 
     return report;
   } catch (err) {
-    console.error('Error in getOrphanedFilesReport:', err);
     throw err;
   }
 }
@@ -1344,7 +1301,6 @@ export function clearAllCaches() {
       keys: keysToDelete
     };
   } catch (err) {
-    console.error('Error clearing caches:', err);
     return {
       success: false,
       error: err.message
@@ -1388,7 +1344,6 @@ export function getCacheStats() {
     
     return stats;
   } catch (err) {
-    console.error('Error getting cache stats:', err);
     return { error: err.message };
   }
 }
@@ -1479,7 +1434,6 @@ export async function getSupabaseDatabaseStats() {
       total_size_gb: (stats.total_size_bytes / 1024 / 1024 / 1024).toFixed(6)
     };
   } catch (err) {
-    console.error('Error getting database stats:', err);
     return { error: err.message };
   }
 }
@@ -1557,7 +1511,6 @@ export async function getSupabaseStorageStats() {
       total_size_gb: (stats.total_size_bytes / 1024 / 1024 / 1024).toFixed(6)
     };
   } catch (err) {
-    console.error('Error getting storage stats:', err);
     return { error: err.message };
   }
 }
@@ -1652,7 +1605,6 @@ export async function getSystemStatistics() {
     const res = await fetch(endpoint);
     
     if (!res.ok) {
-      console.warn('[getSystemStatistics] Endpoint returned status:', res.status);
       throw new Error(`HTTP ${res.status}`);
     }
     
@@ -1667,7 +1619,6 @@ export async function getSystemStatistics() {
       breakdown: data.breakdown || {}
     };
   } catch (err) {
-    console.error('[getSystemStatistics] Error:', err);
     return { 
       success: false, 
       error: err.message,
@@ -1772,7 +1723,6 @@ export async function getUserStatistics() {
 
     return stats;
   } catch (err) {
-    console.error('[getUserStatistics] Error:', err);
     return { error: err.message };
   }
 }
@@ -1826,7 +1776,6 @@ export async function getBillingMetrics() {
 
     return metrics;
   } catch (err) {
-    console.error('Error calculating billing metrics:', err);
     return { error: err.message };
   }
 }
@@ -1865,7 +1814,6 @@ export async function getSupabaseUsageReport() {
       note: 'Egress and realtime metrics require Supabase API access. This dashboard shows database, storage, and user counts accurately.'
     };
   } catch (err) {
-    console.error('Error getting usage report:', err);
     return { error: err.message };
   }
 }
@@ -1898,7 +1846,6 @@ export async function updateUserTier(userId, tier) {
     const payload = await response.json().catch(() => ({}));
     return payload?.data || null;
   } catch (error) {
-    console.error('[updateUserTier] Error:', error?.message || error);
     throw error;
   }
 }
@@ -1929,7 +1876,6 @@ export async function fetchAllProfilesForVerify() {
       subscription_expires_at: u.subscription_expires_at
     }));
   } catch (error) {
-    console.error('Error fetching profiles for verify:', error?.message || error);
     throw error;
   }
 }

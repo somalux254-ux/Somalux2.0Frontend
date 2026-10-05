@@ -164,7 +164,6 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
               }, 'image/png', 0.95);
             }
           } catch (pageError) {
-            console.warn('Could not render PDF page:', pageError);
             showToast({ type: 'info', message: 'Could not auto-extract cover. You can upload one manually.' });
           }
         }
@@ -181,8 +180,7 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
               author = (metadata.info.Author || metadata.info.author || '').trim();
               title = (metadata.info.Title || metadata.info.title || '').trim();
             }
-          } catch (e) {
-            console.warn('Could not extract PDF metadata:', e);
+          } catch  {
           }
           
           // If we couldn't get author from metadata, try to extract from text
@@ -197,8 +195,7 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
                   const page = await pdfDoc.getPage(i);
                   const textContent = await page.getTextContent();
                   pageText += ' ' + textContent.items.map(item => item.str).join(' ');
-                } catch (e) {
-                  console.warn(`Could not extract text from page ${i}`);
+                } catch  {
                 }
               }
               
@@ -310,8 +307,7 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
                   }
                 }
               }
-            } catch (e) {
-              console.warn('Could not extract text from PDF:', e);
+            } catch  {
             }
           }
           
@@ -329,11 +325,9 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
               title: pdf?.name?.replace(/\.[^/.]+$/, '') || ''
             }));
           }
-        } catch (e) {
-          console.warn('Error extracting PDF metadata:', e);
+        } catch  {
         }
       } catch (error) {
-        console.error('Error extracting cover from PDF:', error);
         // Don't show error toast - this is optional, user can upload manual cover
         showToast({ type: 'info', message: 'Could not auto-extract cover. You can upload one manually.' });
       } finally {
@@ -359,7 +353,6 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
         setUnitNames([]);
         setYears([]);
       } catch (error) {
-        console.error('Error fetching faculties:', error);
         setFaculties([]);
       }
     }
@@ -373,7 +366,6 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
         setPaperForm((f) => ({ ...f, unit_name: '', year: '' }));
         setYears([]);
       } catch (error) {
-        console.error('Error fetching unit names:', error);
         setUnitNames([]);
       }
     }
@@ -386,7 +378,6 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
         // Reset year selection when unit name changes
         setPaperForm((f) => ({ ...f, year: '' }));
       } catch (error) {
-        console.error('Error fetching years:', error);
         setYears([]);
       }
     }
@@ -427,7 +418,6 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
       setBookForm({ title: '', author: '', description: '', category_id: '', year: '', language: '', isbn: '', pages: '', publisher: '' });
       navigate('/user/upload');
     } catch (e) {
-      console.error('Book upload failed:', e);
       showToast({ type: 'error', message: e?.message || 'Upload failed.' });
     } finally { setBusy(false); }
   };
@@ -505,11 +495,9 @@ const Upload = ({ userProfile, initialTab = 'books' }) => {
       
       // Fire upload in background without waiting
       uploadFunction({ metadata, pdfFile: paperPdf }).catch((e) => {
-        console.error('Past paper upload failed:', e);
         showToast({ type: 'error', message: e?.message || 'Upload failed.' });
       });
     } catch (e) {
-      console.error('Upload validation failed:', e);
       showToast({ type: 'error', message: e?.message || 'Upload validation failed.' });
     } finally { setBusy(false); }
   };

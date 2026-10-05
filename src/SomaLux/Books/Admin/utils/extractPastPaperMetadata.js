@@ -58,17 +58,14 @@ export async function extractPastPaperMetadata(pdfFile) {
       return parseMetadataFromText(fullText, pdfFile.name);
     } else {
       // If PDF extraction failed to get content, log clearly
-      console.warn(`⚠️ PDF content too small (${fullText.trim().length} chars). Extraction may be incomplete.`);
       const result = parseMetadataFromText(fullText, pdfFile.name);
       // DO NOT fallback to filename - leave empty fields if PDF extraction insufficient
       result.source = 'pdf-empty';
       return result;
     }
   } catch (error) {
-    console.warn('PDF extraction failed:', error);
     // CRITICAL: DO NOT fallback to filename parsing
     // Return empty metadata instead - filename should NEVER be used for extraction
-    console.warn('⚠️ IMPORTANT: Not using filename as fallback. Unit name must be from PDF only.');
     return {
       university: null,
       faculty: null,
@@ -361,7 +358,6 @@ function parseMetadataFromText(text, filename) {
 
   // If unit name is just a code (numeric only or all caps code), clear it and try again
   if (metadata.unitName && /^[A-Z0-9]+$/.test(metadata.unitName) && metadata.unitName.length < 10) {
-    console.warn('⚠️ Unit name looks like a code, clearing and retrying:', metadata.unitName);
     metadata.unitName = null;
     
     // Final desperate attempt: get ANY substantial text from the PDF
@@ -389,7 +385,6 @@ function parseMetadataFromText(text, filename) {
 
   // Log final extraction status
   if (!metadata.unitName) {
-    console.warn('⚠️ Unable to extract unit name from PDF');
   } else 
 
   return metadata;

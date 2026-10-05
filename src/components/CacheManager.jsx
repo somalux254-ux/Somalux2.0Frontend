@@ -125,7 +125,6 @@ export const CacheManager = () => {
       const cacheStats = await downloadOptimizer.getCacheStats();
       setStats(cacheStats);
     } catch (error) {
-      console.error('Failed to load cache stats:', error);
     } finally {
       setLoading(false);
     }

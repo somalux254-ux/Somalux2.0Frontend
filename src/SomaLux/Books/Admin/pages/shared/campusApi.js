@@ -46,7 +46,6 @@ export async function fetchUniversities({ page = 1, pageSize = 10, search = '', 
 
     const { data, error, count } = await query;
     if (error) {
-      console.error('Supabase error fetching universities:', error);
       throw new Error(`Failed to fetch universities: ${error.message}`);
     }
     const result = { data: data || [], count: count || 0 };
@@ -57,7 +56,6 @@ export async function fetchUniversities({ page = 1, pageSize = 10, search = '', 
     }
     return result;
   } catch (err) {
-    console.error('Error in fetchUniversities:', err);
     throw err;
   }
 }
@@ -75,7 +73,6 @@ export async function uploadUniversityCover(file) {
       });
     
     if (error) {
-      console.error('Cover upload error:', error);
       throw new Error(`Failed to upload cover to bucket '${UNIVERSITY_COVERS_BUCKET}': ${error.message}`);
     }
     
@@ -84,7 +81,6 @@ export async function uploadUniversityCover(file) {
       publicUrl: supabase.storage.from(UNIVERSITY_COVERS_BUCKET).getPublicUrl(data.path).data.publicUrl 
     };
   } catch (err) {
-    console.error('Cover upload failed:', err);
     throw err;
   }
 }
@@ -153,7 +149,6 @@ export async function deleteUniversity({ id, cover_image_url }) {
       .single();
     
     if (fetchError && fetchError.code !== 'PGRST116') {
-      console.warn('Could not fetch university details before deletion:', fetchError);
     }
 
     // Delete from Supabase database
@@ -174,7 +169,6 @@ export async function deleteUniversity({ id, cover_image_url }) {
           .from(UNIVERSITY_COVERS_BUCKET)
           .remove([path])
           .catch((err) => {
-            console.warn('Failed to delete university cover image from storage:', err);
             // Don't throw - record is already deleted from DB
           });
       }
@@ -182,7 +176,6 @@ export async function deleteUniversity({ id, cover_image_url }) {
 
     try { clearUniversitiesCache(); } catch (e) {}
   } catch (error) {
-    console.error('Error deleting university:', error);
     throw new Error(error.message || 'Failed to delete university');
   }
 }
@@ -257,10 +250,8 @@ export async function trackUniversityView(universityId) {
     });
     
     if (error) {
-      console.error('Error incrementing university views:', error);
     }
-  } catch (error) {
-    console.error('University view tracking error:', error);
+  } catch  {
   }
 }
 

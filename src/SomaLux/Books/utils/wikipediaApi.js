@@ -83,7 +83,6 @@ const extractKeyTerms = (text) => {
       return text.trim().split(/\s+/)[0] || 'Information';
     }
   } catch (error) {
-    console.error('Error extracting key terms:', error);
     return text.trim().split(/\s+/).slice(0, 2).join(' ') || 'Information';
   }
 };
@@ -111,14 +110,12 @@ const fetchWithRestApi = async (keyTerm) => {
     clearTimeout(timeoutId);
     
     if (!response.ok) {
-      console.warn(`⚠️ REST API status ${response.status}`);
       return { success: false };
     }
     
     const data = await response.json();
     
     if (!data.extract || data.extract.trim().length < 50) {
-      console.warn('⚠️ Extract too short or missing');
       return { success: false };
     }
     
@@ -132,7 +129,6 @@ const fetchWithRestApi = async (keyTerm) => {
       image: data.thumbnail?.source || null
     };
   } catch (error) {
-    console.error('❌ REST API error:', error.message);
     return { success: false };
   }
 };
@@ -165,14 +161,12 @@ const fetchWithQueryApi = async (searchTerm) => {
     const pageId = Object.keys(pages)[0];
     
     if (!pageId || pageId === '-1') {
-      console.warn('⚠️ Page not found in query API');
       return { success: false };
     }
     
     const page = pages[pageId];
     
     if (!page.extract || page.extract.trim().length < 50) {
-      console.warn('⚠️ No valid extract in query response');
       return { success: false };
     }
     
@@ -186,7 +180,6 @@ const fetchWithQueryApi = async (searchTerm) => {
       image: page.pageimage || null
     };
   } catch (error) {
-    console.error('❌ Query API error:', error.message);
     return { success: false };
   }
 };
@@ -218,7 +211,6 @@ const fetchWithSearchFallback = async (searchTerm) => {
     const results = data.query?.search || [];
     
     if (results.length === 0) {
-      console.warn('⚠️ No search results found');
       return { success: false };
     }
     
@@ -246,7 +238,6 @@ const fetchWithSearchFallback = async (searchTerm) => {
     const page = pages[pageId];
     
     if (!page.extract || page.extract.trim().length < 50) {
-      console.warn('⚠️ No valid extract from search result');
       return { success: false };
     }
     
@@ -260,7 +251,6 @@ const fetchWithSearchFallback = async (searchTerm) => {
       image: page.pageimage || null
     };
   } catch (error) {
-    console.error('❌ Search fallback error:', error.message);
     return { success: false };
   }
 };
@@ -309,7 +299,6 @@ export const fetchWikipediaExplanation = async (searchTerm) => {
       error: 'Unable to fetch from Wikipedia'
     };
   } catch (error) {
-    console.error('❌ Wikipedia API error:', error);
     return {
       title: searchTerm,
       extract: null,
@@ -370,7 +359,6 @@ export const fetchWikipediaPage = async (searchTerm) => {
       success: true
     };
   } catch (error) {
-    console.error('❌ Wikipedia page fetch error:', error);
     return {
       success: false,
       error: error.message
@@ -412,7 +400,6 @@ export const searchWikipedia = async (searchTerm, limit = 5) => {
     
     return data.query?.search || [];
   } catch (error) {
-    console.error('❌ Wikipedia search error:', error);
     return [];
   }
 };
@@ -435,7 +422,6 @@ export const getWikipediaDefinition = async (searchTerm) => {
     
     return `Unable to fetch definition for "${searchTerm}"`;
   } catch (error) {
-    console.error('❌ Definition fetch error:', error);
     return `Unable to fetch definition for "${searchTerm}"`;
   }
 };
@@ -483,7 +469,6 @@ export const fetchAuthorImage = async (authorName) => {
     setCacheResult(cacheKey, null);
     return null;
   } catch (error) {
-    console.error(`❌ [${authorName}] Error:`, error.message);
     setCacheResult(cacheKey, null);
     return null;
   }
@@ -635,6 +620,5 @@ export const fetchAuthorImages = async (authorNames) => {
  * Clear the Wikipedia cache
  */
 export const clearWikipediaCache = () => {
-  const count = Object.keys(WIKIPEDIA_CACHE).length;
   Object.keys(WIKIPEDIA_CACHE).forEach(key => delete WIKIPEDIA_CACHE[key]);
 };

@@ -49,7 +49,6 @@ const Submissions = ({ userProfile }) => {
       const items = Array.isArray(json.submissions) ? json.submissions : [];
       setItems(items);
     } catch (e) {
-      console.error(`[Submissions] Error fetching ${type}:`, e);
       setError(e.message || `Failed to load ${type} submissions`);
     } finally {
       setLoading(false);
@@ -88,7 +87,6 @@ const Submissions = ({ userProfile }) => {
     // Validate that id is a UUID, not an email
     const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidPattern.test(id)) {
-      console.error('Invalid submission ID format:', id);
       // If id is not valid but we have selected with valid id, use that
       if (selected?.id && uuidPattern.test(selected.id)) {
         return approve(selected.id);
@@ -136,7 +134,6 @@ const Submissions = ({ userProfile }) => {
       if (!res.ok) throw new Error(json?.details || json?.error || 'Approve failed');
       showToast({ type: 'success', message: `${type === 'books' ? 'Book' : type === 'universities' ? 'University' : 'Past paper'} approved successfully.` });
     } catch (e) {
-      console.error('Approve submission failed:', e);
       showToast({ type: 'error', message: e.message || 'Approve failed.' });
       // Restore item and count on error
       fetchData();
@@ -160,7 +157,6 @@ const Submissions = ({ userProfile }) => {
     // Validate that id is a UUID, not an email
     const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidPattern.test(id)) {
-      console.error('Invalid submission ID format:', id);
       // If id is not valid but we have selected with valid id, use that
       if (selected?.id && uuidPattern.test(selected.id)) {
         return reject(selected.id);
@@ -216,7 +212,6 @@ const Submissions = ({ userProfile }) => {
       if (!res.ok) throw new Error(json?.error || 'Reject failed');
       showToast({ type: 'success', message: `${type === 'books' ? 'Book' : type === 'universities' ? 'University' : 'Past paper'} rejected.` });
     } catch (e) {
-      console.error('Reject submission failed:', e);
       showToast({ type: 'error', message: e.message || 'Reject failed.' });
       // Restore item and count on error
       fetchData();

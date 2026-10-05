@@ -45,7 +45,6 @@ export class CacheManager {
 
       return true;
     } catch (error) {
-      console.warn('Cache set failed:', error);
       // If localStorage is full, clear old entries
       if (error.name === 'QuotaExceededError') {
         this.clearExpired();
@@ -92,8 +91,7 @@ export class CacheManager {
         // Expired, remove it
         localStorage.removeItem(cacheKey);
       }
-    } catch (error) {
-      console.warn('Cache get failed:', error);
+    } catch  {
     }
 
     return fallbackValue;
@@ -199,8 +197,7 @@ export class CacheManager {
       subs.forEach(callback => {
         try {
           callback(data);
-        } catch (error) {
-          console.error('Subscriber callback error:', error);
+        } catch  {
         }
       });
     }

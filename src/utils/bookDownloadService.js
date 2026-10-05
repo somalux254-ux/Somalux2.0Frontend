@@ -43,12 +43,6 @@ export async function recordBookDownload({
       .select();
 
     if (error) {
-      console.error('❌ Download tracking error:', {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint
-      });
       
       // Still return success so download doesn't fail, but log for debugging
       return {
@@ -65,7 +59,6 @@ export async function recordBookDownload({
       error: null
     };
   } catch (error) {
-    console.error('❌ Exception in recordBookDownload:', error);
     return {
       success: false,
       error: error.message,
@@ -92,13 +85,11 @@ export async function getBookDownloadStats(bookId) {
     );
 
     if (error) {
-      console.error('Error fetching download stats:', error);
       return null;
     }
 
     return data && data.length > 0 ? data[0] : null;
   } catch (error) {
-    console.error('Exception in getBookDownloadStats:', error);
     return null;
   }
 }
@@ -139,13 +130,11 @@ export async function getUserDownloadHistory(userId, options = {}) {
     const { data, error } = await query;
 
     if (error) {
-      console.error('Error fetching download history:', error);
       return [];
     }
 
     return data || [];
   } catch (error) {
-    console.error('Exception in getUserDownloadHistory:', error);
     return [];
   }
 }
@@ -167,13 +156,11 @@ export async function getBookDownloadAnalytics(bookId) {
       .eq('book_id', bookId);
 
     if (error) {
-      console.error('Error fetching download analytics:', error);
       return null;
     }
 
     return data && data.length > 0 ? data : null;
   } catch (error) {
-    console.error('Exception in getBookDownloadAnalytics:', error);
     return null;
   }
 }
@@ -197,13 +184,11 @@ export async function hasUserDownloadedBook(userId, bookId) {
       .eq('book_id', bookId);
 
     if (error) {
-      console.error('Error checking download status:', error);
       return false;
     }
 
     return (data && data.length > 0) || false;
   } catch (error) {
-    console.error('Exception in hasUserDownloadedBook:', error);
     return false;
   }
 }
@@ -228,13 +213,11 @@ export async function getTopDownloadedBooks(options = {}) {
       .limit(limit);
 
     if (error) {
-      console.error('Error fetching top downloaded books:', error);
       return [];
     }
 
     return data || [];
   } catch (error) {
-    console.error('Exception in getTopDownloadedBooks:', error);
     return [];
   }
 }

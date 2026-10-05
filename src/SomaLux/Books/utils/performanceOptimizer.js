@@ -21,8 +21,7 @@ class PerformanceOptimizer {
         timestamp: Date.now(),
         ttl: ttlMs
       });
-    } catch (e) {
-      console.warn('Memory cache error:', e);
+    } catch  {
     }
   }
 
@@ -102,8 +101,7 @@ class PerformanceOptimizer {
     
     try {
       await callback(page);
-    } catch (e) {
-      console.warn(`Prefetch failed for page ${page}:`, e);
+    } catch  {
     }
   }
 

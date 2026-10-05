@@ -39,6 +39,5 @@ export const initializeLiveUpdate = async () => {
     });
     await LiveUpdate.setNextBundle({ bundleId: manifest.bundleId });
   } catch (error) {
-    console.warn('[LiveUpdate] Update check failed:', error?.message || error);
   }
 };

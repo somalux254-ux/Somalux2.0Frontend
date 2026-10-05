@@ -38,7 +38,6 @@ export const EmailSender = () => {
 
       setStatus({ type: 'success', text: 'Email sent successfully.' });
     } catch (err) {
-      console.error('Send email failed:', err);
       setStatus({ type: 'error', text: err.message || 'Failed to send email.' });
     } finally {
       setSending(false);

@@ -58,7 +58,6 @@ export const AboutUsTab = ({ onOpenAgreement, onOpenPrivacy }) => {
           await navigator.clipboard.writeText(websiteUrl);
           copied = true;
         } catch (browserError) {
-          console.warn('[AboutUsTab] Browser clipboard write failed, trying fallback:', browserError);
         }
       }
 
@@ -72,7 +71,6 @@ export const AboutUsTab = ({ onOpenAgreement, onOpenPrivacy }) => {
 
       setCopyStatus('Copied!');
     } catch (error) {
-      console.warn('[AboutUsTab] Failed to copy website URL:', error);
       setCopyStatus('Copy failed');
     }
 

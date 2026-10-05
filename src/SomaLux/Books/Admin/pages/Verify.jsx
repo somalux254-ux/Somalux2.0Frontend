@@ -150,7 +150,6 @@ const Verify = ({ userProfile }) => {
       setRows(profiles);
       setCount(profiles.length);
     } catch (error) {
-      console.error('[Verify.load] Failed to load profiles:', error?.message || error);
       showToast({ type: 'error', message: 'Failed to load users.' });
     } finally {
       setLoading(false);
@@ -202,7 +201,6 @@ const Verify = ({ userProfile }) => {
           : row
       )));
     } catch (error) {
-      console.error('[Verify.updateTier] Error updating tier:', error?.message || error);
       showToast({ type: 'error', message: `Failed to update user tier: ${error?.message || 'Unknown error'}` });
     } finally {
       setUpdating(s => ({ ...s, [userId]: false }));

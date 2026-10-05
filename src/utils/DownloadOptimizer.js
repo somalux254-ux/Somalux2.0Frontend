@@ -72,7 +72,6 @@ export class DownloadOptimizer {
       this.triggerDownload(blob, filename);
       
     } catch (error) {
-      console.error('Download failed:', error);
       throw error;
     }
   }
@@ -151,7 +150,6 @@ export class DownloadOptimizer {
       this.triggerDownload(blob, filename);
       
     } catch (error) {
-      console.error('Large file download failed:', error);
       throw error;
     }
   }
@@ -200,7 +198,6 @@ export class DownloadOptimizer {
       });
 
     } catch (error) {
-      console.warn('Failed to cache file:', error);
     }
   }
 
@@ -222,7 +219,6 @@ export class DownloadOptimizer {
         };
       });
     } catch (error) {
-      console.warn('Failed to get cached file:', error);
       return null;
     }
   }
@@ -298,7 +294,6 @@ export class DownloadOptimizer {
         request.onsuccess = () => resolve();
       });
     } catch (error) {
-      console.error('Failed to clear cache:', error);
     }
   }
 
@@ -330,7 +325,6 @@ export class DownloadOptimizer {
         };
       });
     } catch (error) {
-      console.warn('Failed to get cache stats:', error);
       return null;
     }
   }

@@ -60,7 +60,6 @@ const Users = ({ isSuperAdmin }) => {
       try {
         profiles = await profilesPromise;
       } catch (e) {
-        console.error('[Users.load] fetchProfiles error:', e?.message || e);
         setRows([]);
         setLoading(false);
         return;
@@ -68,12 +67,9 @@ const Users = ({ isSuperAdmin }) => {
 
       try {
         uploadCounts = await uploadCountsPromise;
-      } catch (e) {
-        console.error('[Users.load] fetchUploadCountsByUser error:', e?.message || e);
+      } catch  {
       }
 
-      console.groupCollapsed('[Users.load] fetched data');
-      console.groupEnd();
 
       const uploadsMap = new Map(
         (uploadCounts || []).map((u) => [String(u.uploaded_by), {
@@ -144,7 +140,6 @@ const Users = ({ isSuperAdmin }) => {
 
       setRows(enriched);
     } catch (error) {
-      console.error('[Users.load] Error loading users:', error);
       setRows([]);
     } finally {
       setLoading(false);
@@ -159,7 +154,6 @@ const Users = ({ isSuperAdmin }) => {
       await updateUserRole(id, role);
       await load();
     } catch (error) {
-      console.error('[Users.changeRole] Error updating role:', error?.message || error);
       alert(`Failed to update role: ${error?.message || 'Unknown error'}`);
     } finally { 
       setSaving((s) => ({ ...s, [id]: false })); 

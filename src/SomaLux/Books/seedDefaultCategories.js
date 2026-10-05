@@ -40,7 +40,6 @@ export async function seedDefaultCategories() {
 
     return { inserted: missing.length, total: (existingRows || []).length + missing.length };
   } catch (error) {
-    console.error('Failed to seed default categories:', error);
     throw error;
   }
 }

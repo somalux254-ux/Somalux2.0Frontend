@@ -158,12 +158,10 @@ const highSpeedDownload = async (url, filename, folderPath = null) => {
           timestamp: Date.now(),
           size: blob.size,
         });
-      } catch (e) {
-        console.warn('IndexedDB storage failed:', e);
+      } catch  {
       }
     }
   } catch (error) {
-    console.error('High-speed download failed:', error);
     throw error;
   }
 };
@@ -249,7 +247,6 @@ export const Download = ({
       if (onDownloadComplete) onDownloadComplete();
     } catch (error) {
       setDownloading(false);
-      console.error('Download failed:', error);
       if (onDownloadComplete) onDownloadComplete(error);
     }
   };

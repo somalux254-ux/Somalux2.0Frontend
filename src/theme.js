@@ -64,13 +64,11 @@ export const applyAppTheme = async (theme) => {
       await StatusBar.setBackgroundColor({ color: nextTheme === 'light' ? '#FFFFFF' : '#0C1317' });
       await StatusBar.setStyle({ style: nextTheme === 'light' ? Style.Dark : Style.Light });
     } catch (error) {
-      console.warn('Failed to update native status bar theme:', error);
     }
 
     try {
       await SystemBars.setTheme({ theme: nextTheme });
     } catch (error) {
-      console.warn('Failed to update native system bars theme:', error);
     }
   }
 };

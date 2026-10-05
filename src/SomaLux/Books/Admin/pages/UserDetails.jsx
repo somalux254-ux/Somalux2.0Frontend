@@ -115,24 +115,9 @@ const UserDetails = () => {
         const pastPapersData = pastPapersRes.error ? [] : pastPapersRes.data || [];
         const universitiesData = universitiesRes.error ? [] : universitiesRes.data || [];
         
-        // Log any errors
-        if (viewsRes.error) console.error('❌ Views error:', viewsRes.error);
-        if (likesRes.error) console.error('❌ Likes error:', likesRes.error);
-        if (downloadsRes.error) console.error('❌ Downloads error:', downloadsRes.error);
-        if (uploadsRes.error) console.error('❌ Uploads error:', uploadsRes.error);
-        if (pastPapersRes.error) console.error('❌ Past Papers error:', pastPapersRes.error);
-        if (universitiesRes.error) console.error('❌ Universities error:', universitiesRes.error);
-        if (firstLoginRes.error) console.error('❌ First Login error:', firstLoginRes.error);
-        
         // Get first login data
         const firstLoginData = firstLoginRes.error ? null : firstLoginRes.data;
 
-        // Log errors if any
-        if (likesRes.error) console.error('Likes fetch error:', likesRes.error);
-        if (downloadsRes.error) console.error('Downloads fetch error:', downloadsRes.error);
-
-        
-        // DEBUG: Show raw downloads data
         
 
         // Collect ALL unique book IDs from likes, views, downloads
@@ -164,13 +149,11 @@ const UserDetails = () => {
                     .in('id', batch);
                   
                   if (error) {
-                    console.error(`🔴 Error in batch (${batch.length} items):`, error.message);
                     return [];
                   }
                   
                   return data || [];
                 } catch (err) {
-                  console.error('🔴 Catch error in batch:', err);
                   return [];
                 }
               })()
@@ -184,8 +167,7 @@ const UserDetails = () => {
             if (allBooks.length > 0) {
               booksMap = new Map(allBooks.map((b) => [b.id, b]));
             }
-          } catch (err) {
-            console.error('🔴 Error in Promise.all:', err);
+          } catch  {
           }
         } 
 
@@ -216,8 +198,7 @@ const UserDetails = () => {
         setAuthorFollows([]);
         setAuthorRatings([]);
         setAuthorStats([]);
-      } catch (err) {
-        console.error('Failed to load user details', err);
+      } catch  {
       } finally {
         setLoading(false);
       }

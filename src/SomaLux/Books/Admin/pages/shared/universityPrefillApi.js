@@ -49,14 +49,12 @@ export async function searchUniversityNames(query, limit = 10) {
           
           return universities;
         }
-      } catch (proxyError) {
-        console.warn('Backend proxy unavailable:', proxyError.message);
+      } catch  {
       }
     }
 
     return [];
   } catch (error) {
-    console.error('Error searching university names:', error);
     return [];
   }
 }
@@ -85,7 +83,6 @@ async function searchWikipediaUniversities(query, limit = 10) {
         website_url: urls[index] || '',
       }));
   } catch (error) {
-    console.error('Error searching Wikipedia:', error);
     return [];
   }
 }
@@ -103,7 +100,6 @@ export async function getUniversityPrefillData(universityName) {
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error fetching prefill data:', error);
     return null;
   }
 }
@@ -128,8 +124,7 @@ export async function fetchUniversityDataFromGoogle(universityName) {
           cover_images: data.university.image ? [data.university.image] : [],
         };
       }
-    } catch (error) {
-      console.error('Error fetching from Google via proxy:', error);
+    } catch  {
     }
   }
   
@@ -156,7 +151,6 @@ export async function fetchUniversityDataFromWikipedia(universityName) {
       cover_images: json.thumbnail?.source ? [json.thumbnail.source] : [],
     };
   } catch (e) {
-    console.error('Error fetching from Wikipedia REST:', e);
     return null;
   }
 }
@@ -200,7 +194,6 @@ export async function fetchUniversityDataFromWikidata(universityName) {
       cover_images: [],
     };
   } catch (error) {
-    console.error('Error fetching from Wikidata:', error);
     return null;
   }
 }
@@ -247,7 +240,6 @@ export async function fetchWikimediaImages(universityName) {
 
     return prioritized.slice(0, 5);
   } catch (e) {
-    console.error('Error fetching Wikimedia images:', e);
     return [];
   }
 }
@@ -264,8 +256,7 @@ export async function fetchUnsplashImages(universityName) {
         const data = await response.json();
         return data.images?.map(img => img.url) || [];
       }
-    } catch (error) {
-      console.error('Error fetching Unsplash images via proxy:', error);
+    } catch  {
     }
   }
   
@@ -284,7 +275,6 @@ export async function downloadImageAsFile(imageUrl, fileName) {
     const file = new File([blob], fileName, { type: blob.type });
     return file;
   } catch (error) {
-    console.error('Error downloading image:', error);
     return null;
   }
 }
@@ -306,7 +296,6 @@ export async function cacheUniversityPrefillData(universityName, data, source = 
     if (error) throw error;
     return true;
   } catch (error) {
-    console.error('Error caching prefill data:', error);
     return false;
   }
 }
@@ -332,7 +321,6 @@ export async function uploadUniversityImages(universityId, imageFiles) {
         });
 
       if (uploadError) {
-        console.error('Error uploading image:', uploadError);
         continue;
       }
 
@@ -348,7 +336,6 @@ export async function uploadUniversityImages(universityId, imageFiles) {
 
     return uploadedImages;
   } catch (error) {
-    console.error('Error uploading multiple images:', error);
     throw error;
   }
 }
@@ -370,7 +357,6 @@ export async function addUniversityImage(universityId, imageUrl, caption = null,
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error adding university image:', error);
     throw error;
   }
 }
@@ -390,7 +376,6 @@ export async function getUniversityImages(universityId) {
     if (error) throw error;
     return data || [];
   } catch (error) {
-    console.error('Error fetching university images:', error);
     throw error;
   }
 }
@@ -408,7 +393,6 @@ export async function setPrimaryUniversityImage(imageId) {
     if (error) throw error;
     return true;
   } catch (error) {
-    console.error('Error setting primary image:', error);
     return false;
   }
 }
@@ -427,7 +411,6 @@ export async function deleteUniversityImage(imageId, imageUrl) {
       .remove([filePath]);
 
     if (storageError) {
-      console.error('Error deleting from storage:', storageError);
     }
 
     const { error: dbError } = await supabase
@@ -438,7 +421,6 @@ export async function deleteUniversityImage(imageId, imageUrl) {
     if (dbError) throw dbError;
     return true;
   } catch (error) {
-    console.error('Error deleting university image:', error);
     throw error;
   }
 }
@@ -502,7 +484,6 @@ export async function autoFillUniversityData(universityName) {
       }
     );
   } catch (error) {
-    console.error('Error auto-filling university data:', error);
     return {
       name: universityName,
       description: '',
@@ -528,7 +509,6 @@ export async function getAllCachedUniversities() {
     if (error) throw error;
     return data?.map(u => u.university_name) || [];
   } catch (error) {
-    console.error('Error fetching cached universities:', error);
     return [];
   }
 }

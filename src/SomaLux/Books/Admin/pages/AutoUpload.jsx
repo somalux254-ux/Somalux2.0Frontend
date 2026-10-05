@@ -38,8 +38,7 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
           return state;
         }
       }
-    } catch (e) {
-      console.error('⚡ [QUICK CHECK] Error checking localStorage:', e);
+    } catch  {
     }
     return null;
   })();
@@ -83,7 +82,6 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
           setResumeState(state);
         } 
       } catch (e) {
-        console.error('❌ [RESUME CHECK] Error parsing saved upload state:', e);
         localStorage.removeItem('booksUploadState');
       }
     } 
@@ -106,9 +104,7 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
     try {
       localStorage.setItem('booksUploadState', JSON.stringify(state));
     } catch (error) {
-      console.error('❌ [SAVE STATE] Failed to save to localStorage:', error);
       if (error.name === 'QuotaExceededError') {
-        console.error('❌ [SAVE STATE] localStorage quota exceeded!');
       }
     }
   };
@@ -116,8 +112,7 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
   const clearUploadState = () => {
     try {
       localStorage.removeItem('booksUploadState');
-    } catch (error) {
-      console.error('❌ [CLEAR STATE] Failed to clear:', error);
+    } catch  {
     }
     setCanResume(false);
   };
@@ -154,8 +149,7 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
           }, 'image/png', 0.95);
         });
       }
-    } catch (error) {
-      console.error('Error extracting cover:', error);
+    } catch  {
     }
     return null;
   };
@@ -180,8 +174,7 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
           author = (metadata.info.Author || metadata.info.author || '').trim();
           title = (metadata.info.Title || metadata.info.title || '').trim();
         }
-      } catch (e) {
-        console.warn('Could not extract PDF metadata:', e);
+      } catch  {
       }
       
       // If we couldn't get author from metadata, try to extract from text
@@ -196,8 +189,7 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
               const page = await pdfDoc.getPage(i);
               const textContent = await page.getTextContent();
               pageText += ' ' + textContent.items.map(item => item.str).join(' ');
-            } catch (e) {
-              console.warn(`Could not extract text from page ${i}`);
+            } catch  {
             }
           }
           
@@ -322,8 +314,7 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
               }
             }
           }
-        } catch (e) {
-          console.warn('Could not extract text from PDF:', e);
+        } catch  {
         }
       }
       
@@ -343,7 +334,6 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
         publisher: ''
       };
     } catch (error) {
-      console.error('Error extracting metadata from PDF:', error);
       // Fallback to basic metadata from filename
       return extractBasicMetadataFromName(pdfFile.name);
     }
@@ -517,7 +507,6 @@ const BooksAutoUploadContent = ({ userProfile, asSubmission, showToast }) => {
         // SAVE PROGRESS AFTER EACH FILE COMPLETES
         saveUploadState(selectedFiles, { current: i + 1, total: selectedFiles.length }, uploaded, failed, duplicates, false, true);
       } catch (error) {
-        console.error(`❌ [FILE ERROR] Failed to upload ${file.name}:`, error);
         failed++;
         setFailedCount(failed);
         // SAVE PROGRESS AFTER FAILURE TOO
@@ -1128,7 +1117,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
   const folderInputRef = useRef(null);
   const uploadAbortRef = useRef(false);
   const pauseRef = useRef(false);
-  const resumeIndexRef = useRef(0);
   const handleResumePastPapersRef = useRef(null);
 
   const internalShowToast = useCallback((message, type = 'info') => {
@@ -1147,8 +1135,7 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
         timestamp: Date.now()
       };
       localStorage.setItem('pastPapersUploadState', JSON.stringify(state));
-    } catch (error) {
-      console.error('❌ [SAVE PAST PAPERS] Failed to save:', error);
+    } catch  {
     }
   };
 
@@ -1182,8 +1169,7 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           setCanResumePastPapers(true);
           setResumeStatePastPapers(state);
         } 
-      } catch (error) {
-        console.error('❌ [PAST PAPERS CHECK] Error parsing state:', error);
+      } catch  {
       }
     }
   };
@@ -1194,8 +1180,7 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
       try {
         const unis = await getUniversitiesForDropdown();
         setUniversities(unis);
-      } catch (error) {
-        console.error('❌ Failed to load universities:', error);
+      } catch  {
       }
     };
     loadUniversities();
@@ -1214,7 +1199,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           setCustomFaculty('');
           setUseCustomFaculty(false);
         } catch (error) {
-          console.error('❌ Failed to load faculties:', error);
           setFaculties([]);
         }
       } else {
@@ -1256,7 +1240,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           }
         }
       } catch (error) {
-        console.error('Failed to load faculties:', error);
         setFaculties([]);
       }
     };
@@ -1283,7 +1266,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
         if (pdfMetadata) {
           setExtractedMetadata(pdfMetadata);
         } else {
-          console.warn('⚠️ [AUTO-EXTRACT] Both extraction strategies failed');
           setExtractedMetadata(null);
         }
       }
@@ -1320,7 +1302,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
       internalShowToast(`✅ Metadata extracted from ${source}`, 'success');
       
     } catch (error) {
-      console.error('⚠️ [AUTO-EXTRACT] Extraction error:', error);
       setExtractedMetadata(null);
       // Don't fail - allow upload with filename extraction
       internalShowToast('✅ Ready to upload (will extract from filename)', 'success');
@@ -1349,7 +1330,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           unis = await getUniversitiesForDropdown({ forceRefresh: true });
           setUniversities(unis);
         } catch (error) {
-          console.error('❌ Failed to load universities during extraction:', error);
           internalShowToast('Failed to load universities - please try again', 'error');
           return;
         }
@@ -1412,7 +1392,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           unis = await getUniversitiesForDropdown({ forceRefresh: true });
           setUniversities(unis);
         } catch (error) {
-          console.error('❌ Failed to load universities during extraction:', error);
           internalShowToast('Failed to load universities - please try again', 'error');
           return;
         }
@@ -1555,7 +1534,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
                 }
               }
             } catch (e) {
-              console.warn('⚠️ Error parsing filename:', e);
               unit_name = fileNameWithoutExt;
             }
           }
@@ -1767,8 +1745,7 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
                 selectedFaculty = searchResult.faculty;
               } 
             }
-          } catch (error) {
-            console.warn('⚠️ Google Search failed, trying smart Egerton detection:', error);
+          } catch  {
           }
         }
         
@@ -1847,7 +1824,7 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
 
 
         const uploadFunction = asSubmission ? createPastPaperSubmission : createPastPaper;
-        const pastPaperRecord = await uploadFunction({
+        await uploadFunction({
           metadata: {
             title: `${metadata.unit_code} - ${metadata.unit_name}`,
             university_id: metadata.university_id,
@@ -1884,12 +1861,6 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
         // Clear past papers cache so newly uploaded papers appear immediately
         try { clearPastPapersCache(); } catch (e) {}
       } catch (error) {
-        console.error(`❌ Failed to upload ${file.name}:`, error);
-        console.error('Error details:', { 
-          message: error?.message, 
-          code: error?.code,
-          stack: error?.stack
-        });
 
         // Log failed upload to history
         await logUploadHistory({
@@ -1903,7 +1874,7 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           year: metadata.year,
           uploadedBy: userProfile?.id,
           errorMessage: error?.message || 'Unknown error'
-        }).catch(err => console.error('Failed to log error history:', err));
+        }).catch(err => undefined);
 
         failed++;
         setFailedCount(failed);
@@ -1923,7 +1894,7 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
     
     let message = `Upload complete: ${uploaded} successful, ${duplicates} duplicates skipped, ${failed} failed`;
     if (failed > 0) {
-      message += ' ❌ Check browser console for error details';
+      message += ' ❌ Review the failed upload entries for details';
     }
     const messageType = failed === 0 ? 'success' : (duplicates > 0 ? 'warning' : 'error');
     internalShowToast(message, messageType);
@@ -1998,8 +1969,7 @@ const PastPapersAutoUploadContent = ({ userProfile, asSubmission, showToast }) =
           return state;
         }
       }
-    } catch (e) {
-      console.error('⚡ [PAST PAPERS QUICK CHECK] Error:', e);
+    } catch  {
     }
     return null;
   })();

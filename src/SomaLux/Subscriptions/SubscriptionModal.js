@@ -118,7 +118,6 @@ const SubscriptionModal = ({
       alert(`Demo Mode: Payment request sent to ${phoneNumber}.\n\nClick "Verify" to complete the demo subscription flow.`);
 
     } catch (e) {
-      console.error('Subscription error:', e.message || e);
       setError(`Failed to start subscription: ${e.message || 'Please try again.'}`);
     } finally {
       setLoading(false);
@@ -156,7 +155,6 @@ const SubscriptionModal = ({
       setSelectedPlanId('1m');
       onClose();
     } catch (e) {
-      console.error('Verification failed', e);
       setError(e.message || 'Failed to verify payment. Please try again.');
     } finally {
       setLoading(false);
